@@ -20,7 +20,7 @@ The structure of the program contains four parts.
 
    Here we are going to create the environment to create the models locally that later can be used
 
-2. **Creation of the Medical Dataset.**
+2. [**Creation of the Medical Dataset.**](./2-Data/README.md)
 
    In this part we are going to build the Datasets that will be used create the **Medical Model**
 
