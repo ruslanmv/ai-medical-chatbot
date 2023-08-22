@@ -42,13 +42,15 @@ Now we are developing the program.
 
 ![](assets/images/posts/README/future.jpg)
 
-Let us use the best technologies in the world to help us. 
+> Let us use the best technologies in the world to help us.  
 
- *Stay tunned*
+## Contributing
 
-www.ruslanmv.com/doctor
+Please free to contribute following the standard guidelines for submitting patches and additions or solutions. Feel free to submit issues and enhancement requests.
 
+To more information visit www.ruslanmv.com/doctor
 
+Copyright 2023 Ruslan Magana Vsevolodovna This program is distributed under the terms of the GNU Lesser General Public License.
 
 
 
