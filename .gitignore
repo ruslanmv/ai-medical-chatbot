@@ -167,3 +167,4 @@ cython_debug/
 2-Data/Medical-Dialogue-System/*.txt
 2-Data/data/*.txt
 2-Data/*.txt
+2-Data/data/
