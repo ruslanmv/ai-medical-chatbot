@@ -1,4 +1,6 @@
-# Creation of the Medical Dataset
+# Part 2 - Creation of the Medical Dataset
+
+[back](../README.md)
 
 In this part we are going to build the Datasets that will be used create the **Medical Model**
 
@@ -16,9 +18,7 @@ There we load the **2-Data.ipynb**  notebook
 
 ![image-20230824182144129](assets/images/posts/README/image-20230824182144129.png)
 
-This notebook will create the dataframes in csv format for each
-
-document that are int he folder Medical-Dialogue-System
+This notebook will create the dataframes in csv format for each document that are int he folder Medical-Dialogue-System
 
 ```
 C:.
@@ -36,4 +36,12 @@ C:.
 
 ```
 
-and the output file will be saved in the ./data./csv/ folder.
+and saved in the ./data./csv/ 
+
+Then those csv will be cleaned and merged into single file called `dialogues.csv`
+
+![image-20230824232800691](assets/images/posts/README/image-20230824232800691.png)
+
+This csv has 256916 dialogues between a Patient and Doctor.
+
+In the following part we are going to build the model. [3-Modeling](../3-Modeling/README.md)

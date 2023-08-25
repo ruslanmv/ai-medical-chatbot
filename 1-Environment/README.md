@@ -1,4 +1,6 @@
-# Environment creation
+# Part 1 - Environment creation
+
+[back](../README.md)
 
 ## Step 1: Install and Run Jupyter Lab locally
 
@@ -50,6 +52,7 @@ Activate the virtual environment.
 Windows: 
 
 ```
+cd C:\gpt
 my_venv\Scripts\activate.bat
 ```
 
@@ -121,6 +124,7 @@ pip install rouge_score
 pip install nltk 
 pip install "ibm-watson-machine-learning>=1.0.312" 
 pip install ipywidgets widgetsnbextension pandas-profiling
+pip install mlxtend
 
 ```
 

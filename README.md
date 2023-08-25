@@ -24,9 +24,11 @@ The structure of the program contains four parts.
 
    In this part we are going to build the Datasets that will be used create the **Medical Model**
 
-3. **Creation of the model by using RAG**
+3. [**Creation of the model by using RAG**](./3-Modeling/README.md)
 
-In this part we will extend test **Foundation Models**   and identify which model gives better results
+In this part we will perform feture engineering and create the model
+
+We are going to use  **Foundation Models**  and test different models such as:
 
 - **flan-ul2-20b**  - It is an encoder decoder model based on the T5 architecture and instruction-tuned using the Fine-tuned LAnguage Net.Model by Google
 - **mt0-xxl-13b**  - An instruction-tuned iteration on mT5.Model by BigScience
