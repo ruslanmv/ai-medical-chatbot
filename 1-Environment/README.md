@@ -125,7 +125,9 @@ pip install nltk
 pip install "ibm-watson-machine-learning>=1.0.312" 
 pip install ipywidgets widgetsnbextension pandas-profiling
 pip install mlxtend
-
+pip install sentence-transformers
+pip install tiktoken
+pip install openai
 ```
 
 ![](assets/images/posts/README/20230818155817.png)
