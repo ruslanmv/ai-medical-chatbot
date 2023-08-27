@@ -169,3 +169,4 @@ cython_debug/
 2-Data/*.txt
 2-Data/data/
 2-Data/dialogues.csv
+2-Data/dialogues_embededd.pkl
