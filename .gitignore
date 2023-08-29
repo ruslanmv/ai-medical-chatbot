@@ -170,8 +170,8 @@ cython_debug/
 2-Data/data/
 2-Data/dialogues.csv
 2-Data/dialogues_embededd.pkl
-2-Data/dialogues_embededd.pkl
-2-Data/dialogues_embededd.pkl
-2-Data/dialogues_embededd.pkl
-2-Data/dialogues_embededd.pkl
 3-Modeling/credentials/api.json
+2-Data/knowledge_base/
+3-Modeling/credentials/api.json
+3-Modeling/credentials/api.json
+2-Data/dialogues_embededd.pkl
