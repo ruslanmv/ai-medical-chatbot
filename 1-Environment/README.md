@@ -134,6 +134,15 @@ pip install openai
 
 If we are in Linux we can add the followig condition after each line `| tail -n 1` to surpress logs. 
 
+If we have a computer with GPUs we can install p
+
+```
+pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cu113
+
+```
+
+
+
 Before run the notebook, we require load our IBM cloud services.
 
 
