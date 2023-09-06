@@ -26,7 +26,7 @@ The structure of the program contains four parts.
 
 3. [**Creation of the model by using RAG**](./3-Modeling/README.md)
 
-In this part we will perform feture engineering and create the model
+In this part we will perform feature engineering and create the model
 
 We are going to use  **Foundation Models**  and test different models such as:
 
