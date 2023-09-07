@@ -2,9 +2,8 @@
 
 [back](../README.md)
 
-In ordering to give a better diagnosis for each patient. It is necessary analize the flow of the data.
+In ordering to give a better diagnosis for each patient. It is necessary analyze the flow of the data. The standard procedure for a Doctor is:
 
-The standard procedure for a Doctor is:
 1) Generation of the general clinic history. ( With Anamnesis.)
   
 2)  Classification of the health problem.
@@ -17,10 +16,40 @@ We can go deeply with an additional custom clinic history.
 4. Depending of the situation of the patient with all information individual collected
    it is possible give medical diagnosis for a general case.
 
-5. If is needed we can go futher for the special case and
+5. If is needed we can go further for the special case and
    repeat the step 4.
 
 It is recommendable have a clinic history for each patient is treated in this program.
+
+## Modeling of Doctor AI
+
+The first step is the preprocessing of the data
+
+### [3_1-Preproces.ipynb](https://github.com/ruslanmv/Free-Doctor-with-Artificial-Intelligence/blob/master/3-Modeling/3_1-Preproces.ipynb)
+
+The second step is the clustering of the cases. Can be useful to understand better our data.
+
+### [3_2-Clustering.ipynb](https://github.com/ruslanmv/Free-Doctor-with-Artificial-Intelligence/blob/master/3-Modeling/3_2-Clustering.ipynb)
+
+The third  step is classical feature engineering, here we should create a syntenic clinical history for each visit of with the AI doctor.
+
+For future releases our raw data must be included as a part of the model.
+
+Due to lack of data we create a synthetic clinical history based on the description of the patient.
+
+### [3_3-Features.ipynb](https://github.com/ruslanmv/Free-Doctor-with-Artificial-Intelligence/blob/master/3-Modeling/3_3-Features.ipynb)
+
+Having the data well buidld.
+
+Features + Description + Patient + Answer 
+
+Is simply build a model to answer custom questions.
+
+### [3_4-Generative.ipynb](https://github.com/ruslanmv/Free-Doctor-with-Artificial-Intelligence/blob/master/3-Modeling/3_4-Generative.ipynb)
+
+# Additional Notes
+
+## General clinical history 
 
 A clinical history is an essential component of a patient's medical record and provides a concise overview of the patient's medical background, including their past illnesses, surgeries, medications, allergies, and family medical history. Here's a sample format for a clinical history:
 
@@ -95,25 +124,7 @@ A clinical history is an essential component of a patient's medical record and p
 
 This format can be customized to fit the specific requirements of a healthcare facility or the preferences of the healthcare provider. It should be thorough and comprehensive to ensure that all relevant information is documented accurately.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## How  to use Bert
 
 We can install Sentence BERT using:
 
@@ -160,7 +171,5 @@ for sent in sentences:
   sim = cosine(query_vec, model.encode([sent])[0])
   print("Sentence = ", sent, "; similarity = ", sim)
 ```
-
-![img](assets/images/posts/README/sbert_sim.png)
 
 There you go, we have obtained the similarity between the sentences in our text and our test sentence. A crucial point to note is that SentenceBERT is pretty slow if you want to train it from scratch.
