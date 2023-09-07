@@ -2,24 +2,15 @@
 
 [back](../README.md)
 
-In ordering to give a better diagnosis for each patient. It is necessary analyze the flow of the data. The standard procedure for a Doctor is:
+To provide a more accurate diagnosis for each patient, it is necessary to analyze the data flow. The standard procedure for a doctor is as follows:
 
-1) Generation of the general clinic history. ( With Anamnesis.)
-  
-2)  Classification of the health problem.
-Depending of the classification of the medicine area.
-We can go deeply with an additional custom clinic history.
+1. Generating the comprehensive clinical history, including anamnesis.
+2. Classifying the health problem based on the relevant medical area. If needed, a customized clinical history can be developed in greater detail.
+3. Providing a complete patient description, including their symptoms and specific concerns.
+4. Based on the patient's situation and the gathered information, a general medical diagnosis can be made.
+5. If necessary, further evaluation for specific cases can be conducted, repeating step 4.
 
-3. Given the whole description of each patient we should include
-   the description of the patient, what is asking for.
-
-4. Depending of the situation of the patient with all information individual collected
-   it is possible give medical diagnosis for a general case.
-
-5. If is needed we can go further for the special case and
-   repeat the step 4.
-
-It is recommendable have a clinic history for each patient is treated in this program.
+It is strongly recommended to maintain a clinical history for every patient treated within this program.
 
 ## Modeling of Doctor AI
 
