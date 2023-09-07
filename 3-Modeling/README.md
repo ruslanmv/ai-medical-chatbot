@@ -30,7 +30,7 @@ Due to lack of data we create a synthetic clinical history based on the descript
 
 ### [3_3-Features.ipynb](https://github.com/ruslanmv/Free-Doctor-with-Artificial-Intelligence/blob/master/3-Modeling/3_3-Features.ipynb)
 
-Having the data well buidld.
+Having the data well built.
 
 Features + Description + Patient + Answer 
 
