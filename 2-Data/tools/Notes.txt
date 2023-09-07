@@ -1,0 +1,243 @@
+The standard procedure for a Doctor is:
+1) Generation of the general clinic history. ( With Anamnesis.)
+  
+2)  Classification of the health problem.
+Depening of the classification of the medicine area.
+We can go deeply with an additional custom clinic history.
+
+
+3)Given the whole description of each patient we should include
+the description of the patient, what is asking for.
+
+4)Depending of the situation of the patient with all information individual collected
+it is possible give medical diagnosis for a general case.
+
+5)If is needed we can go futher for the special case and
+repeat the step 4)
+
+
+
+
+
+
+
+[Patient Information]
+- Full Name: [Patient's Full Name]
+- Date of Birth: [Patient's Date of Birth]
+- Gender: [Patient's Gender]
+- Address: [Patient's Address]
+- Phone Number: [Patient's Contact Number]
+
+[Chief Complaint]
+- [Description of the patient's main reason for seeking medical attention]
+
+[Present Illness]
+- [Detailed description of the current illness or symptoms, including their onset, duration, severity, and any relevant factors]
+
+[Medical History]
+- Past Medical Conditions:
+  - [List any significant medical conditions the patient has had, including dates of diagnosis]
+- Surgeries/Procedures:
+  - [List any surgeries or medical procedures the patient has undergone, including dates]
+- Medications:
+  - [List current medications, dosages, and frequency]
+- Allergies:
+  - [List any allergies the patient has, including medication, food, or environmental allergies]
+- Immunizations:
+  - [Include information on relevant vaccinations and their dates]
+
+[Family Medical History]
+- [List any significant medical conditions that run in the patient's family, such as heart disease, diabetes, cancer, etc.]
+
+[Social History]
+- Occupation: [Patient's occupation]
+- Tobacco Use: [Specify if the patient smokes or uses tobacco products]
+- Alcohol Use: [Specify if the patient consumes alcohol and if so, how often and in what quantities]
+- Drug Use: [Specify if the patient uses recreational drugs or has a history of drug use]
+- Diet: [Provide information about the patient's dietary habits, including any special diets]
+- Exercise: [Describe the patient's level of physical activity]
+
+[Review of Systems]
+- [List and briefly describe the patient's symptoms or concerns related to various body systems, including cardiovascular, respiratory, gastrointestinal, musculoskeletal, etc.]
+
+[Social and Environmental History]
+- [Include information about the patient's living situation, relationships, and any environmental factors that may be relevant to their health]
+
+[Psychosocial History]
+- [Note any significant mental health history or psychosocial stressors]
+
+[Sexual History]
+- [Include relevant sexual history information if applicable]
+
+[Substance Use History]
+- [Detail any history of alcohol or substance abuse, if applicable]
+
+[Physical Examination Findings]
+- [Summarize any relevant physical examination findings, including vital signs, general appearance, and specific organ system assessments]
+
+[Assessment and Plan]
+- [Provide a brief assessment of the patient's current medical condition and a plan for further evaluation and treatment]
+
+[Provider's Name and Credentials]
+- [Name of the healthcare provider]
+- [Credentials, such as MD, DO, NP, PA]
+
+[Date]
+- [Date of the clinical history]
+
+[Signature]
+- [Signature of the healthcare provider]
+
+
+
+
+
+https://www.odonto.unam.mx/es/formatos-clinicos
+
+Ejemplo de formato para historia clínica
+Aquí te mostramos un formato para historia clínica (básico) que te servirá para recoger datos más importantes de los pacientes y que ayudarán para analizar su recorrido médico. 
+
+Ficha de Identificación.
+
+Nombre: ____________________________
+
+Apellidos: _____________________________
+
+Registro núm. _______________________________________________________
+
+Sexo__________   Edad_____________  Cuarto________  Sala_______
+
+Ocupación / Profesión: 
+
+________________________________________________________
+
+Motivo de la consulta:
+
+_________________________________________________
+
+Antecedentes Personales Patológicos. (Debe decir los antecedentes de importancia clínica. Tratamiento que recibe para cada situación comórbida y su duración).
+
+Cardiovasculares____Pulmonares____Digestivos______Diabetes___
+
+Renales______Quirúrgicos_____Alérgicos_____Transfusiones_____
+
+Medicamentos: ____________________________________________ 
+
+Especifique: _________________________________________________________________
+
+Antecedentes Personales No Patológicos (Indicar todo lo relacionado a tabaquismo, uso de alcohol, así como diferentes adicciones y su duración.  Antecedentes sexuales del paciente)
+
+Alcohol: ________________________________________________
+
+Tabaquismo: ____________________________________________
+
+Drogas: ________________________________________________
+
+Inmunizaciones: _________________________________________
+
+Otros: __________________________________________________
+
+Antecedentes Familiares:
+
+Padre:   Vivo   Si____     No____
+
+Enfermedades que padece: _______________________________________
+
+________________________________________________________________
+
+________________________________________________________________
+
+Madre: Viva   Si____  No____
+
+Enfermedades que padece: ________________________________________
+
+________________________________________________________________
+
+Hermanos: ¿Cuántos? ______   Vivos _____
+
+Enfermedades que padecen: ______________________________________
+
+________________________________________________________________
+
+Otros: 
+
+Antecedentes Gineco-obstétricos:
+
+Menarquía _________  Ritmo ____________  F.U.M.______________
+
+G____         P_____          A______        C_______     I.V.S.A ______________
+
+Uso de Métodos Anticonceptivos: Si ______  No _______
+
+¿Cuáles? ________________________________________
+
+_________________________________________________
+
+Enfermedad actual del paciente
+
+_________________________________________________
+
+Exploración física.
+
+Signos Vitales. T.A._____ (brazo derecho) T.A. (brazo izquierdo)__________F.C._______
+
+Frec. Resp.________Temp.______Peso_____Talla_____IMC______
+
+Cabeza y Cuello __________________________________________
+
+________________________________________________________
+
+________________________________________________________
+
+Tórax __________________________________________________
+
+Abdomen
+
+________________________________
+
+Extremidades
+
+_______________________________________
+
+Neurológico y estado mental
+
+____________________________________________________________
+
+Laboratorio
+
+Estudios de Imagen
+
+Otros: 
+
+Lista de Problemas. (Tratar de orientar el proceso diagnóstico en base a agrupar los síntomas que nuestro paciente presenta, tratando de encontrar una explicación en la mayor parte de los casos  por una sola entidad. Por ejemplo: Paciente el cual acude por hematemesis al interrogatorio nos comenta sobre datos de síndrome dispéptico, pérdida de peso, todo esto probablemente se pudiera englobar en un solo problema)
+
+Activo / Inactivo
+
+1.-______________________
+
+2.-______________________
+
+3.-______________________
+
+4.-______________________
+
+5.-______________________
+
+6.-______________________
+
+7.-______________________
+
+La jerarquía de los problemas va de acuerdo a su importancia y al motivo de consulta, en relación a activos son los problemas que en este momento presenta el paciente, por el contrario, los problemas inactivos son aquellos que en términos generales solo son antecedentes o aquellos activos que ya se resolvieron.
+
+Exámenes complementarios: __________________________________
+
+Diagnóstico: _________________________________________________
+
+____________________________________________________________ 
+
+Plan Terapéutico: ________________________________________
+
+Nombre, apellido y cédula del médico tratante: ________________________________________
+
+
+
