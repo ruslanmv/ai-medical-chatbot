@@ -1,4 +1,4 @@
-# Free Doctor Consultation with Artificial Intelligence.
+# Doctor Consultation with Artificial Intelligence.
 
 *Release:  **August 2023***
 
