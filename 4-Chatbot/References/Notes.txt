@@ -1,0 +1,38 @@
+https://github.com/AIGC-Audio/AudioGPT
+
+
+1)Unofficial BingChat API
+https://github.com/DarkMatter-999/BingChat-API
+
+2)ChatGPT-PyAPI
+https://github.com/ChaoticByte/ChatGPT-PyAPI/tree/main
+
+3)Provide chatai sites api
+https://github.com/omidima/bing-free-gpt/tree/main
+
+4)ReEdgeGPT
+https://github.com/Integration-Automation/ReEdgeGPT
+
+BarkTalk: ChatGPT-powered Voice Assistant
+5)https://github.com/msadeqsirjani/BarkTalk
+
+Kendra is a powerful chatbot charged by GPT-3.5-Turbo, Microsoft Bing Search, Amazon Polly, and OpenAI DALL·E .
+
+https://github.com/leiter2121/Chatbot-GPT-3.5-turbo 
+
+
+-------------------------------
+
+Face  wunjo.wladradchenko.r
+https://colab.research.google.com/drive/1o2Ew72vzQ7Q0Vp8Nwl2jM8V6jbGWLEUI#scrollTo=fAjwGmKKYl_I
+
+1)https://github.com/wladradchenko/wunjo.wladradchenko.ru/tree/main
+
+https://github.com/deepkyu/ml-talking-face
+https://github.com/GiannisPikoulis/dsml-thesis
+
+https://github.com/numz/sd-wav2lip-uhq
+https://github.com/KangweiiLiu/Awesome_Audio-driven_Talking-Face-Generation
+
+https://github.com/AIGC-Audio/AudioGPT
+
