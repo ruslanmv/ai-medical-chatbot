@@ -190,3 +190,4 @@ xxhash==3.4.1
 yarl==1.9.4
 zipp==3.17.0
 zstandard==0.22.0
+openai==1.10.0
