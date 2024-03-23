@@ -42,11 +42,14 @@ We are going to use  **Foundation Models**  and test different models such as:
 
 ## Hugging Face Playground 
 
-Beta version for free
-
 [![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
 
+
+Medical Chatbot Online here:
+
 [https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
+
+This is an demo Medical Assitant.
 
 ## Contributing
 
