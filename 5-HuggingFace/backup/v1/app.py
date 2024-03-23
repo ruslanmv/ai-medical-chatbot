@@ -263,56 +263,22 @@ def chat(message, history):
     response = rag_chain.invoke(message)
     history.append((message, response))
     return history, response
-
-def chat_v1(message, history):
-    response = rag_chain.invoke(message)
-    return (response)
-
 collection.load()
 # Create a Gradio interface
-import gradio as gr
+title = "AI Medical Chatbot"
+description = "Ask any medical question and get answers from our AI Medical Chatbot."
+references = "Developed by Ruslan Magana. Visit ruslanmv.com for more information."
 
-# Function to read CSS from file (improved readability)
-def read_css_from_file(filename):
-    with open(filename, "r") as f:
-        return f.read()
+chatbot = gr.Chatbot()
+interface = gr.Interface(
+    chat,
+    ["text", "state"],
+    [chatbot, "state"],
+    allow_flagging="never",
+    title=title,
+    description=description,
+    examples=[["What are the symptoms of COVID-19?"],["I have started to get lots of acne on my face, particularly on my forehead what can I do"]],
 
-# Read CSS from file
-css = read_css_from_file("style.css")
-
-# The welcome message with improved styling (see style.css)
-welcome_message = '''
-<div id="content_align" style="text-align: center;">
-  <span style="color: #ffc107; font-size: 32px; font-weight: bold;">
-    AI Medical Chatbot
-  </span>
-  <br>
-  <span style="color: #fff; font-size: 16px; font-weight: bold;">
-    Ask any medical question and get answers from our AI Medical Chatbot
-  </span>
-  <br>
-  <span style="color: #fff; font-size: 16px; font-weight: normal;">
-    Developed by Ruslan Magana. Visit <a href="https://ruslanmv.com/">https://ruslanmv.com/</a> for more information.
-  </span>
-</div>
-'''
-
-# Creating Gradio interface with full-screen styling
-with gr.Blocks(css=css) as interface:
-    gr.Markdown(welcome_message)  # Display the welcome message
-
-    # Input and output elements
-    with gr.Row():
-        with gr.Column():
-            text_prompt = gr.Textbox(label="Input Prompt", placeholder="Example: What are the symptoms of COVID-19?", lines=2)
-        generate_button = gr.Button("Ask Me", variant="primary")
-
-    with gr.Row():
-        answer_output = gr.Textbox(type="text", label="Answer")
-
-    # Assuming you have a function `chat` that processes the prompt and returns a response
-    generate_button.click(chat_v1, inputs=[text_prompt], outputs=answer_output)
-
-# Launch the app
+)
 #interface.launch(inline=True, share=False) #For the notebook
 interface.launch(server_name="0.0.0.0",server_port=7860)
