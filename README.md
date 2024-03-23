@@ -1,6 +1,6 @@
 # Doctor Consultation with Artificial Intelligence.
 
-*Release:  **August 2023***
+*Release:  **March 2024***
 
 Hello everyone,  the purpose of this repository is  create a  a simple program that will answer medical questions by using the latest technologies of **IBM**.
 
@@ -9,8 +9,6 @@ The aim of this program is help people who require help.  This program does not 
 The technologies which will use is **WatsonX** of **IBM** and **Watson Assistant.**
 
 ![](assets/images/posts/README/im-778762.png)
-
-
 
 **Watsonx.ai** is part of the IBM watsonx platform that brings together new generative AI capabilities, powered by foundation models, and traditional machine learning into a powerful studio spanning the AI lifecycle. With watsonx.ai, you can train, validate, tune, and deploy generative AI, foundation models, and machine learning capabilities with ease and build AI applications in a fraction of the time with a fraction of the data.
 
@@ -40,11 +38,13 @@ We are going to use  **Foundation Models**  and test different models such as:
 
    Here we will create a chatbot with the capability to answer questions by using the Model created before.
 
-Now we are developing the program.
-
-![](assets/images/posts/README/future.jpg)
-
 > Let us use the best technologies in the world to help us.  
+
+## Hugging Face Playground 
+
+Beta version for free
+
+[![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
 
 ## Contributing
 
