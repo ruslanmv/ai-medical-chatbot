@@ -1,0 +1,73 @@
+/* General Container Styles */
+.gradio-container {
+    font-family: "IBM Plex Sans", sans-serif;
+    position: fixed; /* Ensure full-screen coverage */
+    top: 0;
+    left: 0;
+    width: 100vw;  /* Set width to 100% viewport width */
+    height: 100vh; /* Set height to 100% viewport height */
+    margin: 0;    /* Remove margins for full-screen effect */
+    padding: 0;    /* Remove padding for full-screen background */
+    background-color: #212529; /* Dark background color */
+    color: #fff;    /* Light text color for better readability */
+    overflow: hidden; /* Hide potential overflow content */
+    background-image: url("https://raw.githubusercontent.com/ruslanmv/ai-medical-chatbot/master/assets/images/background.jpg"); /* Replace with your image path */
+    background-size: cover; /* Stretch the image to cover the container */
+    background-position: center; /* Center the image horizontally and vertically */
+}
+/* Button Styles */
+.gr-button {
+    color: white;
+    background: #007bff; /* Use a primary color for the background */
+    white-space: nowrap;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+.gr-button:hover {
+    background-color: #0056b3; /* Darken the background color on hover */
+}
+
+/* Share Button Styles (omitted as not directly affecting dark mode) */
+/* ... */
+
+/* Other styles (adjustments for full-screen might be needed) */
+#gallery {
+    min-height: 22rem;
+    /* Center the gallery horizontally (optional) */
+    margin: auto; 
+    border-bottom-right-radius: 0.5rem !important;
+    border-bottom-left-radius: 0.5rem !important;
+    background-color: #212529; /* Dark background color for elements */
+}
+
+/* Centered Container for the Image */
+.image-container {
+    max-width: 100%; /* Set the maximum width for the container */
+    margin: auto; /* Center the container horizontally */
+    padding: 20px; /* Add padding for spacing */
+    border: 1px solid #a50909; /* Add a subtle border to the container */
+    border-radius: 10px;
+    overflow: hidden; /* Hide overflow if the image is larger */
+    max-height: 22rem; /* Set a maximum height for the container */
+    background-color: #212529; /* Dark background color for elements */
+}
+
+/* Set a fixed size for the image */
+.image-container img {
+    max-width: 100%; /* Ensure the image fills the container */
+    height: auto; /* Maintain aspect ratio */
+    max-height: 100%;
+    border-radius: 10px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Output box styles */
+.gradio-textbox {
+    background-color: #343a40; /* Dark background color */
+    color: #fff; /* Light text color for better readability */
+    border-color: #343a40; /* Dark border color */
+    border-radius: 8px;
+}
