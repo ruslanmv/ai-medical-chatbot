@@ -38,9 +38,16 @@ We are going to use  **Foundation Models**  and test different models such as:
 
    Here we will create a chatbot with the capability to answer questions by using the Model created before.
 
-> Let us use the best technologies in the world to help us.  
+5. ## For Production in WatsonX you can checkout this repo
 
-## Hugging Face Playground 
+
+> Let us use the best technologies in the world to help us. 
+
+
+[Watsonx-Assistant-with-Milvus-as-Vector-Database](https://github.com/ruslanmv/Watsonx-Assistant-with-Milvus-as-Vector-Database)
+
+
+## HuggingFace Playground Demo 
 
 [![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
 
@@ -55,9 +62,9 @@ This is an demo Medical Assitant.
 
 Please free to contribute following the standard guidelines for submitting patches and additions or solutions. Feel free to submit issues and enhancement requests.
 
-To more information visit www.ruslanmv.com/doctor
+To more information visit www.ruslanmv.com
 
-Copyright 2023 Ruslan Magana Vsevolodovna This program is distributed under the terms of the GNU Lesser General Public License.
+Copyright 2024 Ruslan Magana Vsevolodovna This program is distributed under the terms of the GNU Lesser General Public License.
 
 
 
