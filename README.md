@@ -36,12 +36,8 @@ We are going to use  **Foundation Models**  and test different models such as:
 
 4. **Implementation of a chatbot with WatsonX in production.**
 
-   Here we will create a chatbot with the capability to answer questions by using the Model created before.
-
-5. ## For Production in WatsonX you can checkout this repo
-
-
-> Let us use the best technologies in the world to help us. 
+Here we will create a chatbot with the capability to answer questions by using the Model created before.
+For Production in WatsonX you can checkout this repo
 
 
 [Watsonx-Assistant-with-Milvus-as-Vector-Database](https://github.com/ruslanmv/Watsonx-Assistant-with-Milvus-as-Vector-Database)
@@ -57,6 +53,9 @@ Medical Chatbot Online here:
 [https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
 
 This is an demo Medical Assitant.
+
+
+> Let us use the best technologies in the world to help us. 
 
 ## Contributing
 
