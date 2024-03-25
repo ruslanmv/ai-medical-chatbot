@@ -43,9 +43,17 @@ For Production in WatsonX you can checkout this repo
 [Watsonx-Assistant-with-Milvus-as-Vector-Database](https://github.com/ruslanmv/Watsonx-Assistant-with-Milvus-as-Vector-Database)
 
 
+## Custom LLM Chatbot
+We have also developed another version which uses a custom LLM 
+[Medical-Chatbot-with-Langchain-with-a-Custom-LLM](https://github.com/ruslanmv/Medical-Chatbot-with-Langchain-with-a-Custom-LLM)
+
 ## HuggingFace Playground Demo 
 
 [![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
+
+
+
+
 
 
 Medical Chatbot Online here:
