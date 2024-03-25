@@ -34,7 +34,10 @@ We are going to use  **Foundation Models**  and test different models such as:
 - **flan-t5-xxl-11b**  - It is an 11 billion parameter model based on the Flan-T5 family.Model by Google
 - **mpt-7b-instruct**  - It is a decoder-style transformer pretrained from scratch on 1T tokens of English text and code. 
 
-4. **Implementation of a chatbot with WatsonX in production.**
+
+## Chatbot with WatsonX
+
+**Implementation of a chatbot with WatsonX in production.**
 
 Here we will create a chatbot with the capability to answer questions by using the Model created before.
 For Production in WatsonX you can checkout this repo
@@ -43,7 +46,7 @@ For Production in WatsonX you can checkout this repo
 [Watsonx-Assistant-with-Milvus-as-Vector-Database](https://github.com/ruslanmv/Watsonx-Assistant-with-Milvus-as-Vector-Database)
 
 
-## Custom LLM Chatbot
+## Chatbot with Custom LLM 
 We have also developed another version which uses a custom LLM 
 
 [Medical-Chatbot-with-Langchain-with-a-Custom-LLM](https://github.com/ruslanmv/Medical-Chatbot-with-Langchain-with-a-Custom-LLM)
