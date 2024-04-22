@@ -1,6 +1,6 @@
 # Doctor Consultation with Artificial Intelligence.
 
-*Release:  **March 2024***
+*Release:  **April 2024***
 
 Hello everyone,  the purpose of this repository is  create a  a simple program that will answer medical questions by using the latest technologies of **IBM**.
 
@@ -56,16 +56,27 @@ We have also developed another version which uses a custom LLM
 [![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
 
 
-
-
-
-
 Medical Chatbot Online here:
 
 [https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
 
-This is an demo Medical Assitant.
+This is a demo Medical Assitant.
 
+## Fine-tunning Models with ai-medical chatbot
+
+Currently there are two base models that were pretrained with ai-medical-chatbot
+
+## Meta Llama 3
+This repository provides a fine-tuned version of the powerful Llama3 8B model, specifically designed to answer medical questions in an informative way. It leverages the rich knowledge contained in the AI Medical Chatbot dataset (ruslanmv/ai-medical-chatbot).
+
+[Medical-Llama3-8B](https://huggingface.co/ruslanmv/Medical-Llama3-8B)
+
+## Mixtral-7B
+Fine-tuned Mixtral model for answering medical assistance questions. This model is a novel version of mistralai/Mistral-7B-Instruct-v0.2, adapted to a subset of 2.0k records from the AI Medical Chatbot dataset, which contains 250k records (https://huggingface.co/datasets/ruslanmv/ai-medical-chatbot). The purpose of this model is to provide a ready chatbot to answer questions related to medical assistance.
+
+[Medical-Mixtral-7B-v2k](https://huggingface.co/ruslanmv/Medical-Mixtral-7B-v2k)
+
+For more details how was pretrained you can visit this post [here](https://ruslanmv.com/blog/How-to-Fine-Tune-Mixtral-87B-Instruct-model-with-PEFT)
 
 > Let us use the best technologies in the world to help us. 
 
