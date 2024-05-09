@@ -38,7 +38,7 @@ The structure of the program contains 5 parts.
 
 
 5. [**Multimodal  Medical Chatbot**](./7-Multimodal/README.md)
-   We develop a medical chatbot multimodal, that from images can give you a description of the issue.
+   We develop a medical chatbot multimodal, that from images can give you a description of the issue. We analazize different Medical Images Datasets.
 
 
 ## Chatbot with WatsonX
