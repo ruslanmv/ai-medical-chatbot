@@ -12,7 +12,15 @@ The technologies which will use is **WatsonX** of **IBM** and **Watson Assistant
 
 **Watsonx.ai** is part of the IBM watsonx platform that brings together new generative AI capabilities, powered by foundation models, and traditional machine learning into a powerful studio spanning the AI lifecycle. With watsonx.ai, you can train, validate, tune, and deploy generative AI, foundation models, and machine learning capabilities with ease and build AI applications in a fraction of the time with a fraction of the data.
 
-The structure of the program contains four parts.
+We are going to use  **Foundation Models**  and test different models such as:
+
+- **flan-ul2-20b**  - It is an encoder decoder model based on the T5 architecture and instruction-tuned using the Fine-tuned LAnguage Net.Model by Google
+- **mt0-xxl-13b**  - An instruction-tuned iteration on mT5.Model by BigScience
+- **gpt-neox-20b** - A 20 billion parameter autoregressive language model trained on the Pile.Model by EleutherAI
+- **flan-t5-xxl-11b**  - It is an 11 billion parameter model based on the Flan-T5 family.Model by Google
+- **mpt-7b-instruct**  - It is a decoder-style transformer pretrained from scratch on 1T tokens of English text and code. 
+
+The structure of the program contains 5 parts.
 
 1. [**Environment creation**](./1-Environment/README.md)
 
@@ -23,16 +31,14 @@ The structure of the program contains four parts.
    In this part we are going to build the Datasets that will be used create the **Medical Model**
 
 3. [**Creation of the model by using RAG**](./3-Modeling/README.md)
+   In this part we will perform feature engineering and create the model
 
-In this part we will perform feature engineering and create the model
+4. [**Finetuning Models for the Medical Chatbot**](./6-Modeling/README.md)
+   We create a custom model based on medical information
 
-We are going to use  **Foundation Models**  and test different models such as:
 
-- **flan-ul2-20b**  - It is an encoder decoder model based on the T5 architecture and instruction-tuned using the Fine-tuned LAnguage Net.Model by Google
-- **mt0-xxl-13b**  - An instruction-tuned iteration on mT5.Model by BigScience
-- **gpt-neox-20b** - A 20 billion parameter autoregressive language model trained on the Pile.Model by EleutherAI
-- **flan-t5-xxl-11b**  - It is an 11 billion parameter model based on the Flan-T5 family.Model by Google
-- **mpt-7b-instruct**  - It is a decoder-style transformer pretrained from scratch on 1T tokens of English text and code. 
+5. [**Multimodal  Medical Chatbot**](./7-Modeling/README.md)
+   We develop a medical chatbot multimodal, that from images can give you a description of the issue.
 
 
 ## Chatbot with WatsonX
