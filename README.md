@@ -33,11 +33,11 @@ The structure of the program contains 5 parts.
 3. [**Creation of the model by using RAG**](./3-Modeling/README.md)
    In this part we will perform feature engineering and create the model
 
-4. [**Finetuning Models for the Medical Chatbot**](./6-Modeling/README.md)
+4. [**Finetuning Models for the Medical Chatbot**](./6-FineTunning/README.md)
    We create a custom model based on medical information
 
 
-5. [**Multimodal  Medical Chatbot**](./7-Modeling/README.md)
+5. [**Multimodal  Medical Chatbot**](./7-Multimodal/README.md)
    We develop a medical chatbot multimodal, that from images can give you a description of the issue.
 
 
