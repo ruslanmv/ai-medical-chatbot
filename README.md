@@ -61,6 +61,7 @@ We have also developed another version which uses a custom LLM
 
 
 **Medical-Chatbot by RAG method**.
+
 [https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
 
 [![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
