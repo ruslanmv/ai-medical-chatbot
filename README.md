@@ -57,16 +57,24 @@ We have also developed another version which uses a custom LLM
 
 [Medical-Chatbot-with-Langchain-with-a-Custom-LLM](https://github.com/ruslanmv/Medical-Chatbot-with-Langchain-with-a-Custom-LLM)
 
-## HuggingFace Playground Demo 
+## Playground Demo 
 
 [![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
-
-
-Medical Chatbot Online here:
-
+Medical Chatbot Online :
 [https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
 
-This is a demo Medical Assitant.
+
+Medical-Chatbot by RAG method.
+
+https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot
+
+[![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
+
+
+Medical Chatbot by using Medical-Llama3-8B
+
+[https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
+
 
 ## Fine-tunning Models with ai-medical chatbot
 
