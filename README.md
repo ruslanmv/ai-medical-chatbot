@@ -59,17 +59,22 @@ We have also developed another version which uses a custom LLM
 
 ## Playground Demo 
 
-[![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
 
 **Medical-Chatbot by RAG method**.
+[https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
 
-https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot
+[![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
 
-[![](assets/2024-05-16-09-23-02.png)](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
+
 
 **Medical Chatbot by using Medical-Llama3-8B**
 
 [https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
+
+
+[![](assets/2024-05-16-09-23-02.png)](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
+
+
 
 
 ## Fine-tunning Models with ai-medical chatbot
