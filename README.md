@@ -106,6 +106,16 @@ For more details how was pretrained you can visit this post [here](https://rusla
 
 > Let us use the best technologies in the world to help us. 
 
+
+
+## Medical Interviewer
+[![](assets/2024-09-08-19-33-56.png)](https://huggingface.co/spaces/ruslanmv/Medical-Interviewer)
+
+Chatbot that perform medical interview
+
+For more details visit [this](./8-Interviewer/README.md)
+
+
 ## Contributing
 
 Please free to contribute following the standard guidelines for submitting patches and additions or solutions. Feel free to submit issues and enhancement requests.
