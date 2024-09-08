@@ -1,4 +1,5 @@
 # Medical Interviewer
+![](assets/2024-09-08-19-33-27.png)
 
 Medical Interviewer is an AI platform designed to simulate medical interviews based on psychological and medical knowledge. This platform is meant for educational, research, and preliminary assessment purposes but should **not** be used as a substitute for professional medical advice.
 
@@ -64,7 +65,7 @@ To run the application locally:
 1. Clone the repository:
    ```bash
    git clone https://github.com/ruslanmv/ai-medical-chatbot
-   cd ./ai-medical-chatbot/8-Interviewer/
+   cd ./ai-medical-chatbot/8-Interviewer/hf
    ```
 
 2. Install the dependencies:
