@@ -121,15 +121,15 @@ For more details visit [this](./8-Interviewer/README.md)
 
 ## DeepSeek-R1-Distill-Llama-8B
 
-Currently we are a developing also a new AI model in collaboration with the [Tilburg University](https://www.tilburguniversity.edu/), to create a new novel model Emotional Mapping and Needs-Based Response System
+Currently we are a developing also a new AI model in collaboration with the [Tilburg University](https://www.tilburguniversity.edu/), to create a new novel model able to understand your feelings.
 
 The study of emotions and their underlying needs is a critical component of understanding human communication, particularly in contexts such as psychology, nonviolent communication (NVC), and conflict resolution. Emotional states often manifest as evaluative expressions—terms like "betrayed," "belittled," or "manipulated"—which not only convey subjective experiences but also point to unmet needs such as trust, respect, or autonomy. Effectively mapping these evaluative expressions to their associated feelings and corresponding needs is vital for creating tools that enhance emotional understanding and foster constructive dialogue.
 
 [![image-20250203130739209](./assets/image-20250203130739209.png)](https://huggingface.co/spaces/ruslanmv/Empathy_Chatbot_v1)
+You can test our current model [here](
+https://huggingface.co/spaces/ruslanmv/Empathy_Chatbot_v1)
 
-https://huggingface.co/spaces/ruslanmv/Empathy_Chatbot_v1
-
-For more details click [here](https://github.com/energycombined/empathyondemand)
+For more details of this project click [here](https://github.com/energycombined/empathyondemand)
 
 
 
