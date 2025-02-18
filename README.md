@@ -133,7 +133,9 @@ For more details of this project click [here](https://github.com/energycombined/
 
 
 
+
 ## Contributing
+[![Stargazers over time](https://starchart.cc/ruslanmv/ai-medical-chatbot.svg?variant=adaptive)](https://starchart.cc/ruslanmv/ai-medical-chatbot)
 
 Please free to contribute following the standard guidelines for submitting patches and additions or solutions. Feel free to submit issues and enhancement requests.
 
