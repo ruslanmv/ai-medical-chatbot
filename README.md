@@ -116,9 +116,6 @@ Chatbot that perform medical interview
 For more details visit [this](./8-Interviewer/README.md)
 
 
-
-
-
 ## DeepSeek-R1-Distill-Llama-8B
 
 Currently we are developing  a new AI model in collaboration with the [Tilburg University](https://www.tilburguniversity.edu/), to create a new novel model able to understand your feelings.
@@ -130,7 +127,12 @@ You can test our current model [here](
 https://huggingface.co/spaces/ruslanmv/Empathy_Chatbot_v1)
 
 For more details of this project click [here](https://github.com/energycombined/empathyondemand)
+## 🩺 Watsonx Medical MCP Server
+Watsonx Medical MCP Server is a micro-service that wraps IBM watsonx.ai behind the MCP protocol, giving watsonx Orchestrate instant access to both a general-purpose chat endpoint (`chat_with_watsonx`) and a medical-symptom assessment tool (`analyze_medical_symptoms`).  
 
+Fully discoverable via STDIO, the server also exposes conversation-management helpers, rich resources/prompts, and ships with a Makefile-driven workflow for linting, auto-formatting, tests, and Docker packaging.  Zero-downtime reloads are achievable in development, and a lightweight Dockerfile plus CI workflow ensure smooth deployment. 
+
+Explore the project [watsonx-medical-mcp-server](https://github.com/ruslanmv/watsonx-medical-mcp-server).
 
 
 
