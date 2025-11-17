@@ -1,26 +1,183 @@
-# Doctor Consultation with Artificial Intelligence.
+# AI Medical Chatbot
 
-*Release:  **April 2024***
+<div align="center">
 
-Hello everyone,  the purpose of this repository is  create a  a simple program that will answer medical questions by using the latest technologies of **IBM**.
+![AI Medical Chatbot](assets/images/posts/README/im-778762.png)
 
-The aim of this program is help people who require help.  This program does not replace a real doctor but help to identify the possible health solution.
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-The technologies which will use is **WatsonX** of **IBM** and **Watson Assistant.**
+**Production-ready AI Medical Chatbot using IBM WatsonX, OpenAI, and advanced LLM technologies**
 
-![](assets/images/posts/README/im-778762.png)
+[Features](#features) • [Quick Start](#quick-start) • [Installation](#installation) • [Usage](#usage) • [Documentation](#documentation) • [Contributing](#contributing)
+
+</div>
+
+---
+
+## About
+
+The **AI Medical Chatbot** is a production-ready, enterprise-grade conversational AI system designed to provide medical consultation assistance using state-of-the-art technologies including **IBM WatsonX**, **OpenAI GPT models**, and advanced **Retrieval Augmented Generation (RAG)** techniques.
 
 **Watsonx.ai** is part of the IBM watsonx platform that brings together new generative AI capabilities, powered by foundation models, and traditional machine learning into a powerful studio spanning the AI lifecycle. With watsonx.ai, you can train, validate, tune, and deploy generative AI, foundation models, and machine learning capabilities with ease and build AI applications in a fraction of the time with a fraction of the data.
 
-We are going to use  **Foundation Models**  and test different models such as:
+> **Disclaimer:** This program does not replace a real doctor but helps identify possible health solutions. Always consult with a qualified healthcare professional for medical advice.
 
-- **flan-ul2-20b**  - It is an encoder decoder model based on the T5 architecture and instruction-tuned using the Fine-tuned LAnguage Net.Model by Google
-- **mt0-xxl-13b**  - An instruction-tuned iteration on mT5.Model by BigScience
-- **gpt-neox-20b** - A 20 billion parameter autoregressive language model trained on the Pile.Model by EleutherAI
-- **flan-t5-xxl-11b**  - It is an 11 billion parameter model based on the Flan-T5 family.Model by Google
-- **mpt-7b-instruct**  - It is a decoder-style transformer pretrained from scratch on 1T tokens of English text and code. 
+### Release Information
 
-The structure of the program contains 5 parts.
+- **Current Version:** 2.0.0
+- **Release Date:** April 2024
+- **Status:** Production-Ready
+
+---
+
+## Features
+
+### Core Capabilities
+
+- **Multi-Model Support**: Integration with multiple foundation models including:
+  - **flan-ul2-20b** - Encoder decoder model based on T5 architecture (Google)
+  - **mt0-xxl-13b** - Instruction-tuned iteration on mT5 (BigScience)
+  - **gpt-neox-20b** - 20B parameter autoregressive language model (EleutherAI)
+  - **flan-t5-xxl-11b** - 11B parameter Flan-T5 model (Google)
+  - **mpt-7b-instruct** - Decoder-style transformer pretrained on 1T tokens
+  - OpenAI GPT-4 and GPT-3.5 models
+  - Meta Llama 3 fine-tuned variants
+
+- **RAG-Powered Responses**: Utilizes Retrieval Augmented Generation for accurate, context-aware medical information
+
+- **Vector Database Integration**: Milvus, FAISS, and ChromaDB for efficient similarity search
+
+- **Interactive Interfaces**: Gradio-based web UI with medical interviewer capabilities
+
+- **Production-Ready Infrastructure**:
+  - Comprehensive test suite with pytest
+  - Type hints and PEP 8 compliance
+  - Automated CI/CD pipeline support
+  - Makefile-driven development workflow
+  - Comprehensive documentation
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.9 or higher
+- UV package manager (recommended) or pip
+- API keys for OpenAI and/or IBM WatsonX
+
+### Installation
+
+#### Using UV (Recommended)
+
+```bash
+# Install uv package manager
+pip install uv
+
+# Clone the repository
+git clone https://github.com/ruslanmv/ai-medical-chatbot.git
+cd ai-medical-chatbot
+
+# Install dependencies
+make install
+
+# For development
+make install-dev
+
+# For GPU support
+make install-gpu
+```
+
+#### Using pip
+
+```bash
+# Clone the repository
+git clone https://github.com/ruslanmv/ai-medical-chatbot.git
+cd ai-medical-chatbot
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
+```
+
+### Environment Setup
+
+Create a `.env` file in the project root:
+
+```bash
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key_here
+
+# IBM WatsonX Configuration (optional)
+WATSONX_API_KEY=your_watsonx_api_key_here
+WATSONX_PROJECT_ID=your_project_id_here
+
+# Milvus Configuration (optional)
+REMOTE_SERVER=127.0.0.1
+
+# System Configuration
+SYSTEM_MESSAGE=You are a helpful medical assistant.
+```
+
+---
+
+## Usage
+
+### Running the Medical Chatbot
+
+```bash
+# Using Makefile
+make run-chatbot
+
+# Or directly with Python
+python 5-HuggingFace/app.py
+```
+
+### Running the Medical Interviewer
+
+```bash
+# Using Makefile
+make run-interviewer
+
+# Or directly with Python
+python 8-Interviewer/hf/app.py
+```
+
+### Using the Makefile
+
+The project includes a comprehensive Makefile for common operations:
+
+```bash
+# Show all available commands
+make help
+
+# Code quality checks
+make format          # Format code with black and isort
+make lint            # Run linters (flake8, pylint)
+make type-check      # Run mypy type checking
+make check           # Run all quality checks
+
+# Testing
+make test            # Run all tests
+make test-unit       # Run unit tests only
+make test-integration # Run integration tests only
+make test-cov        # Run tests with coverage report
+
+# Cleaning
+make clean           # Remove all artifacts
+```
+
+---
+
+## Project Structure
+
+The structure of the program contains the following main components:
 
 1. [**Environment creation**](./1-Environment/README.md)
 
@@ -146,7 +303,58 @@ Please free to contribute following the standard guidelines for submitting patch
 
 To more information visit www.ruslanmv.com
 
-Copyright 2024 Ruslan Magana Vsevolodovna This program is distributed under the terms of the GNU Lesser General Public License.
+---
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
+```
+Copyright 2024 Ruslan Magana Vsevolodovna
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
+---
+
+## Author
+
+**Ruslan Magana Vsevolodovna**
+
+- 🌐 Website: [ruslanmv.com](https://ruslanmv.com)
+- 📧 Email: contact@ruslanmv.com
+- 💼 GitHub: [@ruslanmv](https://github.com/ruslanmv)
+- 🤗 Hugging Face: [@ruslanmv](https://huggingface.co/ruslanmv)
+
+---
+
+## Acknowledgments
+
+- IBM WatsonX team for their foundation models
+- OpenAI for GPT models and APIs
+- Hugging Face for model hosting and deployment infrastructure
+- Tilburg University for empathy research collaboration
+- The open-source community for their invaluable contributions
+
+---
+
+<div align="center">
+
+**Made with ❤️ by [Ruslan Magana Vsevolodovna](https://ruslanmv.com)**
+
+[⬆ Back to Top](#ai-medical-chatbot)
+
+</div>
 
 
 
