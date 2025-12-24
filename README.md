@@ -294,7 +294,9 @@ Fully discoverable via STDIO, the server also exposes conversation-management he
 
 Explore the project [watsonx-medical-mcp-server](https://github.com/ruslanmv/watsonx-medical-mcp-server).
 
+## 🌐 MedOS - Enterprise Web Application
 
+**Production-ready Next.js medical chatbot with multi-provider AI support, now deployable to Vercel in under 5 minutes.** The MedOS web application brings enterprise-grade conversational AI to the browser with a beautiful, patient-centric interface featuring real-time streaming responses, comprehensive security measures, and seamless integration with OpenAI (GPT-4), Google Gemini (1.5 Pro), and Anthropic Claude (3.5). Built with Next.js 14, TypeScript, and Tailwind CSS, this BYOK (Bring Your Own Key) architecture ensures zero server-side API key storage while delivering ChatGPT-style token-by-token responses through Server-Sent Events. The application includes a complete healthcare dashboard with vitals monitoring, schedule management, health records viewer, and emergency protocols—all optimized for Vercel's edge network with automatic HTTPS, global CDN distribution, and industry-leading performance scores. Simply navigate to the `/web` directory, run `npm install && npm run dev` for local development, or deploy directly to Vercel by setting the root directory to `web` for instant access to a world-class medical AI assistant that prioritizes patient safety, data privacy, and user experience.
 
 ## Contributing
 [![Stargazers over time](https://starchart.cc/ruslanmv/ai-medical-chatbot.svg?variant=adaptive)](https://starchart.cc/ruslanmv/ai-medical-chatbot)
