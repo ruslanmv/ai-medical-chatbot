@@ -1,0 +1,23 @@
+{
+  "appName": "MedOS Global",
+  "tagline": "Kostenloser KI-Medizinassistent",
+  "placeholder": "Geben Sie Ihre Gesundheitsfrage ein oder tippen Sie auf das Mikrofon...",
+  "send": "Senden",
+  "voiceInput": "Spracheingabe",
+  "voiceOutput": "Sprachausgabe",
+  "disclaimer": "Diese KI bietet nur allgemeine Gesundheitsinformationen. Sie ist KEIN Ersatz für professionelle medizinische Beratung, Diagnose oder Behandlung.",
+  "emergencyTitle": "Notfall",
+  "emergencyCall": "Notruf anrufen",
+  "topicsTitle": "Gesundheitsthemen",
+  "languageTitle": "Sprache",
+  "shareTitle": "MedOS teilen",
+  "shareMessage": "Ich habe gerade kostenlose KI-Medizinberatung erhalten! Probieren Sie MedOS:",
+  "offlineMessage": "Sie sind offline. Gespeicherte Antworten werden angezeigt.",
+  "helpedToday": "Personen heute geholfen",
+  "chat": "Chat",
+  "topics": "Themen",
+  "emergency": "SOS",
+  "language": "Sprache",
+  "share": "Teilen",
+  "quickTopics": ["Kopfschmerzen", "Fieber", "Husten", "Diabetes", "Blutdruck", "Schwangerschaft", "Psychische Gesundheit", "Kindergesundheit"]
+}

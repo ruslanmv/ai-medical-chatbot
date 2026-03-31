@@ -1,0 +1,55 @@
+{
+  "region": "middle-east",
+  "categories": [
+    {
+      "name": "Diabetes",
+      "topics": [
+        "Diabetes Prevention (Highest Global Rates)",
+        "Ramadan and Diabetes Management",
+        "Diabetic Complications",
+        "Blood Sugar Monitoring",
+        "Diabetes in Children"
+      ]
+    },
+    {
+      "name": "Genetic Conditions",
+      "topics": [
+        "Thalassemia Awareness",
+        "G6PD Deficiency",
+        "Sickle Cell Disease",
+        "Genetic Counseling",
+        "Newborn Screening"
+      ]
+    },
+    {
+      "name": "Heat-Related Illness",
+      "topics": [
+        "Heat Stroke Prevention",
+        "Dehydration During Summer",
+        "Working Safely in Extreme Heat",
+        "Heat Exhaustion vs Heat Stroke",
+        "Hydration Guidelines"
+      ]
+    },
+    {
+      "name": "Mental Health",
+      "topics": [
+        "PTSD Support",
+        "Depression Awareness",
+        "Grief and Trauma",
+        "Mental Health Stigma",
+        "Support for Refugees"
+      ]
+    },
+    {
+      "name": "Nutrition",
+      "topics": [
+        "Vitamin D Paradox",
+        "Obesity Prevention",
+        "Healthy Eating in Gulf Region",
+        "Iron Deficiency in Women",
+        "Metabolic Syndrome"
+      ]
+    }
+  ]
+}

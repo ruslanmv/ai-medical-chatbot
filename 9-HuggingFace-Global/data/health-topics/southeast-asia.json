@@ -1,0 +1,55 @@
+{
+  "region": "southeast-asia",
+  "categories": [
+    {
+      "name": "Dengue",
+      "topics": [
+        "Dengue Warning Signs",
+        "Dengue vs Other Fevers",
+        "No Aspirin/Ibuprofen for Dengue",
+        "Dengue Prevention",
+        "Severe Dengue Emergency"
+      ]
+    },
+    {
+      "name": "Tuberculosis",
+      "topics": [
+        "TB Symptoms Recognition",
+        "Completing TB Treatment",
+        "TB Testing",
+        "TB Prevention",
+        "Drug-Resistant TB"
+      ]
+    },
+    {
+      "name": "Rabies",
+      "topics": [
+        "Dog Bite First Aid",
+        "Post-Exposure Prophylaxis Urgency",
+        "Rabies Prevention",
+        "Animal Bite Wound Care",
+        "When to Seek PEP"
+      ]
+    },
+    {
+      "name": "Flooding-Related",
+      "topics": [
+        "Leptospirosis After Flooding",
+        "Waterborne Disease Prevention",
+        "Wound Care in Floodwater",
+        "Mental Health After Disasters",
+        "Safe Water After Flooding"
+      ]
+    },
+    {
+      "name": "Road Safety",
+      "topics": [
+        "Motorbike Safety",
+        "Head Injury First Aid",
+        "When to Go to Hospital After Crash",
+        "First Aid for Fractures",
+        "Helmet Importance"
+      ]
+    }
+  ]
+}

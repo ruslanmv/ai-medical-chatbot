@@ -1,0 +1,23 @@
+{
+  "appName": "MedOS Global",
+  "tagline": "Assistente Médico IA Gratuito",
+  "placeholder": "Digite sua pergunta de saúde ou toque no microfone...",
+  "send": "Enviar",
+  "voiceInput": "Entrada de voz",
+  "voiceOutput": "Saída de voz",
+  "disclaimer": "Esta IA fornece apenas informações gerais de saúde. NÃO substitui aconselhamento médico profissional, diagnóstico ou tratamento. Sempre consulte um profissional de saúde qualificado.",
+  "emergencyTitle": "Emergência",
+  "emergencyCall": "Ligar Emergência",
+  "topicsTitle": "Temas de Saúde",
+  "languageTitle": "Idioma",
+  "shareTitle": "Compartilhar MedOS",
+  "shareMessage": "Acabei de receber aconselhamento médico de IA grátis! Experimente o MedOS - é grátis, funciona em 20 idiomas:",
+  "offlineMessage": "Você está offline. Mostrando respostas salvas.",
+  "helpedToday": "pessoas ajudadas hoje",
+  "chat": "Chat",
+  "topics": "Temas",
+  "emergency": "SOS",
+  "language": "Idioma",
+  "share": "Compartilhar",
+  "quickTopics": ["Dor de cabeça", "Febre", "Tosse", "Diabetes", "Pressão arterial", "Gravidez", "Saúde mental", "Saúde infantil"]
+}

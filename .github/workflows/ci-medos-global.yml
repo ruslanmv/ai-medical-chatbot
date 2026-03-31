@@ -1,0 +1,49 @@
+name: CI - MedOS Global
+
+on:
+  push:
+    branches: [main, master, 'dev-*', 'claude/*']
+    paths:
+      - '9-HuggingFace-Global/**'
+      - 'tests/9-hf-global/**'
+      - '.github/workflows/ci-medos-global.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - '9-HuggingFace-Global/**'
+      - 'tests/9-hf-global/**'
+
+jobs:
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Verify folder structure
+        run: make -f 9-HuggingFace-Global/Makefile test-structure
+
+      - name: Verify providers
+        run: make -f 9-HuggingFace-Global/Makefile test-providers
+
+      - name: Verify i18n (20 languages)
+        run: make -f 9-HuggingFace-Global/Makefile test-i18n
+
+      - name: Verify safety modules
+        run: make -f 9-HuggingFace-Global/Makefile test-safety
+
+      - name: Run unit tests
+        run: make -f 9-HuggingFace-Global/Makefile test-unit
+
+      - name: Install dependencies
+        run: make -f 9-HuggingFace-Global/Makefile install
+
+      - name: Build application
+        run: make -f 9-HuggingFace-Global/Makefile build

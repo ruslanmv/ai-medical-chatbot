@@ -1,0 +1,55 @@
+{
+  "region": "americas",
+  "categories": [
+    {
+      "name": "Chronic Disease",
+      "topics": [
+        "Obesity and Metabolic Syndrome",
+        "Type 2 Diabetes Management",
+        "Heart Disease Prevention",
+        "Hypertension Control",
+        "Cancer Screening Guidelines"
+      ]
+    },
+    {
+      "name": "Mental Health",
+      "topics": [
+        "Depression and Anxiety",
+        "Substance Use Support",
+        "Opioid Safety",
+        "ADHD in Children and Adults",
+        "Crisis Hotlines"
+      ]
+    },
+    {
+      "name": "Tropical (Latin America)",
+      "topics": [
+        "Dengue Fever",
+        "Zika Virus and Pregnancy",
+        "Chagas Disease",
+        "Chikungunya",
+        "Leptospirosis"
+      ]
+    },
+    {
+      "name": "Women's Health",
+      "topics": [
+        "PCOS",
+        "Menopause Management",
+        "Contraception Options",
+        "Cervical Cancer Screening",
+        "Postpartum Depression"
+      ]
+    },
+    {
+      "name": "Children's Health",
+      "topics": [
+        "Childhood Vaccination",
+        "Childhood Obesity Prevention",
+        "Asthma in Children",
+        "ADHD Recognition",
+        "Healthy Screen Time"
+      ]
+    }
+  ]
+}

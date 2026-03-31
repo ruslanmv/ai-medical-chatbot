@@ -1,0 +1,115 @@
+# =============================================================================
+# Sync MedOS Global to Hugging Face Space (force-by-default)
+# =============================================================================
+# Builds a clean deploy tree from 9-HuggingFace-Global/ and force-pushes
+# to the HuggingFace Space repository.
+#
+# Required Repository Secrets:
+#   HF_TOKEN    - HuggingFace write token (with Spaces write permission)
+#   HF_USERNAME - HuggingFace username (e.g. ruslanmv)
+#   SPACE_NAME  - HuggingFace Space name (e.g. MedOS-Global)
+# =============================================================================
+name: Sync MedOS Global to Hugging Face Space
+
+on:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - '9-HuggingFace-Global/**'
+  workflow_dispatch: {}
+
+jobs:
+  sync-to-hub:
+    name: Deploy to HF Spaces
+    runs-on: ubuntu-latest
+    concurrency:
+      group: hf-space-sync-medos-global
+      cancel-in-progress: false
+    env:
+      HF_USERNAME: ${{ secrets.HF_USERNAME }}
+      SPACE_NAME: ${{ secrets.SPACE_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate secrets
+        run: |
+          if [ -z "$HF_USERNAME" ] || [ -z "$SPACE_NAME" ]; then
+            echo "Missing HF_USERNAME or SPACE_NAME secrets."
+            echo "Add them under: Settings -> Secrets and variables -> Actions -> Secrets"
+            echo ""
+            echo "Required secrets:"
+            echo "  HF_USERNAME  = your HuggingFace username (e.g. ruslanmv)"
+            echo "  SPACE_NAME   = your HuggingFace Space name (e.g. MedOS-Global)"
+            echo "  HF_TOKEN     = your HuggingFace write token"
+            exit 1
+          fi
+          if [ -z "${{ secrets.HF_TOKEN }}" ]; then
+            echo "Missing HF_TOKEN secret."
+            exit 1
+          fi
+          echo "All secrets validated."
+
+      - name: Build deploy tree and push to HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -e
+
+          REMOTE_URL="https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}"
+
+          # -- Build a clean deploy directory with only HF-needed files --------
+          DEPLOY_DIR=$(mktemp -d)
+          echo "Building deploy tree in $DEPLOY_DIR ..."
+
+          # Copy the entire 9-HuggingFace-Global folder contents to deploy root
+          cp -r 9-HuggingFace-Global/* "$DEPLOY_DIR/"
+          cp -r 9-HuggingFace-Global/.env.example "$DEPLOY_DIR/" 2>/dev/null || true
+
+          # Remove non-deployment files
+          rm -rf "$DEPLOY_DIR/node_modules"
+          rm -rf "$DEPLOY_DIR/.next"
+          rm -rf "$DEPLOY_DIR/Makefile"
+          rm -rf "$DEPLOY_DIR/scripts"
+
+          # Verify critical files exist
+          echo "Verifying deploy tree..."
+          test -f "$DEPLOY_DIR/Dockerfile"     || (echo "FAIL: Dockerfile missing" && exit 1)
+          test -f "$DEPLOY_DIR/README.md"      || (echo "FAIL: README.md missing" && exit 1)
+          test -f "$DEPLOY_DIR/package.json"   || (echo "FAIL: package.json missing" && exit 1)
+          test -f "$DEPLOY_DIR/next.config.js" || (echo "FAIL: next.config.js missing" && exit 1)
+          echo "Deploy tree verified."
+
+          # -- Create an orphan commit and force push --------------------------
+          cd "$DEPLOY_DIR"
+          git init -b main
+          git lfs install --skip-smudge 2>/dev/null || true
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+          git commit -m "Deploy MedOS Global from ${GITHUB_SHA::8}"
+
+          echo "Pushing deploy tree to HF Space main..."
+
+          # Retry logic with exponential backoff
+          MAX_RETRIES=4
+          DELAY=2
+          for i in $(seq 1 $MAX_RETRIES); do
+            if git push --force "$REMOTE_URL" main 2>&1; then
+              echo ""
+              echo "================================================"
+              echo "  Deployment successful!"
+              echo "  https://huggingface.co/spaces/${HF_USERNAME}/${SPACE_NAME}"
+              echo "================================================"
+              exit 0
+            fi
+            echo "Push attempt ${i}/${MAX_RETRIES} failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+            DELAY=$((DELAY * 2))
+          done
+
+          echo "Failed to push after ${MAX_RETRIES} attempts."
+          exit 1

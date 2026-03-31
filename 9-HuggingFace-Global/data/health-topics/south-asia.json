@@ -1,0 +1,65 @@
+{
+  "region": "south-asia",
+  "categories": [
+    {
+      "name": "Tuberculosis",
+      "topics": [
+        "TB Symptoms and When to Get Tested",
+        "Completing Full TB Treatment",
+        "TB Medication Side Effects",
+        "TB Prevention in Families",
+        "Drug-Resistant TB"
+      ]
+    },
+    {
+      "name": "Diabetes Epidemic",
+      "topics": [
+        "Type 2 Diabetes Prevention",
+        "Blood Sugar Monitoring at Home",
+        "Diabetic Diet (South Asian Foods)",
+        "Diabetic Eye and Foot Care",
+        "Diabetes Myths vs Facts"
+      ]
+    },
+    {
+      "name": "Dengue and Vector-Borne",
+      "topics": [
+        "Dengue Warning Signs",
+        "Why NOT to Take Aspirin for Dengue",
+        "Mosquito Bite Prevention",
+        "Chikungunya",
+        "Japanese Encephalitis"
+      ]
+    },
+    {
+      "name": "Snakebite",
+      "topics": [
+        "Snakebite First Aid (DO and DONT)",
+        "When to Seek Antivenom",
+        "Common Venomous Snakes",
+        "Snake Prevention Around Home",
+        "Myths About Snakebite Treatment"
+      ]
+    },
+    {
+      "name": "Air Pollution",
+      "topics": [
+        "Protecting Lungs from Air Pollution",
+        "Masks and Air Quality Index",
+        "Children and Air Pollution",
+        "Indoor Air Pollution from Cooking",
+        "Respiratory Disease from Pollution"
+      ]
+    },
+    {
+      "name": "Mental Health",
+      "topics": [
+        "Depression is Not Weakness",
+        "Seeking Mental Health Help",
+        "Stress and Anxiety Management",
+        "Suicide Prevention Resources",
+        "Mental Health in Young People"
+      ]
+    }
+  ]
+}
