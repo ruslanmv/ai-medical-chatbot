@@ -1,0 +1,23 @@
+{
+  "appName": "MedOS Ulimwengu",
+  "tagline": "Msaidizi wa Afya wa AI Bure",
+  "placeholder": "Andika swali lako la afya au gusa maikrofoni...",
+  "send": "Tuma",
+  "voiceInput": "Ingizo la sauti",
+  "voiceOutput": "Matokeo ya sauti",
+  "disclaimer": "AI hii inatoa taarifa za afya kwa ujumla tu. SI mbadala wa ushauri wa kitaalamu wa matibabu, utambuzi, au matibabu.",
+  "emergencyTitle": "Dharura",
+  "emergencyCall": "Piga simu ya dharura",
+  "topicsTitle": "Mada za Afya",
+  "languageTitle": "Lugha",
+  "shareTitle": "Shiriki MedOS",
+  "shareMessage": "Nimepata ushauri wa matibabu wa AI bure! Jaribu MedOS:",
+  "offlineMessage": "Uko nje ya mtandao. Inaonyesha majibu yaliyohifadhiwa.",
+  "helpedToday": "watu waliosaidika leo",
+  "chat": "Gumzo",
+  "topics": "Mada",
+  "emergency": "SOS",
+  "language": "Lugha",
+  "share": "Shiriki",
+  "quickTopics": ["Maumivu ya kichwa", "Homa", "Kikohozi", "Kisukari", "Shinikizo la damu", "Ujauzito", "Afya ya akili", "Afya ya mtoto"]
+}

@@ -1,0 +1,55 @@
+{
+  "region": "europe",
+  "categories": [
+    {
+      "name": "Cancer",
+      "topics": [
+        "Breast Cancer Screening",
+        "Colorectal Cancer Screening",
+        "Skin Cancer Prevention",
+        "Prostate Cancer Awareness",
+        "Lung Cancer and Smoking"
+      ]
+    },
+    {
+      "name": "Cardiovascular",
+      "topics": [
+        "Heart Disease Prevention",
+        "Stroke Recognition",
+        "Blood Pressure Management",
+        "Cholesterol Control",
+        "Atrial Fibrillation"
+      ]
+    },
+    {
+      "name": "Mental Health",
+      "topics": [
+        "Depression Treatment",
+        "Burnout and Work Stress",
+        "Anxiety Disorders",
+        "Addiction Support",
+        "Eating Disorders"
+      ]
+    },
+    {
+      "name": "Aging",
+      "topics": [
+        "Dementia and Alzheimer's",
+        "Fall Prevention in Elderly",
+        "Polypharmacy Risks",
+        "Osteoporosis",
+        "End-of-Life Planning"
+      ]
+    },
+    {
+      "name": "Allergies",
+      "topics": [
+        "Seasonal Allergies",
+        "Food Allergies",
+        "Asthma Management",
+        "Eczema and Atopic Dermatitis",
+        "Anaphylaxis Awareness"
+      ]
+    }
+  ]
+}

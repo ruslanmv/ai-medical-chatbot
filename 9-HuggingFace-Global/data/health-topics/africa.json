@@ -1,0 +1,65 @@
+{
+  "region": "africa",
+  "categories": [
+    {
+      "name": "Malaria",
+      "topics": [
+        "Malaria Symptoms and Recognition",
+        "Bed Net Prevention",
+        "When Fever Means Emergency",
+        "Malaria in Pregnancy",
+        "Malaria Treatment Adherence"
+      ]
+    },
+    {
+      "name": "HIV/AIDS",
+      "topics": [
+        "HIV Testing and PrEP",
+        "ART Treatment Adherence",
+        "Preventing Mother-to-Child Transmission",
+        "Living with HIV",
+        "HIV Myths and Facts"
+      ]
+    },
+    {
+      "name": "Tuberculosis",
+      "topics": [
+        "TB Symptom Recognition",
+        "DOTS Treatment Adherence",
+        "TB and HIV Co-infection",
+        "MDR-TB Awareness",
+        "TB Prevention"
+      ]
+    },
+    {
+      "name": "Maternal Health",
+      "topics": [
+        "Pregnancy Danger Signs",
+        "Postpartum Hemorrhage Recognition",
+        "Importance of Colostrum",
+        "Family Planning Options",
+        "Anemia in Pregnancy"
+      ]
+    },
+    {
+      "name": "Child Health",
+      "topics": [
+        "ORS for Diarrhea",
+        "Pneumonia Warning Signs in Children",
+        "Childhood Vaccination",
+        "Malnutrition Recognition (MUAC)",
+        "Sickle Cell Disease"
+      ]
+    },
+    {
+      "name": "Water and Sanitation",
+      "topics": [
+        "Safe Water and Cholera Prevention",
+        "Hand Hygiene",
+        "Food Safety",
+        "Schistosomiasis Prevention",
+        "Trachoma Prevention"
+      ]
+    }
+  ]
+}

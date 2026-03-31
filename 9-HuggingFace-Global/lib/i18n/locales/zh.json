@@ -1,0 +1,23 @@
+{
+  "appName": "MedOS 全球版",
+  "tagline": "免费AI医疗助手",
+  "placeholder": "输入您的健康问题或点击麦克风...",
+  "send": "发送",
+  "voiceInput": "语音输入",
+  "voiceOutput": "语音输出",
+  "disclaimer": "此AI仅提供一般健康信息，不能替代专业医疗建议、诊断或治疗。请始终咨询合格的医疗保健提供者。",
+  "emergencyTitle": "紧急情况",
+  "emergencyCall": "拨打急救电话",
+  "topicsTitle": "健康话题",
+  "languageTitle": "语言",
+  "shareTitle": "分享MedOS",
+  "shareMessage": "我刚刚获得了免费的AI医疗建议！试试MedOS——免费、支持20种语言、无需注册：",
+  "offlineMessage": "您已离线。正在显示缓存的回答。",
+  "helpedToday": "今日已帮助人数",
+  "chat": "对话",
+  "topics": "话题",
+  "emergency": "急救",
+  "language": "语言",
+  "share": "分享",
+  "quickTopics": ["头痛", "发烧", "咳嗽", "糖尿病", "血压", "怀孕", "心理健康", "儿童健康"]
+}

@@ -1,0 +1,23 @@
+{
+  "appName": "MedOS Global",
+  "tagline": "Ücretsiz Yapay Zeka Sağlık Asistanı",
+  "placeholder": "Sağlık sorunuzu yazın veya mikrofona dokunun...",
+  "send": "Gönder",
+  "voiceInput": "Sesli giriş",
+  "voiceOutput": "Sesli çıkış",
+  "disclaimer": "Bu yapay zeka yalnızca genel sağlık bilgisi sunar. Profesyonel tıbbi tavsiye, teşhis veya tedavinin yerini ALMAZ.",
+  "emergencyTitle": "Acil Durum",
+  "emergencyCall": "Acil Arama",
+  "topicsTitle": "Sağlık Konuları",
+  "languageTitle": "Dil",
+  "shareTitle": "MedOS'u Paylaş",
+  "shareMessage": "Az önce ücretsiz yapay zeka tıbbi danışmanlığı aldım! MedOS'u deneyin:",
+  "offlineMessage": "Çevrimdışısınız. Kayıtlı yanıtlar gösteriliyor.",
+  "helpedToday": "bugün yardım edilen kişi",
+  "chat": "Sohbet",
+  "topics": "Konular",
+  "emergency": "SOS",
+  "language": "Dil",
+  "share": "Paylaş",
+  "quickTopics": ["Baş ağrısı", "Ateş", "Öksürük", "Diyabet", "Tansiyon", "Hamilelik", "Ruh sağlığı", "Çocuk sağlığı"]
+}

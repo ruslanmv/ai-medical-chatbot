@@ -1,0 +1,23 @@
+{
+  "appName": "MedOS 글로벌",
+  "tagline": "무료 AI 의료 도우미",
+  "placeholder": "건강 질문을 입력하거나 마이크를 탭하세요...",
+  "send": "보내기",
+  "voiceInput": "음성 입력",
+  "voiceOutput": "음성 출력",
+  "disclaimer": "이 AI는 일반적인 건강 정보만 제공합니다. 전문적인 의료 조언, 진단 또는 치료를 대체하지 않습니다.",
+  "emergencyTitle": "응급 상황",
+  "emergencyCall": "응급 전화",
+  "topicsTitle": "건강 주제",
+  "languageTitle": "언어",
+  "shareTitle": "MedOS 공유",
+  "shareMessage": "방금 무료 AI 의료 상담을 받았어요! MedOS를 사용해 보세요:",
+  "offlineMessage": "오프라인 상태입니다. 저장된 답변을 표시합니다.",
+  "helpedToday": "오늘 도움받은 사람",
+  "chat": "채팅",
+  "topics": "주제",
+  "emergency": "SOS",
+  "language": "언어",
+  "share": "공유",
+  "quickTopics": ["두통", "발열", "기침", "당뇨병", "혈압", "임신", "정신건강", "아동건강"]
+}

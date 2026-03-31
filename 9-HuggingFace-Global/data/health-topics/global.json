@@ -1,0 +1,85 @@
+{
+  "region": "global",
+  "categories": [
+    {
+      "name": "Cardiovascular",
+      "topics": [
+        "Heart Attack Recognition",
+        "High Blood Pressure Management",
+        "Stroke Signs and FAST Protocol",
+        "Cholesterol Understanding",
+        "Heart Failure"
+      ]
+    },
+    {
+      "name": "Diabetes",
+      "topics": [
+        "Type 2 Diabetes Management",
+        "Blood Sugar Monitoring",
+        "Diabetic Foot Care",
+        "Gestational Diabetes",
+        "Hypoglycemia Recognition"
+      ]
+    },
+    {
+      "name": "Respiratory",
+      "topics": [
+        "Asthma Management",
+        "COPD",
+        "Pneumonia Warning Signs",
+        "When Cough Needs Medical Attention",
+        "COVID-19 and Long COVID"
+      ]
+    },
+    {
+      "name": "Mental Health",
+      "topics": [
+        "Depression Recognition and Help",
+        "Anxiety Management",
+        "Stress Reduction Techniques",
+        "Sleep Problems",
+        "Crisis Support Resources"
+      ]
+    },
+    {
+      "name": "Maternal and Child Health",
+      "topics": [
+        "Pregnancy Danger Signs",
+        "Prenatal Care Essentials",
+        "Breastfeeding Support",
+        "Childhood Vaccination Schedule",
+        "ORS for Childhood Diarrhea"
+      ]
+    },
+    {
+      "name": "Medication Safety",
+      "topics": [
+        "Antibiotic Resistance Awareness",
+        "Safe Pain Medication Use",
+        "Understanding Drug Interactions",
+        "Medication Adherence Importance",
+        "When to See a Doctor vs Self-Care"
+      ]
+    },
+    {
+      "name": "Nutrition",
+      "topics": [
+        "Iron Deficiency and Anemia",
+        "Vitamin D Importance",
+        "Healthy Diet Principles",
+        "Hydration and Electrolytes",
+        "Nutrition During Pregnancy"
+      ]
+    },
+    {
+      "name": "Emergency Recognition",
+      "topics": [
+        "When to Call Emergency Services",
+        "Basic First Aid",
+        "Choking Response",
+        "Severe Allergic Reaction",
+        "Burns and Wound Care"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "region": "east-asia",
+  "categories": [
+    {
+      "name": "Stroke Prevention",
+      "topics": [
+        "Stroke FAST Recognition",
+        "Blood Pressure Control",
+        "Stroke Risk Factors",
+        "Recovery After Stroke",
+        "Preventing Recurrent Stroke"
+      ]
+    },
+    {
+      "name": "Cancer Screening",
+      "topics": [
+        "Gastric Cancer Screening",
+        "Liver Cancer and Hepatitis B",
+        "Lung Cancer Prevention",
+        "Colorectal Cancer Screening",
+        "Breast Cancer Awareness"
+      ]
+    },
+    {
+      "name": "Aging and Dementia",
+      "topics": [
+        "Dementia Early Signs",
+        "Alzheimer's Disease",
+        "Caring for Elderly Parents",
+        "Fall Prevention",
+        "Osteoporosis"
+      ]
+    },
+    {
+      "name": "Air Quality",
+      "topics": [
+        "PM2.5 and Health Effects",
+        "Protecting Against Air Pollution",
+        "COPD from Pollution",
+        "Children and Air Quality",
+        "Indoor Air Purification"
+      ]
+    },
+    {
+      "name": "Mental Health",
+      "topics": [
+        "Workplace Burnout",
+        "Suicide Prevention",
+        "Depression Recognition",
+        "Social Isolation",
+        "Youth Mental Health"
+      ]
+    }
+  ]
+}
