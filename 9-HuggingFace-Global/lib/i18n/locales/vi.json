@@ -1,0 +1,23 @@
+{
+  "appName": "MedOS Toàn cầu",
+  "tagline": "Trợ lý Y tế AI Miễn phí",
+  "placeholder": "Nhập câu hỏi sức khỏe hoặc chạm vào micro...",
+  "send": "Gửi",
+  "voiceInput": "Nhập giọng nói",
+  "voiceOutput": "Xuất giọng nói",
+  "disclaimer": "AI này chỉ cung cấp thông tin sức khỏe chung. KHÔNG thay thế cho tư vấn y tế chuyên nghiệp, chẩn đoán hoặc điều trị.",
+  "emergencyTitle": "Khẩn cấp",
+  "emergencyCall": "Gọi cấp cứu",
+  "topicsTitle": "Chủ đề sức khỏe",
+  "languageTitle": "Ngôn ngữ",
+  "shareTitle": "Chia sẻ MedOS",
+  "shareMessage": "Tôi vừa nhận được tư vấn y tế AI miễn phí! Hãy thử MedOS:",
+  "offlineMessage": "Bạn đang ngoại tuyến. Đang hiển thị câu trả lời đã lưu.",
+  "helpedToday": "người được giúp hôm nay",
+  "chat": "Trò chuyện",
+  "topics": "Chủ đề",
+  "emergency": "SOS",
+  "language": "Ngôn ngữ",
+  "share": "Chia sẻ",
+  "quickTopics": ["Đau đầu", "Sốt", "Ho", "Tiểu đường", "Huyết áp", "Thai kỳ", "Sức khỏe tâm thần", "Sức khỏe trẻ em"]
+}
