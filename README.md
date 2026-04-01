@@ -353,6 +353,17 @@ npm install
 npm run dev
 
 ```
+## MediBot — Community Free Version
+
+<div align="center">
+
+[![Try MediBot Free](https://img.shields.io/badge/%F0%9F%8F%A5_MediBot-Try_Free_on_HuggingFace-blue?style=for-the-badge\&logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
+
+**[https://huggingface.co/spaces/ruslanmv/MediBot](https://huggingface.co/spaces/ruslanmv/MediBot)**
+
+</div>
+
+**MediBot** is the enterprise-ready, community free edition of the AI Medical Chatbot, fully rebuilt from scratch in [`9-HuggingFace-Global/`](./9-HuggingFace-Global/) and deployed on Hugging Face Spaces for instant global access with zero setup or API keys. It replaces the original MedOS (`web/`) with a scalable, production-grade architecture powered by the OllaBridge multi-provider backend and a resilient fallback chain, while adding multilingual support (20 languages), voice capabilities, medical RAG, and real-time emergency triage detection. Designed with modern UX, PWA offline functionality, region-aware health content, and built-in safety layers, MediBot also includes CI/CD automation, Docker-based deployment, and extensive automated testing—making it suitable for both public use and enterprise-level adaptation.
 
 
 
@@ -385,78 +396,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
-
----
-
-## MediBot — Community Free Version
-
-<div align="center">
-
-[![Try MediBot Free](https://img.shields.io/badge/%F0%9F%8F%A5_MediBot-Try_Free_on_HuggingFace-blue?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
-
-**https://huggingface.co/spaces/ruslanmv/MediBot**
-
-</div>
-
-**MediBot** is the community free edition of the AI Medical Chatbot — a complete redesign of the original MedOS web application (`web/`) built from scratch in [`9-HuggingFace-Global/`](./9-HuggingFace-Global/), deployed on Hugging Face Spaces and available to anyone worldwide with zero friction.
-
-### What's New in MediBot vs. MedOS (`web/`)
-
-| Feature | MedOS (`web/`) | MediBot (`9-HuggingFace-Global/`) |
-|---------|---------------|----------------------------------|
-| **Access** | Requires user API keys (OpenAI, Gemini, or Claude) | **No API keys needed** — completely free |
-| **Hosting** | Vercel (user deploys themselves) | **Hugging Face Spaces** — live at one URL for everyone |
-| **LLM Backend** | User pays for OpenAI/Gemini/Claude | **OllaBridge** multi-provider gateway (free models) |
-| **Model Selection** | Manual provider config in Settings | **Settings panel** with model picker + custom OllaBridge URL |
-| **Fallback Chain** | Single provider, fails if down | **3-tier fallback**: OllaBridge → HF Inference → Cached FAQ |
-| **Languages** | English only | **20 languages** with auto-detection and RTL support |
-| **Voice** | None | **Speech-to-text + text-to-speech** (Web Speech API) |
-| **Mobile** | Responsive but no PWA | **Full PWA**: install on homescreen, offline FAQ cache |
-| **Emergency Triage** | Static 911 card | **Multilingual keyword detection** + local emergency numbers for 190+ countries |
-| **Health Topics** | None | **Region-aware browsing** by category (8 regions: Africa, South Asia, etc.) |
-| **Medical RAG** | None | **15-topic knowledge base** with keyword search (extensible to FAISS) |
-| **Sharing** | None | **WhatsApp, Telegram, Twitter, QR code, embeddable iframe** |
-| **Session Tracking** | None | **Real server-side counter** (anonymous, zero PII) |
-| **User Menu** | Settings page with API key inputs | **Claude/ChatGPT-style popup menu**: Settings, Language, About, Install App, Source Code |
-| **Safety** | Basic disclaimer | **Medical disclaimers in 20 languages** + emergency detection in all languages |
-| **Offline** | None | **Service worker** caches app shell + top medical FAQ |
-| **CI/CD** | None for web/ | **GitHub Actions CI** + **auto-deploy to HF Spaces** on push |
-| **Testing** | Vitest (basic) | **118 unit tests** covering providers, i18n, safety, RAG, API routes, Docker, PWA |
-
-### Architecture
-
-```
-User (any browser, any country)
-  │
-  ▼
-MediBot (Next.js 14 on HF Spaces — Docker, port 7860)
-  │
-  ├── Emergency Triage (multilingual keyword detection)
-  ├── Medical RAG (knowledge base search)
-  │
-  ▼
-OllaBridge (https://ruslanmv-ollabridge.hf.space)
-  │
-  ├──→ Qwen 2.5 1.5B (local Ollama — always available)
-  ├──→ Gemini Flash (free tier, when configured)
-  ├──→ Groq Llama (free tier, fastest)
-  ├──→ OpenRouter (free models)
-  └──→ HuggingFace Inference (fallback)
-```
-
-### Quick Start (Development)
-
-```bash
-cd 9-HuggingFace-Global
-make install    # Install dependencies
-make test       # Run 118 unit tests
-make build      # Build Next.js app
-make dev        # Start dev server on port 7860
-```
-
-### Supported Languages
-
-🇺🇸 English · 🇪🇸 Spanish · 🇨🇳 Chinese · 🇮🇳 Hindi · 🇸🇦 Arabic · 🇧🇷 Portuguese · 🇧🇩 Bengali · 🇫🇷 French · 🇷🇺 Russian · 🇯🇵 Japanese · 🇩🇪 German · 🇰🇷 Korean · 🇹🇷 Turkish · 🇻🇳 Vietnamese · 🇮🇹 Italian · 🇹🇭 Thai · 🇮🇩 Indonesian · 🇰🇪 Swahili · 🇵🇭 Tagalog · 🇺🇦 Ukrainian
 
 ---
 
