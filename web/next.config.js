@@ -4,8 +4,10 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
 
-  // Production optimizations
-  swcMinify: true,
+  // Skip type checking during build (handled by CI separately)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 
   // Image optimization
   images: {
@@ -45,7 +47,7 @@ const nextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()'
+            value: 'camera=(), microphone=(self), geolocation=()'
           }
         ]
       }

@@ -9,7 +9,7 @@
   }
 
   * {
-    @apply border-border;
+    @apply border-slate-200;
   }
 
   body {
@@ -76,4 +76,24 @@
 /* Selection */
 ::selection {
   @apply bg-blue-100 text-blue-900;
+}
+
+/* Safe area for mobile bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* RTL support for Arabic */
+[dir="rtl"] .flex {
+  direction: rtl;
+}
+
+/* Large tap targets for accessibility */
+@media (pointer: coarse) {
+  button,
+  a,
+  select,
+  input {
+    min-height: 44px;
+  }
 }
