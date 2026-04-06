@@ -2,7 +2,7 @@
 
 import { Clock, MessageCircle, Trash2, XCircle } from "lucide-react";
 import { type ConversationSummary } from "@/lib/health-store";
-import { type SupportedLanguage } from "@/lib/i18n";
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface HistoryViewProps {
   history: ConversationSummary[];
@@ -17,6 +17,7 @@ export function HistoryView({
   onDelete,
   onClearAll,
   onReplay,
+  language,
 }: HistoryViewProps) {
   return (
     <div className="flex-1 overflow-y-auto p-6 sm:p-8">

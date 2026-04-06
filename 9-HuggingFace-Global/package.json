@@ -19,7 +19,8 @@
     "zod": "^3.23.0",
     "lucide-react": "^0.394.0",
     "better-sqlite3": "^11.0.0",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "nodemailer": "^6.9.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
@@ -32,7 +33,8 @@
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",
     "@types/better-sqlite3": "^7.6.0",
-    "@types/bcryptjs": "^2.4.0"
+    "@types/bcryptjs": "^2.4.0",
+    "@types/nodemailer": "^6.4.0"
   },
   "engines": {
     "node": ">=18.0.0"
