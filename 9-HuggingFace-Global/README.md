@@ -1,73 +1,95 @@
 ---
-title: MediBot - Free AI Medical Assistant
+title: "MediBot: Free AI Medical Assistant · 20 languages"
 emoji: "\U0001F3E5"
 colorFrom: blue
-colorTo: green
+colorTo: indigo
 sdk: docker
 app_port: 7860
 pinned: true
+license: apache-2.0
+short_description: "Free AI medical chatbot. 20 languages. No sign-up."
 tags:
   - medical
   - healthcare
   - chatbot
-  - nextjs
+  - medical-ai
+  - health-assistant
+  - symptom-checker
+  - telemedicine
+  - who-guidelines
+  - cdc
   - multilingual
-  - pwa
-  - text-generation
+  - i18n
   - rag
-  - ollabridge
-short_description: "Free AI medical chatbot. 20 languages. No sign-up."
+  - llama-3.3
+  - llama-3.3-70b
+  - mixtral
+  - groq
+  - huggingface-inference
+  - pwa
+  - offline-first
+  - free
+  - no-signup
+  - privacy-first
+  - worldwide
+  - nextjs
+  - docker
 models:
-  - mistralai/Mixtral-8x7B-Instruct-v0.1
+  - meta-llama/Llama-3.3-70B-Instruct
   - meta-llama/Meta-Llama-3-8B-Instruct
+  - mistralai/Mixtral-8x7B-Instruct-v0.1
+  - Qwen/Qwen2.5-72B-Instruct
+  - deepseek-ai/DeepSeek-V3
   - ruslanmv/Medical-Llama3-8B
   - google/gemma-2-9b-it
 datasets:
   - ruslanmv/ai-medical-chatbot
 ---
 
-# MediBot - Free AI Medical Assistant
+# MediBot — free AI medical assistant, worldwide
 
-A premium, mobile-first AI medical chatbot available to everyone worldwide — completely free, no sign-up required.
+> **Tell MediBot what's bothering you. In your language. Instantly. For free.**
+> No sign-up. No paywall. No data retention. Aligned with WHO · CDC · NHS guidelines.
 
-## Features
+[![Try MediBot](https://img.shields.io/badge/Try_MediBot-Free_on_HuggingFace-blue?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
+[![Languages](https://img.shields.io/badge/languages-20-14B8A6?style=for-the-badge)](#)
+[![Free](https://img.shields.io/badge/price-free_forever-22C55E?style=for-the-badge)](#)
+[![No sign-up](https://img.shields.io/badge/account-not_required-3B82F6?style=for-the-badge)](#)
 
-- **Zero Friction**: No API keys, no sign-up, no paywall
-- **20 Languages**: Auto-detects your language (covers 95%+ of world population)
-- **Mobile PWA**: Install on your phone like a native app
-- **Voice I/O**: Speak your question, hear the answer
-- **Offline Mode**: Top 500 medical Q&As cached for offline use
-- **Emergency Triage**: Detects emergencies and shows your local emergency number (190+ countries)
-- **Region-Aware**: Prioritizes health topics relevant to your region
-- **Shareable**: WhatsApp, Telegram, QR codes, embeddable iframe
-- **Open Source**: Fully transparent, community-driven
+## Why MediBot
 
-## Architecture
+- **Free forever.** No API key, no sign-up, no paywall, no ads.
+- **20 languages, auto-detected.** English, Español, Français, Português, Deutsch, Italiano, العربية, हिन्दी, Kiswahili, 中文, 日本語, 한국어, Русский, Türkçe, Tiếng Việt, ไทย, বাংলা, اردو, Polski, Nederlands.
+- **Worldwide.** IP-based country detection picks your local emergency number (190+ countries) and adapts the answer to your region (°C/°F, metric/imperial, local guidance).
+- **Best free LLM on HuggingFace.** Powered by **Llama 3.3 70B via HF Inference Providers (Groq)** — fastest high-quality free tier available — with an automatic fallback chain across Cerebras, SambaNova, Together, and Mixtral.
+- **Grounded on WHO, CDC, NHS, NIH, ICD-11, BNF, EMA.** A structured system prompt aligns every answer with authoritative guidance.
+- **Red-flag triage.** Built-in symptom patterns detect cardiac, neurological, respiratory, obstetric, pediatric, and mental-health emergencies in every supported language — and immediately escalate to the local emergency number.
+- **Installable PWA.** Add to your phone's home screen and use it like a native app. Offline-capable with a cached FAQ fallback.
+- **Shareable.** Every AI answer gets a Share button that generates a clean deep link with a branded OG card preview — perfect for WhatsApp, Twitter, and Telegram.
+- **Private & anonymous.** Zero accounts. Zero server-side conversation storage. No IPs logged. Anonymous session counter only.
+- **Open source.** Fully transparent. [github.com/ruslanmv/ai-medical-chatbot](https://github.com/ruslanmv/ai-medical-chatbot)
 
-```
-User (Browser/Mobile PWA)
-  |
-  v
-MedOS UI (Next.js 14 on HF Spaces)
-  |
-  |--> Safety Filter (emergency detection)
-  |--> RAG Search (medical knowledge base)
-  |
-  v
-OllaBridge-Cloud (Smart LLM Gateway)
-  |
-  |--> Google Gemini (free)
-  |--> Groq (free, fastest)
-  |--> OpenRouter (free models)
-  |--> HuggingFace Inference (free)
-  |--> Local Ollama (fallback)
-```
+## How it works
 
-## Powered By
+1. You type (or speak) a health question
+2. MedOS checks for emergency red flags first
+3. It searches a medical knowledge base for relevant context
+4. Your question + context go to **Llama 3.3 70B** (via Groq, free)
+5. You get a structured answer: Summary, Possible causes, Self-care, When to see a doctor
 
-- [OllaBridge-Cloud](https://github.com/ruslanmv/ollabridge) — Multi-provider LLM gateway
-- [AI Medical Chatbot](https://github.com/ruslanmv/ai-medical-chatbot) — Medical RAG knowledge base
+If the main model is busy, MedOS automatically tries other free models until one responds.
+
+## Built with
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14, React, Tailwind CSS |
+| AI Model | Llama 3.3 70B Instruct (via HuggingFace Inference + Groq) |
+| Fallbacks | Mixtral 8x7B, OllaBridge, cached FAQ |
+| Knowledge | Medical RAG from [ruslanmv/ai-medical-chatbot](https://github.com/ruslanmv/ai-medical-chatbot) dataset |
+| Gateway | [OllaBridge-Cloud](https://github.com/ruslanmv/ollabridge) |
+| Hosting | HuggingFace Spaces (Docker) |
 
 ## License
 
-Apache 2.0
+Apache 2.0 — free to use, modify, and distribute.

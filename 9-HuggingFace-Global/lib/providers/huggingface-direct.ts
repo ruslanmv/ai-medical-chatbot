@@ -1,35 +1,55 @@
 import type { ChatMessage, ProviderResponse } from './index';
 
-const DEFAULT_MODEL = 'mistralai/Mixtral-8x7B-Instruct-v0.1';
-const HF_BASE_URL = 'https://router.huggingface.co/hf-inference';
-
 /**
- * Direct HuggingFace Inference API fallback.
- * Uses router.huggingface.co (new endpoint replacing api-inference.huggingface.co).
+ * HuggingFace Inference Providers router — OpenAI-compatible endpoint.
+ *
+ * Defaults to Llama 3.3 70B Instruct pinned to Groq, which gives the best
+ * quality-to-latency ratio on the HF free tier (sub-second TTFT, strong
+ * medical reasoning). The `:groq` suffix is HF's documented syntax for
+ * pinning a specific inference provider; strip it to let the router
+ * auto-select. On 429/5xx we transparently fall through to Mixtral via
+ * HF-default routing (handled by the caller's fallback chain).
  */
-export async function streamWithHuggingFace(
-  messages: ChatMessage[]
-): Promise<ReadableStream> {
-  const token = process.env.HF_TOKEN || '';
-  const encoder = new TextEncoder();
+const DEFAULT_MODEL = 'meta-llama/Llama-3.3-70B-Instruct:groq';
+const FALLBACK_MODEL = 'meta-llama/Llama-3.3-70B-Instruct';
+const HF_BASE_URL = 'https://router.huggingface.co/v1';
 
-  const response = await fetch(`${HF_BASE_URL}/models/${DEFAULT_MODEL}/v1/chat/completions`, {
+async function callHF(
+  messages: ChatMessage[],
+  model: string,
+  stream: boolean,
+): Promise<Response> {
+  const token = process.env.HF_TOKEN || '';
+  return fetch(`${HF_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: DEFAULT_MODEL,
+      model,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       max_tokens: 1000,
       temperature: 0.7,
-      stream: true,
+      stream,
     }),
   });
+}
 
+export async function streamWithHuggingFace(
+  messages: ChatMessage[],
+): Promise<ReadableStream> {
+  const encoder = new TextEncoder();
+
+  // Try the preferred provider-pinned model first, then the auto-routed one.
+  let response = await callHF(messages, DEFAULT_MODEL, true);
+  let activeModel = DEFAULT_MODEL;
   if (!response.ok) {
-    throw new Error(`HF Inference API error: ${response.status}`);
+    response = await callHF(messages, FALLBACK_MODEL, true);
+    activeModel = FALLBACK_MODEL;
+  }
+  if (!response.ok) {
+    throw new Error(`HF Inference Providers error: ${response.status}`);
   }
 
   const reader = response.body?.getReader();
@@ -55,7 +75,7 @@ export async function streamWithHuggingFace(
                   const data = JSON.stringify({
                     choices: [{ delta: { content } }],
                     provider: 'huggingface',
-                    model: DEFAULT_MODEL,
+                    model: activeModel,
                   });
                   controller.enqueue(encoder.encode(`data: ${data}\n\n`));
                 }
@@ -75,33 +95,22 @@ export async function streamWithHuggingFace(
 }
 
 export async function chatWithHuggingFace(
-  messages: ChatMessage[]
+  messages: ChatMessage[],
 ): Promise<ProviderResponse> {
-  const token = process.env.HF_TOKEN || '';
-
-  const response = await fetch(`${HF_BASE_URL}/models/${DEFAULT_MODEL}/v1/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: DEFAULT_MODEL,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
-      max_tokens: 1000,
-      temperature: 0.7,
-    }),
-  });
-
+  let response = await callHF(messages, DEFAULT_MODEL, false);
+  let activeModel = DEFAULT_MODEL;
   if (!response.ok) {
-    throw new Error(`HF Inference API error: ${response.status}`);
+    response = await callHF(messages, FALLBACK_MODEL, false);
+    activeModel = FALLBACK_MODEL;
+  }
+  if (!response.ok) {
+    throw new Error(`HF Inference Providers error: ${response.status}`);
   }
 
   const data = await response.json();
-
   return {
     content: data.choices?.[0]?.message?.content || '',
     provider: 'huggingface',
-    model: DEFAULT_MODEL,
+    model: activeModel,
   };
 }

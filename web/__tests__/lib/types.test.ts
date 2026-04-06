@@ -4,7 +4,7 @@ import type { Provider } from '@/lib/types';
 
 describe('Provider Types', () => {
   it('should have all required provider configurations', () => {
-    const providers: Provider[] = ['openai', 'gemini', 'claude', 'watsonx', 'ollama'];
+    const providers: Provider[] = ['openai', 'gemini', 'claude', 'hf', 'ollabridge', 'ollama'];
 
     providers.forEach(provider => {
       expect(PROVIDER_CONFIGS[provider]).toBeDefined();

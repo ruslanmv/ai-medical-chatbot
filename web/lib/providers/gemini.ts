@@ -1,15 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import type { ChatMessage } from "../types";
+import { resolveSystemPrompt, type MedicalContext } from "./system-prompt";
 
-const SYSTEM_PROMPT = `You are a caring, professional medical AI assistant. Your role is to:
-- Provide helpful, accurate health information
-- Ask clarifying questions when needed
-- Encourage users to seek professional medical care for serious concerns
-- Maintain a warm, empathetic tone
-- NEVER provide definitive diagnoses
-- Always remind users that you're an AI and cannot replace professional medical advice
-
-Remember: Patient safety is paramount. When in doubt, recommend consulting a healthcare provider.`;
+type Args = {
+  apiKey: string;
+  messages: ChatMessage[];
+  context?: MedicalContext;
+};
 
 function formatMessagesForGemini(messages: ChatMessage[]): string {
   return messages
@@ -20,39 +17,31 @@ function formatMessagesForGemini(messages: ChatMessage[]): string {
     .join("\n\n");
 }
 
-export async function chatGemini(args: {
-  apiKey: string;
-  messages: ChatMessage[];
-}): Promise<string> {
+export async function chatGemini(args: Args): Promise<string> {
   const genAI = new GoogleGenerativeAI(args.apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    systemInstruction: SYSTEM_PROMPT,
+    systemInstruction: resolveSystemPrompt(args.context),
   });
-
-  const prompt = formatMessagesForGemini(args.messages);
-  const result = await model.generateContent(prompt);
-
+  const result = await model.generateContent(
+    formatMessagesForGemini(args.messages),
+  );
   return result.response.text();
 }
 
-export async function* streamGemini(args: {
-  apiKey: string;
-  messages: ChatMessage[];
-}): AsyncGenerator<string, void, unknown> {
+export async function* streamGemini(
+  args: Args,
+): AsyncGenerator<string, void, unknown> {
   const genAI = new GoogleGenerativeAI(args.apiKey);
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
-    systemInstruction: SYSTEM_PROMPT,
+    systemInstruction: resolveSystemPrompt(args.context),
   });
-
-  const prompt = formatMessagesForGemini(args.messages);
-  const result = await model.generateContentStream(prompt);
-
+  const result = await model.generateContentStream(
+    formatMessagesForGemini(args.messages),
+  );
   for await (const chunk of result.stream) {
     const text = chunk.text();
-    if (text) {
-      yield text;
-    }
+    if (text) yield text;
   }
 }

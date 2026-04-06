@@ -1,14 +1,38 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { verifyConnection } from "@/lib/providers";
-import type { Provider } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-const BodySchema = z.object({
-  provider: z.enum(["openai", "gemini", "claude", "watsonx", "ollama"]),
-  apiKey: z.string().min(1, "API key is required"),
-});
+const ProviderEnum = z.enum([
+  "hf",
+  "ollabridge",
+  "ollama",
+  "openai",
+  "gemini",
+  "claude",
+]);
+
+const PresetEnum = z.enum([
+  "free-best",
+  "free-fastest",
+  "free-flexible",
+  "deep-reasoning",
+  "local",
+  "ollabridge",
+]);
+
+const BodySchema = z
+  .object({
+    preset: PresetEnum.optional(),
+    provider: ProviderEnum.optional(),
+    model: z.string().optional(),
+    apiKey: z.string().optional(),
+    userHfToken: z.string().optional(),
+  })
+  .refine((v) => v.preset || v.provider, {
+    message: "Either `preset` or `provider` must be provided",
+  });
 
 export async function POST(req: Request) {
   try {
@@ -16,40 +40,37 @@ export async function POST(req: Request) {
     const body = BodySchema.parse(json);
 
     const result = await verifyConnection({
-      provider: body.provider as Provider,
+      preset: body.preset,
+      provider: body.provider,
+      model: body.model,
       apiKey: body.apiKey,
+      userHfToken: body.userHfToken,
+      messages: [{ role: "user", content: "Hi" }],
     });
 
     if (result.success) {
       return NextResponse.json({
         success: true,
-        message: "Connection verified successfully",
+        message: `Connection verified: ${result.label ?? "ok"}`,
       });
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          error: result.error || "Connection failed",
-        },
-        { status: 400 }
-      );
     }
+    return NextResponse.json(
+      { success: false, error: result.error || "Connection failed" },
+      { status: 400 },
+    );
   } catch (error: any) {
-    console.error("Verify API error:", error);
+    console.error("Verify API error:", error?.message);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: "Invalid request", details: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     return NextResponse.json(
-      {
-        success: false,
-        error: error?.message || "Internal server error",
-      },
-      { status: 500 }
+      { success: false, error: error?.message || "Internal server error" },
+      { status: 500 },
     );
   }
 }
