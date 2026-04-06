@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Home,
   MessageCircle,
@@ -13,11 +13,20 @@ import {
   Calendar,
   Activity,
   FileText,
+  Package,
   Clock,
   User2,
   LogIn,
   PanelLeftClose,
   PanelLeftOpen,
+  Globe,
+  HelpCircle,
+  Share2,
+  Info,
+  ExternalLink,
+  ChevronUp,
+  ChevronDown,
+  Smartphone,
 } from "lucide-react";
 import { NavItem } from "./NavItem";
 import { t, type SupportedLanguage } from "@/lib/i18n";
@@ -37,7 +46,8 @@ export type NavView =
   | "settings"
   | "login"
   | "profile"
-  | "ehr-wizard";
+  | "ehr-wizard"
+  | "my-medicines";
 
 interface SidebarProps {
   activeNav: NavView;
@@ -58,12 +68,25 @@ export function Sidebar({
   username,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [bottomMenuOpen, setBottomMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Restore collapsed state from localStorage on mount.
   useEffect(() => {
     const stored = localStorage.getItem(COLLAPSED_KEY);
     if (stored === "true") setCollapsed(true);
   }, []);
+
+  // Close bottom menu on outside click
+  useEffect(() => {
+    if (!bottomMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setBottomMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [bottomMenuOpen]);
 
   const toggleCollapse = () => {
     const next = !collapsed;
@@ -71,257 +94,226 @@ export function Sidebar({
     localStorage.setItem(COLLAPSED_KEY, String(next));
   };
 
+  const navTo = (view: NavView) => {
+    setActiveNav(view);
+    setBottomMenuOpen(false);
+  };
+
   return (
     <>
-      {/* Desktop sidebar — collapsible */}
+      {/* Desktop sidebar */}
       <aside
         className={`hidden md:flex flex-col z-20 bg-surface-1/70 backdrop-blur-xl border-r border-line/60 transition-all duration-300 ease-in-out ${
           collapsed ? "w-[68px] p-2" : "w-64 p-4"
         }`}
       >
-        {/* Logo */}
+        {/* Top row: collapse toggle + logo */}
         <div
-          className={`flex items-center mb-6 mt-1 ${
-            collapsed ? "justify-center px-0" : "gap-3 px-3"
+          className={`flex items-center mb-5 ${
+            collapsed ? "flex-col gap-3" : "justify-between"
           }`}
         >
-          <div
-            className={`rounded-2xl bg-brand-gradient flex items-center justify-center text-white shadow-glow flex-shrink-0 ${
-              collapsed ? "w-10 h-10" : "w-10 h-10"
-            }`}
+          {/* Collapse toggle — TOP, like ChatGPT/Claude */}
+          <button
+            onClick={toggleCollapse}
+            className="p-2 rounded-xl text-ink-subtle hover:text-ink-base hover:bg-surface-2 transition-all flex-shrink-0"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <Heart size={20} strokeWidth={2.5} />
-          </div>
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+
+          {/* Logo */}
           {!collapsed && (
-            <div className="min-w-0">
-              <h1 className="font-bold text-lg text-ink-base tracking-tight leading-none">
-                MedOS
-              </h1>
-              <p className="text-[10px] font-semibold text-ink-subtle uppercase tracking-[0.14em] mt-1 truncate">
-                {t("home_hero_eyebrow", language)}
-              </p>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-brand-gradient flex items-center justify-center text-white shadow-glow flex-shrink-0">
+                <Heart size={16} strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-bold text-base text-ink-base tracking-tight leading-none">
+                  MedOS
+                </h1>
+              </div>
+            </div>
+          )}
+
+          {collapsed && (
+            <div className="w-10 h-10 rounded-2xl bg-brand-gradient flex items-center justify-center text-white shadow-glow">
+              <Heart size={18} strokeWidth={2.5} />
             </div>
           )}
         </div>
 
-        {/* Nav items */}
+        {/* Main nav */}
         <nav className="flex-1 overflow-y-auto space-y-0.5">
-          <NavItem
-            icon={Home}
-            label={t("nav_home", language)}
-            active={activeNav === "home"}
-            onClick={() => setActiveNav("home")}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={MessageCircle}
-            label={t("nav_ask", language)}
-            active={activeNav === "chat"}
-            onClick={() => setActiveNav("chat")}
-            collapsed={collapsed}
-          />
+          <NavItem icon={Home} label={t("nav_home", language)} active={activeNav === "home"} onClick={() => setActiveNav("home")} collapsed={collapsed} />
+          <NavItem icon={MessageCircle} label={t("nav_ask", language)} active={activeNav === "chat"} onClick={() => setActiveNav("chat")} collapsed={collapsed} />
 
-          {/* Health Tracker section */}
-          {!collapsed && (
-            <div className="mt-5 mb-2 px-4">
-              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
-                {t("nav_health_tracker", language)}
-              </span>
-            </div>
-          )}
-          {collapsed && <div className="my-3 border-t border-line/50" />}
+          {!collapsed && <SectionLabel>{t("nav_health_tracker", language)}</SectionLabel>}
+          {collapsed && <div className="my-2 border-t border-line/50" />}
 
-          <NavItem
-            icon={Heart}
-            label={t("nav_dashboard", language)}
-            active={activeNav === "health-dashboard"}
-            onClick={() => setActiveNav("health-dashboard")}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={Calendar}
-            label={t("nav_schedule", language)}
-            active={activeNav === "schedule"}
-            onClick={() => setActiveNav("schedule")}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={Pill}
-            label={t("nav_medications", language)}
-            active={activeNav === "medications"}
-            onClick={() => setActiveNav("medications")}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={Calendar}
-            label={t("nav_appointments", language)}
-            active={activeNav === "appointments"}
-            onClick={() => setActiveNav("appointments")}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={Activity}
-            label={t("nav_vitals", language)}
-            active={activeNav === "vitals"}
-            onClick={() => setActiveNav("vitals")}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={FileText}
-            label={t("nav_records", language)}
-            active={activeNav === "records"}
-            onClick={() => setActiveNav("records")}
-            collapsed={collapsed}
-          />
+          <NavItem icon={Heart} label={t("nav_dashboard", language)} active={activeNav === "health-dashboard"} onClick={() => setActiveNav("health-dashboard")} collapsed={collapsed} />
+          <NavItem icon={Calendar} label={t("nav_schedule", language)} active={activeNav === "schedule"} onClick={() => setActiveNav("schedule")} collapsed={collapsed} />
+          <NavItem icon={Pill} label={t("nav_medications", language)} active={activeNav === "medications"} onClick={() => setActiveNav("medications")} collapsed={collapsed} />
+          <NavItem icon={Calendar} label={t("nav_appointments", language)} active={activeNav === "appointments"} onClick={() => setActiveNav("appointments")} collapsed={collapsed} />
+          <NavItem icon={Activity} label={t("nav_vitals", language)} active={activeNav === "vitals"} onClick={() => setActiveNav("vitals")} collapsed={collapsed} />
+          <NavItem icon={FileText} label={t("nav_records", language)} active={activeNav === "records"} onClick={() => setActiveNav("records")} collapsed={collapsed} />
+          <NavItem icon={Package} label="My Medicines" active={activeNav === "my-medicines"} onClick={() => setActiveNav("my-medicines")} collapsed={collapsed} />
 
-          {/* Tools section */}
-          {!collapsed && (
-            <div className="mt-5 mb-2 px-4">
-              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
-                {t("nav_tools", language)}
-              </span>
-            </div>
-          )}
-          {collapsed && <div className="my-3 border-t border-line/50" />}
+          {!collapsed && <SectionLabel>{t("nav_tools", language)}</SectionLabel>}
+          {collapsed && <div className="my-2 border-t border-line/50" />}
 
-          <NavItem
-            icon={AlertTriangle}
-            label={t("nav_emergency", language)}
-            active={activeNav === "emergency"}
-            onClick={() => setActiveNav("emergency")}
-            urgent
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={BookOpen}
-            label={t("nav_topics", language)}
-            active={activeNav === "topics"}
-            onClick={() => setActiveNav("topics")}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={Clock}
-            label={t("nav_history", language)}
-            active={activeNav === "history"}
-            onClick={() => setActiveNav("history")}
-            collapsed={collapsed}
-          />
-
-          <div className="my-3 border-t border-line/50" />
-
-          <NavItem
-            icon={Settings}
-            label={t("nav_settings", language)}
-            active={activeNav === "settings"}
-            onClick={() => setActiveNav("settings")}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={isAuthenticated ? User2 : LogIn}
-            label={
-              isAuthenticated
-                ? username || t("nav_profile", language)
-                : t("nav_login", language)
-            }
-            active={activeNav === (isAuthenticated ? "profile" : "login")}
-            onClick={() =>
-              setActiveNav(isAuthenticated ? "profile" : "login")
-            }
-            collapsed={collapsed}
-          />
+          <NavItem icon={AlertTriangle} label={t("nav_emergency", language)} active={activeNav === "emergency"} onClick={() => setActiveNav("emergency")} urgent collapsed={collapsed} />
+          <NavItem icon={BookOpen} label={t("nav_topics", language)} active={activeNav === "topics"} onClick={() => setActiveNav("topics")} collapsed={collapsed} />
+          <NavItem icon={Clock} label={t("nav_history", language)} active={activeNav === "history"} onClick={() => setActiveNav("history")} collapsed={collapsed} />
         </nav>
 
-        {/* Trust badges — only when expanded */}
-        {!collapsed && (
-          <div className="mt-3 rounded-2xl bg-surface-2/70 border border-line/50 p-3.5">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-accent-500/15 flex items-center justify-center">
-                <ShieldCheck size={14} className="text-accent-500" />
-              </div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
-                {t("trust_source_chip", language)}
-              </span>
-            </div>
-            <ul className="space-y-1.5 text-[11px] text-ink-subtle leading-snug">
-              <li className="flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-success-500" />
-                {t("badge_private", language)}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-success-500" />
-                {t("badge_no_signup", language)}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-success-500" />
-                {t("badge_free", language)}
-              </li>
-            </ul>
-          </div>
-        )}
+        {/* ============================================================
+         * Bottom settings drawer — like ChatGPT/Claude/HF Space.
+         * Shows user profile + settings menu that pops UP from the bottom.
+         * ============================================================ */}
+        <div className="mt-auto pt-3 border-t border-line/50 relative" ref={menuRef}>
+          {/* Pop-up menu (opens upward) */}
+          {bottomMenuOpen && !collapsed && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-surface-1 border border-line/60 rounded-2xl shadow-card overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200 z-50">
+              <div className="p-2 space-y-0.5">
+                <MenuItem icon={Settings} label={t("nav_settings", language)} shortcut="Ctrl+," onClick={() => navTo("settings")} />
+                <MenuItem icon={Globe} label={`${t("settings_language", language)}`} detail={language.toUpperCase()} onClick={() => navTo("settings")} />
+                <MenuItem icon={HelpCircle} label="Get help" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot/issues", "_blank")} />
 
-        {/* Collapse toggle button — always at the very bottom */}
-        <button
-          onClick={toggleCollapse}
-          className={`mt-3 flex items-center gap-2 rounded-xl text-ink-subtle hover:text-ink-base hover:bg-surface-2 transition-all ${
-            collapsed
-              ? "justify-center p-2.5"
-              : "px-3 py-2.5"
-          }`}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? (
-            <PanelLeftOpen size={18} />
-          ) : (
-            <>
-              <PanelLeftClose size={18} />
-              <span className="text-xs font-medium">Collapse</span>
-            </>
+                <div className="my-1.5 border-t border-line/40" />
+
+                <MenuItem icon={Smartphone} label="Install as App" onClick={() => {}} />
+                <MenuItem icon={Share2} label="Share MedOS" onClick={() => { if (navigator.share) navigator.share({ title: "MedOS", url: window.location.origin }); }} />
+                <MenuItem icon={Info} label="About MedOS" detail="v1.0" onClick={() => navTo("settings")} />
+
+                <div className="my-1.5 border-t border-line/40" />
+
+                <MenuItem icon={ExternalLink} label="Source Code" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot", "_blank")} external />
+                <MenuItem icon={ExternalLink} label="HuggingFace Space" onClick={() => window.open("https://huggingface.co/spaces/ruslanmv/MediBot", "_blank")} external />
+
+                <div className="my-1.5 border-t border-line/40" />
+
+                <div className="px-3 py-2">
+                  <p className="text-[10px] text-ink-subtle leading-snug">
+                    MedOS v1.0 · Free & Open Source
+                    <br />
+                    Zero data retention · {t("badge_private", language)}
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
-        </button>
+
+          {/* User profile button — triggers the bottom menu */}
+          <button
+            onClick={() => {
+              if (collapsed) {
+                setActiveNav(isAuthenticated ? "profile" : "login");
+              } else {
+                setBottomMenuOpen(!bottomMenuOpen);
+              }
+            }}
+            className={`w-full flex items-center rounded-xl transition-all hover:bg-surface-2 ${
+              collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
+            }`}
+          >
+            {/* Avatar */}
+            <div
+              className={`flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs ${
+                isAuthenticated
+                  ? "bg-brand-gradient text-white"
+                  : "bg-surface-2 text-ink-muted border border-line/60"
+              } ${collapsed ? "w-9 h-9" : "w-8 h-8"}`}
+            >
+              {isAuthenticated
+                ? (username || "U")[0].toUpperCase()
+                : "G"}
+            </div>
+
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0 text-left">
+                  <span className="text-sm font-semibold text-ink-base block truncate">
+                    {isAuthenticated ? (username || t("nav_profile", language)) : "Guest User"}
+                  </span>
+                  <span className="text-[10px] text-ink-subtle block">
+                    {isAuthenticated ? "Account" : "Free plan"}
+                  </span>
+                </div>
+                {bottomMenuOpen ? (
+                  <ChevronDown size={14} className="text-ink-subtle flex-shrink-0" />
+                ) : (
+                  <ChevronUp size={14} className="text-ink-subtle flex-shrink-0" />
+                )}
+              </>
+            )}
+          </button>
+        </div>
       </aside>
 
-      {/* Mobile bottom navigation — 5 tabs, 48px min touch target */}
+      {/* Mobile bottom navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-1/95 backdrop-blur-xl border-t border-line/60 flex items-center justify-around px-1 z-50 safe-area-bottom">
-        <MobileNavButton
-          icon={Home}
-          label={t("nav_home", language)}
-          active={activeNav === "home"}
-          onClick={() => setActiveNav("home")}
-        />
-        <MobileNavButton
-          icon={MessageCircle}
-          label={t("nav_ask", language)}
-          active={activeNav === "chat"}
-          onClick={() => setActiveNav("chat")}
-        />
+        <MobileNavButton icon={Home} label={t("nav_home", language)} active={activeNav === "home"} onClick={() => setActiveNav("home")} />
+        <MobileNavButton icon={MessageCircle} label={t("nav_ask", language)} active={activeNav === "chat"} onClick={() => setActiveNav("chat")} />
         <MobileNavButton
           icon={Heart}
           label={t("nav_health", language)}
-          active={
-            activeNav === "health-dashboard" ||
-            activeNav === "medications" ||
-            activeNav === "appointments" ||
-            activeNav === "vitals" ||
-            activeNav === "records" ||
-            activeNav === "schedule"
-          }
+          active={["health-dashboard", "medications", "appointments", "vitals", "records", "schedule", "my-medicines"].includes(activeNav)}
           onClick={() => setActiveNav("health-dashboard")}
         />
-        <MobileNavButton
-          icon={AlertTriangle}
-          label={t("nav_emergency", language)}
-          active={activeNav === "emergency"}
-          onClick={() => setActiveNav("emergency")}
-          urgent
-        />
-        <MobileNavButton
-          icon={Settings}
-          label={t("nav_settings", language)}
-          active={activeNav === "settings"}
-          onClick={() => setActiveNav("settings")}
-        />
+        <MobileNavButton icon={AlertTriangle} label={t("nav_emergency", language)} active={activeNav === "emergency"} onClick={() => setActiveNav("emergency")} urgent />
+        <MobileNavButton icon={Settings} label={t("nav_settings", language)} active={activeNav === "settings"} onClick={() => setActiveNav("settings")} />
       </div>
     </>
+  );
+}
+
+// ============================================================
+// Sub-components
+// ============================================================
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-4 mb-1.5 px-4">
+      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function MenuItem({
+  icon: Icon,
+  label,
+  detail,
+  shortcut,
+  external,
+  onClick,
+}: {
+  icon: any;
+  label: string;
+  detail?: string;
+  shortcut?: string;
+  external?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-ink-base hover:bg-surface-2 transition-colors"
+    >
+      <Icon size={16} className="text-ink-subtle flex-shrink-0" />
+      <span className="flex-1 text-left">{label}</span>
+      {detail && (
+        <span className="text-xs text-ink-subtle">{detail}</span>
+      )}
+      {shortcut && (
+        <kbd className="text-[10px] text-ink-subtle bg-surface-2 border border-line/60 rounded px-1.5 py-0.5 font-mono">
+          {shortcut}
+        </kbd>
+      )}
+      {external && <ExternalLink size={12} className="text-ink-subtle" />}
+    </button>
   );
 }
 
@@ -349,14 +341,8 @@ function MobileNavButton({
           : "text-ink-subtle"
       }`}
     >
-      <Icon
-        size={22}
-        strokeWidth={active ? 2.5 : 1.75}
-        className={urgent && !active ? "text-danger-500/70" : ""}
-      />
-      <span className="text-[10px] font-semibold leading-none tracking-tight">
-        {label}
-      </span>
+      <Icon size={22} strokeWidth={active ? 2.5 : 1.75} className={urgent && !active ? "text-danger-500/70" : ""} />
+      <span className="text-[10px] font-semibold leading-none tracking-tight">{label}</span>
     </button>
   );
 }

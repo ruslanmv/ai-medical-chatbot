@@ -30,7 +30,8 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { LoginView } from "./views/LoginView";
 import { ProfileView } from "./views/ProfileView";
 import { EHRWizard } from "./views/EHRWizard";
-import { buildPatientContext } from "@/lib/health-store";
+import { MyMedicinesView } from "./views/MyMedicinesView";
+import { buildPatientContext, todayISO } from "@/lib/health-store";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
 export default function MedOSApp() {
@@ -257,6 +258,28 @@ function MedOSAppInner() {
             onEdit={health.editRecord}
             onDelete={health.deleteRecord}
             onExport={health.downloadAll}
+            language={settings.language}
+          />
+        );
+      case "my-medicines":
+        return (
+          <MyMedicinesView
+            medicines={health.medicines}
+            onAdd={health.addMedicine}
+            onUpdate={health.editMedicine}
+            onDelete={health.deleteMedicine}
+            onAddToSchedule={(med) => {
+              // Add to the medication schedule tracker
+              health.addMedication({
+                name: med.name,
+                dose: med.dose,
+                frequency: "daily",
+                times: ["08:00"],
+                startDate: todayISO(),
+                active: true,
+              });
+              setActiveNav("medications");
+            }}
             language={settings.language}
           />
         );

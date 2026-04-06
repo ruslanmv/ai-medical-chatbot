@@ -13,6 +13,25 @@
 // Types
 // ============================================================
 
+export type MedicineForm = 'tablet' | 'capsule' | 'syrup' | 'inhaler' | 'injection' | 'cream' | 'drops' | 'patch' | 'other';
+export type MedicineStatus = 'active' | 'expiring' | 'expired' | 'discontinued';
+export type StockState = 'ok' | 'low' | 'out';
+
+export interface MedicineItem {
+  id: string;
+  name: string;
+  brandName?: string;
+  activeIngredient?: string;
+  dose: string;
+  form: MedicineForm;
+  category?: string; // e.g. "Diabetes", "Pain Relief", "Supplement"
+  quantity: number;
+  expiryDate?: string; // ISO date
+  refillDate?: string; // ISO date
+  notes?: string;
+  createdAt: string;
+}
+
 export interface Medication {
   id: string;
   name: string;
@@ -325,6 +344,7 @@ const KEYS = {
   vitals: 'medos_vitals',
   records: 'medos_records',
   history: 'medos_history',
+  medicines: 'medos_medicines',
 } as const;
 
 // ============================================================
@@ -515,6 +535,61 @@ export function removeRecord(id: string): void {
   );
 }
 
+// --- Medicine inventory ---
+
+export function loadMedicines(): MedicineItem[] {
+  return load<MedicineItem>(KEYS.medicines);
+}
+
+export function saveMedicine(med: Omit<MedicineItem, 'id' | 'createdAt'>): MedicineItem {
+  const all = loadMedicines();
+  const item: MedicineItem = { ...med, id: genId(), createdAt: new Date().toISOString() };
+  all.push(item);
+  save(KEYS.medicines, all);
+  return item;
+}
+
+export function updateMedicine(id: string, patch: Partial<MedicineItem>): void {
+  const all = loadMedicines().map((m) =>
+    m.id === id ? { ...m, ...patch } : m,
+  );
+  save(KEYS.medicines, all);
+}
+
+export function removeMedicine(id: string): void {
+  save(KEYS.medicines, loadMedicines().filter((m) => m.id !== id));
+}
+
+/** Compute the status of a medicine based on its expiry date. */
+export function getMedicineStatus(med: MedicineItem): MedicineStatus {
+  if (!med.expiryDate) return 'active';
+  const now = new Date();
+  const exp = new Date(med.expiryDate);
+  const daysUntilExpiry = Math.ceil((exp.getTime() - now.getTime()) / 86400000);
+  if (daysUntilExpiry < 0) return 'expired';
+  if (daysUntilExpiry <= 30) return 'expiring';
+  return 'active';
+}
+
+/** Compute stock state based on quantity. */
+export function getStockState(med: MedicineItem): StockState {
+  if (med.quantity <= 0) return 'out';
+  if (med.quantity <= 5) return 'low';
+  return 'ok';
+}
+
+/** Build a summary of the medicine inventory for AI context. */
+export function buildMedicineInventoryContext(): string {
+  const meds = loadMedicines();
+  if (meds.length === 0) return '';
+  const lines = meds.map((m) => {
+    const status = getMedicineStatus(m);
+    const stock = getStockState(m);
+    return `${m.name} ${m.dose} (${m.form}, qty:${m.quantity}, ${status}${stock === 'low' ? ', LOW STOCK' : stock === 'out' ? ', OUT OF STOCK' : ''})`;
+  });
+  return `\n[Medicine inventory: ${lines.join('; ')}]`;
+}
+
 // --- Conversation history ---
 
 export function loadHistory(): ConversationSummary[] {
@@ -557,7 +632,9 @@ export interface HealthExport {
   appointments: Appointment[];
   vitals: VitalReading[];
   records: HealthRecord[];
+  medicines: MedicineItem[];
   history: ConversationSummary[];
+  ehrProfile: EHRProfile;
 }
 
 export function exportAllHealthData(): HealthExport {
@@ -569,7 +646,9 @@ export function exportAllHealthData(): HealthExport {
     appointments: loadAppointments(),
     vitals: loadVitals(),
     records: loadRecords(),
+    medicines: loadMedicines(),
     history: loadHistory(),
+    ehrProfile: loadEHRProfile(),
   };
 }
 

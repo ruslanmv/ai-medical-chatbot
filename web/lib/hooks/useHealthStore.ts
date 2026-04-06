@@ -35,6 +35,7 @@ export function useHealthStore(authToken?: string | null) {
   const [appointments, setAppointments] = useState<hs.Appointment[]>([]);
   const [vitals, setVitals] = useState<hs.VitalReading[]>([]);
   const [records, setRecords] = useState<hs.HealthRecord[]>([]);
+  const [medicines, setMedicines] = useState<hs.MedicineItem[]>([]);
   const [history, setHistory] = useState<hs.ConversationSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -44,6 +45,7 @@ export function useHealthStore(authToken?: string | null) {
     setAppointments(hs.loadAppointments());
     setVitals(hs.loadVitals());
     setRecords(hs.loadRecords());
+    setMedicines(hs.loadMedicines());
     setHistory(hs.loadHistory());
   }, []);
 
@@ -208,6 +210,33 @@ export function useHealthStore(authToken?: string | null) {
     [refresh, syncDelete],
   );
 
+  // --- Medicines (inventory) ---
+  const addMedicine = useCallback(
+    (med: Omit<hs.MedicineItem, "id" | "createdAt">) => {
+      const saved = hs.saveMedicine(med);
+      refresh();
+      syncItem(saved.id, "medicine", saved);
+    },
+    [refresh, syncItem],
+  );
+  const editMedicine = useCallback(
+    (id: string, patch: Partial<hs.MedicineItem>) => {
+      hs.updateMedicine(id, patch);
+      refresh();
+      const updated = hs.loadMedicines().find((m) => m.id === id);
+      if (updated) syncItem(id, "medicine", updated);
+    },
+    [refresh, syncItem],
+  );
+  const deleteMedicine = useCallback(
+    (id: string) => {
+      hs.removeMedicine(id);
+      refresh();
+      syncDelete(id);
+    },
+    [refresh, syncDelete],
+  );
+
   // --- History ---
   const saveSession = useCallback(
     (summary: Omit<hs.ConversationSummary, "id">) => {
@@ -236,6 +265,7 @@ export function useHealthStore(authToken?: string | null) {
     appointments,
     vitals,
     records,
+    medicines,
     history,
     // Medication actions
     addMedication,
@@ -255,6 +285,10 @@ export function useHealthStore(authToken?: string | null) {
     addRecord,
     editRecord,
     deleteRecord,
+    // Medicine inventory actions
+    addMedicine,
+    editMedicine,
+    deleteMedicine,
     // History actions
     saveSession,
     deleteSession,
