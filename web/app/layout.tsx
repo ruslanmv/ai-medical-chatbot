@@ -26,7 +26,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F7F9FB" },
     { media: "(prefers-color-scheme: dark)",  color: "#0B1220" },
@@ -43,7 +45,7 @@ const themeBootstrap = `
   try {
     var stored = localStorage.getItem('medos_theme');
     var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var isDark = stored === 'dark' || (!stored && prefersDark) || (stored === 'system' && prefersDark);
+    var isDark = stored === 'dark' || (stored === 'system' && prefersDark);
     if (isDark) document.documentElement.classList.add('dark');
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
   } catch (e) {}
@@ -59,6 +61,11 @@ export default function RootLayout({
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="MedOS" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className="min-h-screen antialiased">{children}</body>
     </html>

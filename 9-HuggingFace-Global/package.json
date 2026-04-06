@@ -17,7 +17,9 @@
     "openai": "^4.52.0",
     "@huggingface/inference": "^2.7.0",
     "zod": "^3.23.0",
-    "lucide-react": "^0.394.0"
+    "lucide-react": "^0.394.0",
+    "better-sqlite3": "^11.0.0",
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
@@ -28,7 +30,9 @@
     "postcss": "^8.4.0",
     "autoprefixer": "^10.4.0",
     "eslint": "^8.57.0",
-    "eslint-config-next": "^14.2.0"
+    "eslint-config-next": "^14.2.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/bcryptjs": "^2.4.0"
   },
   "engines": {
     "node": ">=18.0.0"

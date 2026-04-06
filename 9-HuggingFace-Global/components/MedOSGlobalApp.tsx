@@ -7,6 +7,8 @@ import { initPWA } from '@/lib/mobile/pwa';
 import { onConnectivityChange, isOnline } from '@/lib/mobile/offline-cache';
 import { detectCountryFromTimezone } from '@/lib/safety/emergency-numbers';
 import { useGeoDetect } from '@/lib/hooks/useGeoDetect';
+import { useTheme } from '@/lib/hooks/useTheme';
+import ThemeToggle from './ui/ThemeToggle';
 import Sidebar from './chat/Sidebar';
 import RightPanel from './chat/RightPanel';
 import BottomNav from './mobile/BottomNav';
@@ -65,6 +67,7 @@ export default function MedOSGlobalApp() {
   const [isLoading, setIsLoading] = useState(false);
   const [online, setOnline] = useState(true);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const { theme, setTheme } = useTheme();
 
   // Initialize on mount
   useEffect(() => {
@@ -275,7 +278,7 @@ export default function MedOSGlobalApp() {
   };
 
   return (
-    <div className="h-screen-safe flex flex-col bg-slate-900 pt-safe">
+    <div className="h-screen-safe flex flex-col bg-white dark:bg-slate-900 pt-safe transition-colors">
       {!online && <OfflineBanner language={language} />}
       <InstallPrompt />
 

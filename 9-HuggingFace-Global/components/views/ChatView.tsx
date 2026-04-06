@@ -11,6 +11,8 @@ import QuickChips from '../chat/QuickChips';
 import TrustBar from '../chat/TrustBar';
 import { trackSession } from '@/lib/analytics/anonymous-tracker';
 import { readPrefillQuery } from '@/lib/share';
+import { useTheme } from '@/lib/hooks/useTheme';
+import ThemeToggle from '../ui/ThemeToggle';
 import { suggestFollowUps } from '@/lib/follow-ups';
 import { HERO_VARIANTS, pickVariant } from '@/lib/ab-variant';
 
@@ -49,6 +51,7 @@ export default function ChatView({
   language,
   onSendMessage,
 }: ChatViewProps) {
+  const { theme, setTheme } = useTheme();
   const [input, setInput] = useState('');
   const [rotIdx, setRotIdx] = useState(0);
   // Deterministic A/B variant — picked once per visitor and persisted.
@@ -148,11 +151,14 @@ export default function ChatView({
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Mobile Header */}
-      <div className="mobile-header-compact flex items-center justify-between px-4 py-3 border-b border-slate-700/50">
-        <h1 className="text-lg font-bold text-slate-50">
+      <div className="mobile-header-compact flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700/50">
+        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-50">
           <span className="text-medical-primary">Med</span>OS
         </h1>
-        <span className="text-xs text-slate-500">Free AI Medical Assistant</span>
+        <div className="flex items-center gap-2">
+          <ThemeToggle theme={theme} setTheme={setTheme} />
+          <span className="text-xs text-slate-500">Free</span>
+        </div>
       </div>
 
       {/* Messages Area */}
@@ -165,10 +171,10 @@ export default function ChatView({
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-teal-400 mb-2">
               {hero.eyebrow}
             </p>
-            <h2 className="text-2xl font-bold text-slate-100 mb-2 tracking-tight max-w-md">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2 tracking-tight max-w-md">
               {hero.title}
             </h2>
-            <p className="text-sm text-slate-400 mb-5 max-w-md leading-relaxed">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 max-w-md leading-relaxed">
               {hero.subtitle}
             </p>
             <div className="mb-6">
@@ -218,7 +224,7 @@ export default function ChatView({
       </div>
 
       {/* Input Area */}
-      <div className="flex-shrink-0 border-t border-slate-700/50 bg-slate-900/95 px-4 py-3">
+      <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-700/50 bg-white/95 dark:bg-slate-900/95 px-4 py-3 transition-colors">
         <div className="flex items-center gap-2 chat-input-area">
           <div className="flex-1 relative">
             <input
@@ -228,8 +234,8 @@ export default function ChatView({
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={ROTATING_PLACEHOLDERS[rotIdx]}
-              className="w-full bg-slate-800 border border-slate-700/50 rounded-xl
-                         px-4 py-3 text-sm text-slate-100 placeholder-slate-500
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-xl
+                         px-4 py-3 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500
                          focus:outline-none focus:ring-2 focus:ring-medical-primary/50
                          focus:border-medical-primary/50 transition-all"
               disabled={isLoading}

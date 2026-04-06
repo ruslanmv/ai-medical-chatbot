@@ -179,8 +179,8 @@ export function ChatView({
         </div>
       )}
 
-      {/* Sticky composer — the most important element */}
-      <div className="px-4 sm:px-6 pt-3 pb-5 bg-gradient-to-t from-surface-0 via-surface-0/95 to-transparent">
+      {/* Sticky composer — most important element. Stays above mobile keyboard. */}
+      <div className="sticky-bottom-keyboard px-4 sm:px-6 pt-3 pb-5 pb-safe-area bg-gradient-to-t from-surface-0 via-surface-0/95 to-transparent">
         <div className="max-w-3xl mx-auto">
           <HeroInput
             language={language}

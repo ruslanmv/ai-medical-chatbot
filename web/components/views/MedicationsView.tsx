@@ -29,9 +29,9 @@ interface MedicationsViewProps {
 }
 
 const TIME_GROUPS = [
-  { label: "Morning", range: ["05:00", "12:00"] },
-  { label: "Afternoon", range: ["12:00", "18:00"] },
-  { label: "Evening", range: ["18:00", "23:59"] },
+  { label: "med_morning", range: ["05:00", "12:00"] },
+  { label: "med_afternoon", range: ["12:00", "18:00"] },
+  { label: "med_evening", range: ["18:00", "23:59"] },
 ] as const;
 
 export function MedicationsView({
@@ -77,13 +77,13 @@ export function MedicationsView({
   }));
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+    <div className="flex-1 overflow-y-auto p-6 sm:p-8 pb-mobile-nav scroll-touch">
       <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-ink-base">Medications</h2>
+            <h2 className="text-2xl font-bold text-ink-base">{t("med_title", language)}</h2>
             <p className="text-sm text-ink-muted mt-1">
-              Track your daily medications and build a streak
+              {t("med_subtitle", language)}
             </p>
           </div>
           <button
@@ -91,14 +91,14 @@ export function MedicationsView({
             className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 transition-all"
           >
             {showForm ? <X size={16} /> : <Plus size={16} />}
-            {showForm ? "Cancel" : "Add"}
+            {showForm ? t("med_cancel", language) : t("med_add", language)}
           </button>
         </div>
 
         {/* Add medication form */}
         {showForm && (
           <div className="bg-surface-1 border border-line/60 rounded-2xl p-5 mb-6 shadow-soft animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h3 className="font-bold text-ink-base mb-4">New Medication</h3>
+            <h3 className="font-bold text-ink-base mb-4">{t("med_new", language)}</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1.5 block">
@@ -191,10 +191,10 @@ export function MedicationsView({
               <Pill size={28} className="text-brand-500" />
             </div>
             <h3 className="font-bold text-ink-base text-lg mb-1">
-              No medications yet
+              {t("med_none", language)}
             </h3>
             <p className="text-ink-muted text-sm">
-              Tap &ldquo;Add&rdquo; to start tracking your medications
+              {t("med_none_desc", language)}
             </p>
           </div>
         )}
@@ -206,9 +206,9 @@ export function MedicationsView({
           );
           if (meds.length === 0) return null;
           return (
-            <div key={g.label} className="mb-6">
+            <div key={t(g.label, language)} className="mb-6">
               <h3 className="text-xs font-bold uppercase tracking-wider text-ink-subtle mb-3">
-                {g.label}
+                {t(g.label, language)}
               </h3>
               <div className="space-y-2">
                 {meds.map((m) => {

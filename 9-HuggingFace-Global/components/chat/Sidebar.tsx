@@ -54,13 +54,13 @@ export default function Sidebar({ currentView, onNavigate, language }: SidebarPr
   const currentLangMeta = LANGUAGE_META[language];
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 p-4">
+    <div className="flex flex-col h-full bg-slate-100 dark:bg-slate-900 p-4 transition-colors">
       {/* Logo */}
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-50">
+        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-50">
           <span className="text-medical-primary">Med</span>OS
         </h1>
-        <p className="text-xs text-slate-400 mt-1">Free AI Medical Assistant</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Free AI Medical Assistant</p>
       </div>
 
       {/* Navigation */}
@@ -78,8 +78,8 @@ export default function Sidebar({ currentView, onNavigate, language }: SidebarPr
                 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
                 touch-target transition-all duration-200
                 ${isActive
-                  ? 'bg-slate-700/60 text-slate-50'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  ? 'bg-blue-50 text-blue-700 dark:bg-slate-700/60 dark:text-slate-50'
+                  : 'text-slate-500 hover:bg-slate-200 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
                 }
                 ${isEmergency && !isActive ? 'text-red-400 hover:text-red-300' : ''}
               `}

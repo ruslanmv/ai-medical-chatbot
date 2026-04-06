@@ -13,6 +13,8 @@ import {
   Activity,
   FileText,
   Clock,
+  User2,
+  LogIn,
 } from "lucide-react";
 import { NavItem } from "./NavItem";
 import { t, type SupportedLanguage } from "@/lib/i18n";
@@ -28,19 +30,25 @@ export type NavView =
   | "vitals"
   | "health-dashboard"
   | "history"
-  | "settings";
+  | "settings"
+  | "login"
+  | "profile";
 
 interface SidebarProps {
   activeNav: NavView;
   setActiveNav: (nav: NavView) => void;
   language?: SupportedLanguage;
   advancedMode?: boolean;
+  isAuthenticated?: boolean;
+  username?: string;
 }
 
 export function Sidebar({
   activeNav,
   setActiveNav,
   language = "en",
+  isAuthenticated = false,
+  username,
 }: SidebarProps) {
   return (
     <>
@@ -55,7 +63,7 @@ export function Sidebar({
               MedOS
             </h1>
             <p className="text-[10px] font-semibold text-ink-subtle uppercase tracking-[0.14em] mt-1">
-              worldwide care
+              {t("home_hero_eyebrow", language)}
             </p>
           </div>
         </div>
@@ -77,36 +85,36 @@ export function Sidebar({
           {/* Health Tracker section */}
           <div className="mt-5 mb-2 px-4">
             <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
-              Health Tracker
+              {t("nav_health_tracker", language)}
             </span>
           </div>
           <NavItem
             icon={Heart}
-            label="Dashboard"
+            label={t("nav_dashboard", language)}
             active={activeNav === "health-dashboard"}
             onClick={() => setActiveNav("health-dashboard")}
           />
           <NavItem
             icon={Pill}
-            label="Medications"
+            label={t("nav_medications", language)}
             active={activeNav === "medications"}
             onClick={() => setActiveNav("medications")}
           />
           <NavItem
             icon={Calendar}
-            label="Appointments"
+            label={t("nav_appointments", language)}
             active={activeNav === "appointments"}
             onClick={() => setActiveNav("appointments")}
           />
           <NavItem
             icon={Activity}
-            label="Vitals"
+            label={t("nav_vitals", language)}
             active={activeNav === "vitals"}
             onClick={() => setActiveNav("vitals")}
           />
           <NavItem
             icon={FileText}
-            label="Records"
+            label={t("nav_records", language)}
             active={activeNav === "records"}
             onClick={() => setActiveNav("records")}
           />
@@ -114,7 +122,7 @@ export function Sidebar({
           {/* Tools section */}
           <div className="mt-5 mb-2 px-4">
             <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
-              Tools
+              {t("nav_tools", language)}
             </span>
           </div>
           <NavItem
@@ -132,7 +140,7 @@ export function Sidebar({
           />
           <NavItem
             icon={Clock}
-            label="History"
+            label={t("nav_history", language)}
             active={activeNav === "history"}
             onClick={() => setActiveNav("history")}
           />
@@ -142,6 +150,14 @@ export function Sidebar({
             label={t("nav_settings", language)}
             active={activeNav === "settings"}
             onClick={() => setActiveNav("settings")}
+          />
+          <NavItem
+            icon={isAuthenticated ? User2 : LogIn}
+            label={isAuthenticated ? (username || "Profile") : "Log in"}
+            active={activeNav === (isAuthenticated ? "profile" : "login")}
+            onClick={() =>
+              setActiveNav(isAuthenticated ? "profile" : "login")
+            }
           />
         </nav>
 
@@ -172,8 +188,8 @@ export function Sidebar({
         </div>
       </aside>
 
-      {/* Mobile bottom navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-1/95 backdrop-blur-xl border-t border-line/60 flex items-center justify-around px-2 py-1 z-50 safe-area-bottom">
+      {/* Mobile bottom navigation — 5 tabs, 48px min touch target */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-1/95 backdrop-blur-xl border-t border-line/60 flex items-center justify-around px-1 z-50 safe-area-bottom">
         <MobileNavButton
           icon={Home}
           label={t("nav_home", language)}
@@ -187,17 +203,23 @@ export function Sidebar({
           onClick={() => setActiveNav("chat")}
         />
         <MobileNavButton
+          icon={Heart}
+          label={t("nav_health", language)}
+          active={
+            activeNav === "health-dashboard" ||
+            activeNav === "medications" ||
+            activeNav === "appointments" ||
+            activeNav === "vitals" ||
+            activeNav === "records"
+          }
+          onClick={() => setActiveNav("health-dashboard")}
+        />
+        <MobileNavButton
           icon={AlertTriangle}
           label={t("nav_emergency", language)}
           active={activeNav === "emergency"}
           onClick={() => setActiveNav("emergency")}
           urgent
-        />
-        <MobileNavButton
-          icon={BookOpen}
-          label={t("nav_topics", language)}
-          active={activeNav === "topics"}
-          onClick={() => setActiveNav("topics")}
         />
         <MobileNavButton
           icon={Settings}
@@ -226,11 +248,11 @@ function MobileNavButton({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl transition-all min-w-[56px] ${
+      className={`flex flex-col items-center justify-center gap-0.5 min-h-[48px] min-w-[48px] px-2 py-1.5 rounded-2xl transition-all active:scale-95 ${
         active
           ? urgent
-            ? "text-danger-500"
-            : "text-brand-600"
+            ? "text-danger-500 bg-danger-500/10"
+            : "text-brand-600 bg-brand-500/10"
           : "text-ink-subtle"
       }`}
     >
@@ -239,7 +261,7 @@ function MobileNavButton({
         strokeWidth={active ? 2.5 : 1.75}
         className={urgent && !active ? "text-danger-500/70" : ""}
       />
-      <span className="text-[10px] font-semibold leading-tight tracking-tight">
+      <span className="text-[10px] font-semibold leading-none tracking-tight">
         {label}
       </span>
     </button>

@@ -112,8 +112,8 @@ export default function MessageBubble({
             isUser
               ? 'bg-medical-primary text-white message-user'
               : isEmergency
-                ? 'bg-red-950/50 border border-red-700/50 text-slate-100 message-bot'
-                : 'bg-slate-800 border border-slate-700/50 text-slate-100 message-bot'
+                ? 'bg-red-50 border border-red-200 text-red-900 dark:bg-red-950/50 dark:border-red-700/50 dark:text-slate-100 message-bot'
+                : 'bg-slate-50 border border-slate-200 text-slate-800 dark:bg-slate-800 dark:border-slate-700/50 dark:text-slate-100 message-bot'
           }
         `}
       >
@@ -162,7 +162,7 @@ export default function MessageBubble({
         {/* Footer: timestamp + action row */}
         <div
           className={`flex items-center justify-between mt-2 gap-3 flex-wrap ${
-            isUser ? 'text-blue-200' : 'text-slate-500'
+            isUser ? 'text-blue-200' : 'text-slate-400 dark:text-slate-500'
           }`}
         >
           <span className="text-xs">

@@ -190,7 +190,7 @@ export function SettingsView({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+    <div className="flex-1 overflow-y-auto p-6 sm:p-8 pb-mobile-nav scroll-touch">
       <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
         <h2 className="text-2xl font-bold text-slate-800 mb-6">
           {t("settings_title", language)}

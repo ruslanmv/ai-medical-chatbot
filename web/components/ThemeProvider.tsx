@@ -35,7 +35,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Hydrate from localStorage on mount.
   useEffect(() => {
-    const stored = (localStorage.getItem("medos_theme") as ThemeMode | null) ?? "system";
+    const stored = (localStorage.getItem("medos_theme") as ThemeMode | null) ?? "light";
     setThemeState(stored);
     const dark = stored === "dark" || (stored === "system" && systemPrefersDark());
     setResolved(dark ? "dark" : "light");
