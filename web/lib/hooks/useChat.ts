@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { Provider, Preset } from "../types";
-import { buildPatientContext } from "../health-store";
+import { buildPatientContext, buildMedicineInventoryContext } from "../health-store";
 
 export type ChatMessage = {
   id: number;
@@ -96,7 +96,7 @@ export function useChat() {
               // every turn with repeated profile data.
               content:
                 i === 0 && m.role === "user"
-                  ? m.content + buildPatientContext()
+                  ? m.content + buildPatientContext() + buildMedicineInventoryContext()
                   : m.content,
             })),
           }),
