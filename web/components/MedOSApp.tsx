@@ -8,6 +8,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { EmergencyCTA } from "./chat/EmergencyCTA";
 import { Sidebar, NavView } from "./chat/Sidebar";
 import { RightPanel } from "./chat/RightPanel";
+import { NotificationBell } from "./chat/NotificationCenter";
 import { ChatView } from "./views/ChatView";
 import { HomeView } from "./views/HomeView";
 import { EmergencyView } from "./views/EmergencyView";
@@ -19,10 +20,12 @@ import { MedicationsView } from "./views/MedicationsView";
 import { AppointmentsView } from "./views/AppointmentsView";
 import { VitalsView } from "./views/VitalsView";
 import { HealthDashboard } from "./views/HealthDashboard";
+import { ScheduleView } from "./views/ScheduleView";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { useSettings } from "@/lib/hooks/useSettings";
 import { useChat } from "@/lib/hooks/useChat";
 import { useHealthStore } from "@/lib/hooks/useHealthStore";
+import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { LoginView } from "./views/LoginView";
 import { ProfileView } from "./views/ProfileView";
@@ -42,6 +45,7 @@ function MedOSAppInner() {
   const auth = useAuth();
   const { messages, isTyping, error, sendMessage, clearMessages } = useChat();
   const health = useHealthStore(auth.token);
+  const notif = useNotifications();
 
   // IP-based auto-detection. Only applies if the user hasn't manually
   // chosen a language yet; the manual override in Settings wins forever.
@@ -180,6 +184,19 @@ function MedOSAppInner() {
             darkMode={settings.darkMode}
             setDarkMode={settings.setDarkMode}
             emergencyNumber={settings.emergencyNumber}
+          />
+        );
+      case "schedule":
+        return (
+          <ScheduleView
+            medications={health.medications}
+            medicationLogs={health.medicationLogs}
+            appointments={health.appointments}
+            onMarkMedTaken={health.markMedTaken}
+            isMedTaken={health.isMedTaken}
+            onEditAppointment={health.editAppointment}
+            onNavigate={handleNavigate}
+            language={settings.language}
           />
         );
       case "health-dashboard":
@@ -397,6 +414,12 @@ function MedOSAppInner() {
           </h2>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <NotificationBell
+              notifications={notif.notifications}
+              count={notif.count}
+              onDismiss={notif.dismiss}
+              onDismissAll={notif.dismissAll}
+            />
             <ThemeToggle />
             <EmergencyCTA
               number={settings.emergencyNumber}
@@ -414,12 +437,15 @@ function MedOSAppInner() {
 
       {/* Right Panel — context-aware */}
       <RightPanel
-        onScheduleClick={() => setActiveNav("schedule")}
         language={settings.language}
         emergencyNumber={settings.emergencyNumber}
-        hasActiveChat={hasActiveChat}
+        vitals={health.vitals}
+        medications={health.medications}
+        appointments={health.appointments}
+        isMedTaken={health.isMedTaken}
         onNavigate={handleNavigate}
-        onStartVoice={handleStartVoice}
+        notificationCount={notif.count}
+        onOpenNotifications={() => {}}
       />
     </div>
   );
