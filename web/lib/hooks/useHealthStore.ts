@@ -1,16 +1,35 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import * as hs from "../health-store";
+
+/**
+ * Build a flat array of sync items from all localStorage entities.
+ * Used for the initial bulk sync on login.
+ */
+function buildSyncPayload(): Array<{ id: string; type: string; data: any }> {
+  const items: Array<{ id: string; type: string; data: any }> = [];
+  for (const m of hs.loadMedications()) items.push({ id: m.id, type: "medication", data: m });
+  for (const l of hs.loadMedicationLogs()) items.push({ id: l.id, type: "medication_log", data: l });
+  for (const a of hs.loadAppointments()) items.push({ id: a.id, type: "appointment", data: a });
+  for (const v of hs.loadVitals()) items.push({ id: v.id, type: "vital", data: v });
+  for (const r of hs.loadRecords()) items.push({ id: r.id, type: "record", data: r });
+  for (const c of hs.loadHistory()) items.push({ id: c.id, type: "conversation", data: c });
+  return items;
+}
 
 /**
  * React hook wrapping the health-store's localStorage CRUD.
  *
- * Re-reads from storage on mount and after every mutation so the UI
- * always reflects the latest state. All writes are synchronous and
- * local — no server calls, no loading states needed.
+ * When `authToken` is provided (user is logged in), mutations are
+ * also synced to the HF Space backend via /api/proxy/health-data.
+ * The initial login triggers a bulk sync of all existing localStorage
+ * data to the server (migration from guest → account).
+ *
+ * All writes are localStorage-first (offline-capable), with async
+ * server sync as a best-effort background operation.
  */
-export function useHealthStore() {
+export function useHealthStore(authToken?: string | null) {
   const [medications, setMedications] = useState<hs.Medication[]>([]);
   const [medicationLogs, setMedicationLogs] = useState<hs.MedicationLog[]>([]);
   const [appointments, setAppointments] = useState<hs.Appointment[]>([]);
@@ -33,96 +52,160 @@ export function useHealthStore() {
     setLoaded(true);
   }, [refresh]);
 
+  // --- Server sync (when authenticated) ---
+  const synced = useRef(false);
+
+  // On first login, bulk-sync all localStorage to server.
+  useEffect(() => {
+    if (!authToken || synced.current) return;
+    synced.current = true;
+    const items = buildSyncPayload();
+    if (items.length === 0) return;
+    fetch("/api/proxy/health-data/sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ items }),
+    }).catch(() => {});
+  }, [authToken]);
+
+  /** Best-effort server upsert — fire and forget. */
+  const syncItem = useCallback(
+    (id: string, type: string, data: any) => {
+      if (!authToken) return;
+      fetch("/api/proxy/health-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ id, type, data }),
+      }).catch(() => {});
+    },
+    [authToken],
+  );
+
+  const syncDelete = useCallback(
+    (id: string) => {
+      if (!authToken) return;
+      fetch(`/api/proxy/health-data?id=${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${authToken}` },
+      }).catch(() => {});
+    },
+    [authToken],
+  );
+
   // --- Medications ---
   const addMedication = useCallback(
     (med: Omit<hs.Medication, "id">) => {
-      hs.saveMedication(med);
+      const saved = hs.saveMedication(med);
       refresh();
+      syncItem(saved.id, "medication", saved);
     },
-    [refresh],
+    [refresh, syncItem],
   );
   const editMedication = useCallback(
     (id: string, patch: Partial<hs.Medication>) => {
       hs.updateMedication(id, patch);
       refresh();
+      const updated = hs.loadMedications().find((m) => m.id === id);
+      if (updated) syncItem(id, "medication", updated);
     },
-    [refresh],
+    [refresh, syncItem],
   );
   const deleteMedication = useCallback(
     (id: string) => {
       hs.removeMedication(id);
       refresh();
+      syncDelete(id);
     },
-    [refresh],
+    [refresh, syncDelete],
   );
   const markMedTaken = useCallback(
     (medicationId: string, date: string, time: string) => {
       hs.logMedicationTaken(medicationId, date, time);
       refresh();
+      // Sync the log entry
+      const logs = hs.loadMedicationLogs();
+      const latest = logs[logs.length - 1];
+      if (latest) syncItem(latest.id, "medication_log", latest);
     },
-    [refresh],
+    [refresh, syncItem],
   );
 
   // --- Appointments ---
   const addAppointment = useCallback(
     (appt: Omit<hs.Appointment, "id">) => {
-      hs.saveAppointment(appt);
+      const saved = hs.saveAppointment(appt);
       refresh();
+      syncItem(saved.id, "appointment", saved);
     },
-    [refresh],
+    [refresh, syncItem],
   );
   const editAppointment = useCallback(
     (id: string, patch: Partial<hs.Appointment>) => {
       hs.updateAppointment(id, patch);
       refresh();
+      const updated = hs.loadAppointments().find((a) => a.id === id);
+      if (updated) syncItem(id, "appointment", updated);
     },
-    [refresh],
+    [refresh, syncItem],
   );
   const deleteAppointment = useCallback(
     (id: string) => {
       hs.removeAppointment(id);
       refresh();
+      syncDelete(id);
     },
-    [refresh],
+    [refresh, syncDelete],
   );
 
   // --- Vitals ---
   const addVital = useCallback(
     (reading: Omit<hs.VitalReading, "id">) => {
-      hs.saveVital(reading);
+      const saved = hs.saveVital(reading);
       refresh();
+      syncItem(saved.id, "vital", saved);
     },
-    [refresh],
+    [refresh, syncItem],
   );
   const deleteVital = useCallback(
     (id: string) => {
       hs.removeVital(id);
       refresh();
+      syncDelete(id);
     },
-    [refresh],
+    [refresh, syncDelete],
   );
 
   // --- Records ---
   const addRecord = useCallback(
     (rec: Omit<hs.HealthRecord, "id">) => {
-      hs.saveRecord(rec);
+      const saved = hs.saveRecord(rec);
       refresh();
+      syncItem(saved.id, "record", saved);
     },
-    [refresh],
+    [refresh, syncItem],
   );
   const editRecord = useCallback(
     (id: string, patch: Partial<hs.HealthRecord>) => {
       hs.updateRecord(id, patch);
       refresh();
+      const updated = hs.loadRecords().find((r) => r.id === id);
+      if (updated) syncItem(id, "record", updated);
     },
-    [refresh],
+    [refresh, syncItem],
   );
   const deleteRecord = useCallback(
     (id: string) => {
       hs.removeRecord(id);
       refresh();
+      syncDelete(id);
     },
-    [refresh],
+    [refresh, syncDelete],
   );
 
   // --- History ---

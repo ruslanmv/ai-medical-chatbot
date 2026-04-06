@@ -43,6 +43,10 @@
   html,
   body {
     @apply h-full w-full;
+    /* iOS Safari 100vh fix: dvh accounts for the collapsible address bar.
+       Falls back to 100vh for browsers that don't support dvh. */
+    height: 100vh;
+    height: 100dvh;
   }
 
   html {
@@ -198,6 +202,51 @@
 /* Large tap targets */
 @media (pointer: coarse) {
   button, a, select, input, textarea { min-height: 44px; }
+}
+
+/* ============================================================
+ * Mobile-first utilities
+ * ============================================================ */
+
+/* Dynamic viewport height — works on iOS Safari, Android Chrome,
+   and every modern browser. Falls back to 100vh. */
+.h-screen-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Sticky input bar that stays above the mobile keyboard.
+   Uses env(keyboard-inset-height) on supporting browsers and
+   falls back to standard sticky positioning elsewhere. */
+.sticky-bottom-keyboard {
+  position: sticky;
+  bottom: 0;
+  bottom: env(keyboard-inset-height, 0px);
+}
+
+/* Prevent iOS input zoom — any input below 16px triggers a zoom.
+   We force 16px minimum on touch devices and compensate with
+   transforms where we need visually-smaller text. */
+@media (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* iOS momentum scrolling */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Bottom padding spacer for content that sits above a fixed bottom nav.
+   The 5.5rem accounts for the nav height + safe-area-inset-bottom. */
+.pb-mobile-nav {
+  padding-bottom: 5.5rem;
+}
+@media (min-width: 768px) {
+  .pb-mobile-nav {
+    padding-bottom: 0;
+  }
 }
 
 /* Respect reduced-motion preferences everywhere */

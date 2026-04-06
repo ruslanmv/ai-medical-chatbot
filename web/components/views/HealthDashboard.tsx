@@ -22,7 +22,7 @@ import {
   type HealthRecord,
   type MedicationLog,
 } from "@/lib/health-store";
-import { type SupportedLanguage } from "@/lib/i18n";
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface HealthDashboardProps {
   medications: Medication[];
@@ -72,11 +72,11 @@ export function HealthDashboard({
   const medsTotal = todayMedSlots.length;
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+    <div className="flex-1 overflow-y-auto p-6 sm:p-8 pb-mobile-nav scroll-touch">
       <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-ink-base">Health Tracker</h2>
+            <h2 className="text-2xl font-bold text-ink-base">{t("health_tracker", language)}</h2>
             <p className="text-sm text-ink-muted mt-1">
               Today&rsquo;s overview — {new Date().toLocaleDateString(undefined, {
                 weekday: "long",
@@ -88,7 +88,7 @@ export function HealthDashboard({
           <button
             onClick={onExport}
             className="flex items-center gap-1.5 px-3 py-2 bg-surface-2 border border-line/60 rounded-xl text-xs font-semibold text-ink-muted hover:text-ink-base transition-colors"
-            title="Export all health data"
+            title={t("health_export_all", language)}
           >
             <Download size={14} />
             Export
@@ -99,28 +99,28 @@ export function HealthDashboard({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           <QuickStat
             icon={Pill}
-            label="Meds today"
+            label={t("health_meds_today", language)}
             value={`${medsDone}/${medsTotal}`}
             onClick={() => onNavigate("medications")}
             accent={medsDone === medsTotal && medsTotal > 0 ? "success" : "brand"}
           />
           <QuickStat
             icon={Calendar}
-            label="Upcoming"
+            label={t("health_upcoming", language)}
             value={String(upcomingAppts.length)}
             onClick={() => onNavigate("appointments")}
             accent="brand"
           />
           <QuickStat
             icon={Activity}
-            label="Vitals"
+            label={t("nav_vitals", language)}
             value={String(latestVitals.length)}
             onClick={() => onNavigate("vitals")}
             accent="accent"
           />
           <QuickStat
             icon={FileText}
-            label="Records"
+            label={t("nav_records", language)}
             value={String(records.length)}
             onClick={() => onNavigate("records")}
             accent="brand"
@@ -130,7 +130,7 @@ export function HealthDashboard({
         {/* Today's medications */}
         {todayMedSlots.length > 0 && (
           <DashSection
-            title="Today's medications"
+            title={t("health_todays_meds", language)}
             icon={Pill}
             onMore={() => onNavigate("medications")}
           >
@@ -180,7 +180,7 @@ export function HealthDashboard({
         {/* Upcoming appointments */}
         {upcomingAppts.length > 0 && (
           <DashSection
-            title="Upcoming appointments"
+            title={t("health_upcoming_appts", language)}
             icon={Calendar}
             onMore={() => onNavigate("appointments")}
           >
@@ -213,7 +213,7 @@ export function HealthDashboard({
         {/* Latest vitals */}
         {latestVitals.length > 0 && (
           <DashSection
-            title="Latest vitals"
+            title={t("health_latest_vitals", language)}
             icon={Activity}
             onMore={() => onNavigate("vitals")}
           >
@@ -246,16 +246,16 @@ export function HealthDashboard({
                 <Heart size={28} className="text-white" />
               </div>
               <h3 className="font-bold text-ink-base text-lg mb-2">
-                Start tracking your health
+                {t("health_start_tracking", language)}
               </h3>
               <p className="text-ink-muted text-sm max-w-md mx-auto mb-6">
                 Add your medications, appointments, and vital signs. Everything stays
                 private in your browser — no account needed.
               </p>
               <div className="flex flex-wrap gap-2 justify-center">
-                <NavButton label="Add medication" onClick={() => onNavigate("medications")} />
-                <NavButton label="Schedule appointment" onClick={() => onNavigate("appointments")} />
-                <NavButton label="Log vitals" onClick={() => onNavigate("vitals")} />
+                <NavButton label={t("health_add_med", language)} onClick={() => onNavigate("medications")} />
+                <NavButton label={t("health_schedule_appt", language)} onClick={() => onNavigate("appointments")} />
+                <NavButton label={t("health_log_vitals", language)} onClick={() => onNavigate("vitals")} />
               </div>
             </div>
           )}

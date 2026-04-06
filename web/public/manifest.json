@@ -1,0 +1,29 @@
+{
+  "name": "MedOS — your medical assistant",
+  "short_name": "MedOS",
+  "description": "Free AI medical assistant. 20 languages. No sign-up. Private.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "theme_color": "#3B82F6",
+  "background_color": "#F7F9FB",
+  "categories": ["health", "medical", "lifestyle"],
+  "lang": "en",
+  "dir": "auto",
+  "id": "medos-web",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Ask a health question",
+      "short_name": "Ask",
+      "url": "/?source=shortcut"
+    },
+    {
+      "name": "Health Dashboard",
+      "short_name": "Health",
+      "url": "/?view=health-dashboard"
+    }
+  ]
+}

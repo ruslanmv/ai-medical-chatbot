@@ -2,8 +2,10 @@
 # Optimized for Next.js 14 standalone output
 
 # Stage 1: Install ALL dependencies (including devDeps for build)
+# better-sqlite3 needs python3 + make + g++ to compile the native addon.
 FROM node:18-alpine AS deps
 WORKDIR /app
+RUN apk add --no-cache python3 make g++
 COPY package.json ./
 RUN npm install --legacy-peer-deps && npm cache clean --force
 
@@ -40,6 +42,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy data files (health topics, medical KB)
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data
+
+# Persistent storage directory for SQLite DB.
+# HF Spaces mounts /data as persistent volume — the DB survives restarts.
+# Ensure the directory exists and is writable by the nextjs user.
+RUN mkdir -p /data && chown nextjs:nodejs /data
+
+ENV DB_PATH=/data/medos.db
 
 USER nextjs
 

@@ -213,18 +213,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" dir="ltr" className="dark">
+    <html lang="en" dir="ltr" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* Pre-hydration: read stored theme before first paint to avoid flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('medos-theme');var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(d)document.documentElement.classList.add('dark');document.documentElement.style.colorScheme=d?'dark':'light'}catch(e){}})();`,
+          }}
+        />
         {/* JSON-LD structured data for Google rich results + SEO */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="bg-slate-900 text-slate-50 antialiased">
+      <body className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-50 antialiased">
         {children}
         <script
           dangerouslySetInnerHTML={{

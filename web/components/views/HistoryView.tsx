@@ -24,10 +24,10 @@ export function HistoryView({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-ink-base">
-              Conversation History
+              {t("hist_title", language)}
             </h2>
             <p className="text-sm text-ink-muted mt-1">
-              Your past MedOS sessions, saved locally
+              {t("hist_subtitle", language)}
             </p>
           </div>
           {history.length > 0 && (
@@ -47,10 +47,10 @@ export function HistoryView({
               <Clock size={28} className="text-brand-500" />
             </div>
             <h3 className="font-bold text-ink-base text-lg mb-1">
-              No conversations yet
+              {t("hist_none", language)}
             </h3>
             <p className="text-ink-muted text-sm">
-              Your past MedOS sessions will appear here automatically
+              {t("hist_none_desc", language)}
             </p>
           </div>
         ) : (

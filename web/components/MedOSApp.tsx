@@ -23,6 +23,9 @@ import { WelcomeScreen } from "./WelcomeScreen";
 import { useSettings } from "@/lib/hooks/useSettings";
 import { useChat } from "@/lib/hooks/useChat";
 import { useHealthStore } from "@/lib/hooks/useHealthStore";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { LoginView } from "./views/LoginView";
+import { ProfileView } from "./views/ProfileView";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
 export default function MedOSApp() {
@@ -36,8 +39,9 @@ export default function MedOSApp() {
 function MedOSAppInner() {
   const [activeNav, setActiveNav] = useState<NavView>("home");
   const settings = useSettings();
+  const auth = useAuth();
   const { messages, isTyping, error, sendMessage, clearMessages } = useChat();
-  const health = useHealthStore();
+  const health = useHealthStore(auth.token);
 
   // IP-based auto-detection. Only applies if the user hasn't manually
   // chosen a language yet; the manual override in Settings wins forever.
@@ -247,6 +251,52 @@ function MedOSAppInner() {
             language={settings.language}
           />
         );
+      case "login":
+        return (
+          <LoginView
+            onLogin={async (u, p) => {
+              const res = await auth.login(u, p);
+              if (res.ok) setActiveNav("home");
+              return res;
+            }}
+            onRegister={async (u, p, o) => {
+              const res = await auth.register(u, p, o);
+              if (res.ok) setActiveNav("home");
+              return res;
+            }}
+            language={settings.language}
+          />
+        );
+      case "profile":
+        return auth.user ? (
+          <ProfileView
+            user={auth.user}
+            onLogout={() => {
+              auth.logout();
+              setActiveNav("home");
+            }}
+            onExport={health.downloadAll}
+            medicationCount={health.medications.length}
+            appointmentCount={health.appointments.length}
+            vitalCount={health.vitals.length}
+            recordCount={health.records.length}
+            language={settings.language}
+          />
+        ) : (
+          <LoginView
+            onLogin={async (u, p) => {
+              const res = await auth.login(u, p);
+              if (res.ok) setActiveNav("profile");
+              return res;
+            }}
+            onRegister={async (u, p, o) => {
+              const res = await auth.register(u, p, o);
+              if (res.ok) setActiveNav("profile");
+              return res;
+            }}
+            language={settings.language}
+          />
+        );
       default:
         return (
           <ChatView
@@ -292,7 +342,7 @@ function MedOSAppInner() {
 
   return (
     <div
-      className={`relative flex h-screen w-full font-sans text-ink-base ${textSizeClass}`}
+      className={`relative flex h-screen-safe w-full font-sans text-ink-base ${textSizeClass}`}
     >
       {/* Sidebar */}
       <Sidebar
@@ -300,18 +350,20 @@ function MedOSAppInner() {
         setActiveNav={setActiveNav}
         language={settings.language}
         advancedMode={settings.advancedMode}
+        isAuthenticated={auth.isAuthenticated}
+        username={auth.user?.username}
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col relative overflow-hidden pb-16 md:pb-0">
-        {/* Top Header — elevated glass card, sticky emergency CTA */}
-        <header className="h-16 glass-card border-0 border-b rounded-none flex items-center justify-between px-4 sm:px-8 sticky top-0 z-20">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 md:hidden">
-            <div className="w-8 h-8 rounded-xl bg-brand-gradient flex items-center justify-center text-white shadow-glow">
-              <Heart size={15} />
+      <div className="flex-1 flex flex-col relative overflow-hidden pb-14 md:pb-0">
+        {/* Top Header — clean, mobile-first, always accessible */}
+        <header className="h-14 sm:h-16 bg-surface-1/90 backdrop-blur-xl border-b border-line/50 flex items-center justify-between px-3 sm:px-8 sticky top-0 z-20">
+          {/* Mobile logo — larger tap target */}
+          <div className="flex items-center gap-2.5 md:hidden">
+            <div className="w-9 h-9 rounded-xl bg-brand-gradient flex items-center justify-center text-white shadow-soft">
+              <Heart size={16} />
             </div>
-            <span className="font-bold text-ink-base tracking-tight">MedOS</span>
+            <span className="font-bold text-ink-base tracking-tight text-base">MedOS</span>
           </div>
 
           <h2 className="hidden md:block font-bold text-lg text-ink-base tracking-tight">

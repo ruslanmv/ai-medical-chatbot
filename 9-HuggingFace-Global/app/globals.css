@@ -5,11 +5,11 @@
 /* ===== CSS Custom Properties ===== */
 :root {
   --vh: 1vh;
-  --color-bg-primary: #0f172a;
-  --color-bg-secondary: #1e293b;
-  --color-bg-tertiary: #334155;
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #94a3b8;
+  --color-bg-primary: #f7f9fb;
+  --color-bg-secondary: #f1f5f9;
+  --color-bg-tertiary: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
   --color-accent: #3b82f6;
   --color-accent-secondary: #10b981;
   --color-danger: #ef4444;
@@ -18,7 +18,81 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --safe-area-right: env(safe-area-inset-right, 0px);
+  color-scheme: light;
 }
+
+.dark {
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #334155;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  color-scheme: dark;
+}
+
+/* ============================================================
+ * Light-mode compatibility layer.
+ *
+ * Most components were originally built dark-only with hardcoded
+ * slate-700/800/900 classes. Rather than adding dark: prefixes to
+ * every single class in every file (15+ views), we remap the most
+ * common dark-palette utilities to their light equivalents at the
+ * CSS level. In .dark mode these rules don't apply, so the
+ * original dark colors remain.
+ *
+ * This is intentionally !important so it overrides Tailwind's
+ * generated utilities (which have equal specificity).
+ * ============================================================ */
+
+/* --- Backgrounds --- */
+:root:not(.dark) .bg-slate-900     { background-color: #ffffff !important; }
+:root:not(.dark) .bg-slate-900\/95 { background-color: rgba(255,255,255,0.95) !important; }
+:root:not(.dark) .bg-slate-900\/85 { background-color: rgba(255,255,255,0.90) !important; }
+:root:not(.dark) .bg-slate-800     { background-color: #f8fafc !important; }
+:root:not(.dark) .bg-slate-800\/50 { background-color: rgba(241,245,249,0.7) !important; }
+:root:not(.dark) .bg-slate-800\/30 { background-color: rgba(241,245,249,0.5) !important; }
+:root:not(.dark) .bg-slate-800\/80 { background-color: rgba(241,245,249,0.85) !important; }
+:root:not(.dark) .bg-slate-700     { background-color: #e2e8f0 !important; }
+:root:not(.dark) .bg-slate-700\/60 { background-color: rgba(226,232,240,0.7) !important; }
+
+/* Tinted surfaces */
+:root:not(.dark) .bg-red-950\/50   { background-color: rgba(254,226,226,0.6) !important; }
+
+/* --- Text --- */
+:root:not(.dark) .text-slate-50    { color: #0f172a !important; }
+:root:not(.dark) .text-slate-100   { color: #1e293b !important; }
+:root:not(.dark) .text-slate-200   { color: #334155 !important; }
+:root:not(.dark) .text-slate-300   { color: #475569 !important; }
+:root:not(.dark) .text-slate-400   { color: #64748b !important; }
+:root:not(.dark) .text-red-300     { color: #dc2626 !important; }
+:root:not(.dark) .text-red-400     { color: #ef4444 !important; }
+:root:not(.dark) .text-blue-200    { color: #3b82f6 !important; }
+:root:not(.dark) .text-teal-300    { color: #0d9488 !important; }
+:root:not(.dark) .text-teal-400    { color: #14b8a6 !important; }
+
+/* --- Borders --- */
+:root:not(.dark) .border-slate-700\/50 { border-color: rgba(226,232,240,0.8) !important; }
+:root:not(.dark) .border-slate-700\/30 { border-color: rgba(226,232,240,0.6) !important; }
+:root:not(.dark) .border-slate-700\/60 { border-color: rgba(226,232,240,0.7) !important; }
+:root:not(.dark) .border-slate-700     { border-color: #e2e8f0 !important; }
+:root:not(.dark) .border-red-700\/50   { border-color: rgba(252,165,165,0.6) !important; }
+:root:not(.dark) .border-red-700\/30   { border-color: rgba(252,165,165,0.4) !important; }
+
+/* --- Placeholder text --- */
+:root:not(.dark) .placeholder-slate-500::placeholder { color: #94a3b8 !important; }
+
+/* --- Hover states --- */
+:root:not(.dark) .hover\:bg-slate-800:hover  { background-color: #f1f5f9 !important; }
+:root:not(.dark) .hover\:bg-slate-700:hover  { background-color: #e2e8f0 !important; }
+:root:not(.dark) .hover\:bg-slate-600:hover  { background-color: #cbd5e1 !important; }
+:root:not(.dark) .hover\:text-slate-200:hover { color: #1e293b !important; }
+:root:not(.dark) .hover\:text-slate-300:hover { color: #334155 !important; }
+:root:not(.dark) .hover\:text-teal-200:hover  { color: #0d9488 !important; }
+
+/* --- Focus rings stay the same (blue) --- */
+
+/* --- Right panel, sidebar, bottom nav overlays --- */
+:root:not(.dark) .bg-slate-800\/95 { background-color: rgba(255,255,255,0.95) !important; }
 
 /* ===== Base Styles ===== */
 * {
@@ -39,6 +113,7 @@ body {
   color: var(--color-text-primary);
   overflow: hidden;
   overscroll-behavior: none;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 /* ===== Mobile Viewport Height Fix (iOS Safari) ===== */
@@ -93,11 +168,19 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #cbd5e1;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
 
@@ -203,6 +286,10 @@ select {
 
 .message-content strong {
   font-weight: 600;
+  color: #1e293b;
+}
+
+.dark .message-content strong {
   color: #f1f5f9;
 }
 
@@ -223,6 +310,10 @@ select {
 .bottom-nav {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.90);
+}
+
+.dark .bottom-nav {
   background-color: rgba(15, 23, 42, 0.85);
 }
 

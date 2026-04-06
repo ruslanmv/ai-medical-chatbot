@@ -61,13 +61,13 @@ export function VitalsView({
   const grouped = Object.keys(VITAL_META) as VitalType[];
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+    <div className="flex-1 overflow-y-auto p-6 sm:p-8 pb-mobile-nav scroll-touch">
       <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-ink-base">Vitals</h2>
+            <h2 className="text-2xl font-bold text-ink-base">{t("vital_title", language)}</h2>
             <p className="text-sm text-ink-muted mt-1">
-              Log blood pressure, glucose, weight, temperature, and more
+              {t("vital_subtitle", language)}
             </p>
           </div>
           <button
@@ -75,14 +75,14 @@ export function VitalsView({
             className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 transition-all"
           >
             {showForm ? <X size={16} /> : <Plus size={16} />}
-            {showForm ? "Cancel" : "Log"}
+            {showForm ? t("vital_cancel", language) : t("vital_log", language)}
           </button>
         </div>
 
         {/* Quick-entry form */}
         {showForm && (
           <div className="bg-surface-1 border border-line/60 rounded-2xl p-5 mb-6 shadow-soft animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <h3 className="font-bold text-ink-base mb-4">Log a reading</h3>
+            <h3 className="font-bold text-ink-base mb-4">{t("vital_new", language)}</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1.5 block">
@@ -117,6 +117,7 @@ export function VitalsView({
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   placeholder={meta.placeholder}
+                  inputMode="decimal"
                   className="w-full bg-surface-2 border border-line/60 text-ink-base rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                 />
               </div>
@@ -219,7 +220,7 @@ export function VitalsView({
                     )}
                   </div>
                 ) : (
-                  <span className="text-sm text-ink-subtle">No readings yet</span>
+                  <span className="text-sm text-ink-subtle">{t("vital_no_readings", language)}</span>
                 )}
                 {/* Mini sparkline — last 7 readings as bars */}
                 {readings.length > 1 && (
