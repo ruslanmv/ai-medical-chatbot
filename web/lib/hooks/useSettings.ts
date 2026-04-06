@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Provider } from "../types";
+import type { Provider, Preset } from "../types";
 import {
   detectLanguage,
   detectCountry,
@@ -12,8 +12,10 @@ import {
 export type TextSize = "small" | "medium" | "large";
 
 export function useSettings() {
-  const [provider, setProvider] = useState<Provider>("openai");
+  const [preset, setPreset] = useState<Preset>("free-best");
+  const [provider, setProvider] = useState<Provider>("hf");
   const [apiKey, setApiKey] = useState("");
+  const [hfToken, setHfToken] = useState("");
   const [isLoaded, setIsLoaded] = useState(false);
 
   // New patient-friendly settings
@@ -27,11 +29,16 @@ export function useSettings() {
   const [darkMode, setDarkMode] = useState(false);
   const [welcomeCompleted, setWelcomeCompleted] = useState(false);
   const [emergencyNumber, setEmergencyNumber] = useState("112");
+  // True once the user picks a language/country manually — blocks any
+  // subsequent IP-based auto-detect from overriding their choice.
+  const [explicitLanguage, setExplicitLanguage] = useState(false);
 
   // Load from localStorage on mount
   useEffect(() => {
+    const savedPreset = localStorage.getItem("medos_preset") as Preset;
     const savedProvider = localStorage.getItem("medos_provider") as Provider;
     const savedApiKey = localStorage.getItem("medos_api_key");
+    const savedHfToken = localStorage.getItem("medos_hf_token");
     const savedAdvanced = localStorage.getItem("medos_advanced_mode");
     const savedLanguage = localStorage.getItem("medos_language") as SupportedLanguage;
     const savedCountry = localStorage.getItem("medos_country");
@@ -42,9 +49,12 @@ export function useSettings() {
     const savedDark = localStorage.getItem("medos_dark_mode");
     const savedWelcome = localStorage.getItem("medos_welcome_completed");
     const savedEmergency = localStorage.getItem("medos_emergency_number");
+    const savedExplicit = localStorage.getItem("medos_explicit_language");
 
+    if (savedPreset) setPreset(savedPreset);
     if (savedProvider) setProvider(savedProvider);
     if (savedApiKey) setApiKey(savedApiKey);
+    if (savedHfToken) setHfToken(savedHfToken);
     if (savedAdvanced) setAdvancedMode(savedAdvanced === "true");
     if (savedLanguage) {
       setLanguage(savedLanguage);
@@ -71,11 +81,17 @@ export function useSettings() {
       const detectedCountry = savedCountry || detectCountry();
       setEmergencyNumber(getEmergencyNumber(detectedCountry));
     }
+    if (savedExplicit !== null) setExplicitLanguage(savedExplicit === "true");
 
     setIsLoaded(true);
   }, []);
 
   // Save all settings to localStorage when they change
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem("medos_preset", preset);
+  }, [preset, isLoaded]);
+
   useEffect(() => {
     if (!isLoaded) return;
     localStorage.setItem("medos_provider", provider);
@@ -85,6 +101,15 @@ export function useSettings() {
     if (!isLoaded) return;
     localStorage.setItem("medos_api_key", apiKey);
   }, [apiKey, isLoaded]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (hfToken) {
+      localStorage.setItem("medos_hf_token", hfToken);
+    } else {
+      localStorage.removeItem("medos_hf_token");
+    }
+  }, [hfToken, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -134,19 +159,68 @@ export function useSettings() {
     localStorage.setItem("medos_welcome_completed", String(welcomeCompleted));
   }, [welcomeCompleted, isLoaded]);
 
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem("medos_explicit_language", String(explicitLanguage));
+  }, [explicitLanguage, isLoaded]);
+
+  /**
+   * Wrap setLanguage so a manual pick also flips the "user chose" flag,
+   * which in turn prevents IP geo-detection from overriding the choice.
+   */
+  const setLanguageExplicit = (lang: SupportedLanguage) => {
+    setLanguage(lang);
+    setExplicitLanguage(true);
+  };
+
+  const setCountryExplicit = (c: string) => {
+    setCountry(c);
+    setExplicitLanguage(true);
+  };
+
+  /**
+   * Applied by useGeoDetect. Only called when explicitLanguage === false,
+   * so it never clobbers a manual choice.
+   */
+  const applyGeo = (g: {
+    country: string;
+    language: SupportedLanguage;
+    emergencyNumber: string;
+  }) => {
+    if (explicitLanguage) return;
+    setCountry(g.country);
+    setLanguage(g.language);
+    setEmergencyNumber(g.emergencyNumber);
+  };
+
   const clearApiKey = () => {
     setApiKey("");
     localStorage.removeItem("medos_api_key");
   };
 
+  const clearHfToken = () => {
+    setHfToken("");
+    localStorage.removeItem("medos_hf_token");
+  };
+
   return {
     // Original
+    preset,
+    setPreset,
     provider,
     setProvider,
     apiKey,
     setApiKey,
     clearApiKey,
+    hfToken,
+    setHfToken,
+    clearHfToken,
     isLoaded,
+    // Geo / language explicit-override plumbing
+    explicitLanguage,
+    setLanguageExplicit,
+    setCountryExplicit,
+    applyGeo,
     // New patient-friendly settings
     advancedMode,
     setAdvancedMode,

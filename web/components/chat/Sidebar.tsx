@@ -1,13 +1,18 @@
 "use client";
 
 import {
-  Activity,
   Home,
   MessageCircle,
   AlertTriangle,
   BookOpen,
   Settings,
   Heart,
+  ShieldCheck,
+  Pill,
+  Calendar,
+  Activity,
+  FileText,
+  Clock,
 } from "lucide-react";
 import { NavItem } from "./NavItem";
 import { t, type SupportedLanguage } from "@/lib/i18n";
@@ -18,7 +23,10 @@ export type NavView =
   | "emergency"
   | "topics"
   | "records"
-  | "schedule"
+  | "medications"
+  | "appointments"
+  | "vitals"
+  | "health-dashboard"
   | "history"
   | "settings";
 
@@ -33,27 +41,26 @@ export function Sidebar({
   activeNav,
   setActiveNav,
   language = "en",
-  advancedMode = false,
 }: SidebarProps) {
   return (
     <>
-      {/* Desktop sidebar */}
-      <div className="hidden md:flex w-64 bg-white border-r border-slate-100 flex-col p-4 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
-        <div className="flex items-center gap-3 px-4 mb-8 mt-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
-            <Heart size={18} strokeWidth={2.5} />
+      {/* Desktop sidebar — slight surface tier above backdrop */}
+      <aside className="hidden md:flex w-64 flex-col p-4 z-20 bg-surface-1/70 backdrop-blur-xl border-r border-line/60 shadow-[4px_0_32px_rgba(15,23,42,0.05)] dark:shadow-[4px_0_32px_rgba(0,0,0,0.35)]">
+        <div className="flex items-center gap-3 px-3 mb-8 mt-1">
+          <div className="w-10 h-10 rounded-2xl bg-brand-gradient flex items-center justify-center text-white shadow-glow">
+            <Heart size={20} strokeWidth={2.5} />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-slate-800 tracking-tight">
+            <h1 className="font-bold text-lg text-ink-base tracking-tight leading-none">
               MedOS
             </h1>
-            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
-              {t("home_headline", language)}
+            <p className="text-[10px] font-semibold text-ink-subtle uppercase tracking-[0.14em] mt-1">
+              worldwide care
             </p>
           </div>
         </div>
 
-        <nav className="flex-1">
+        <nav className="flex-1 overflow-y-auto">
           <NavItem
             icon={Home}
             label={t("nav_home", language)}
@@ -66,6 +73,50 @@ export function Sidebar({
             active={activeNav === "chat"}
             onClick={() => setActiveNav("chat")}
           />
+
+          {/* Health Tracker section */}
+          <div className="mt-5 mb-2 px-4">
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
+              Health Tracker
+            </span>
+          </div>
+          <NavItem
+            icon={Heart}
+            label="Dashboard"
+            active={activeNav === "health-dashboard"}
+            onClick={() => setActiveNav("health-dashboard")}
+          />
+          <NavItem
+            icon={Pill}
+            label="Medications"
+            active={activeNav === "medications"}
+            onClick={() => setActiveNav("medications")}
+          />
+          <NavItem
+            icon={Calendar}
+            label="Appointments"
+            active={activeNav === "appointments"}
+            onClick={() => setActiveNav("appointments")}
+          />
+          <NavItem
+            icon={Activity}
+            label="Vitals"
+            active={activeNav === "vitals"}
+            onClick={() => setActiveNav("vitals")}
+          />
+          <NavItem
+            icon={FileText}
+            label="Records"
+            active={activeNav === "records"}
+            onClick={() => setActiveNav("records")}
+          />
+
+          {/* Tools section */}
+          <div className="mt-5 mb-2 px-4">
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
+              Tools
+            </span>
+          </div>
           <NavItem
             icon={AlertTriangle}
             label={t("nav_emergency", language)}
@@ -79,7 +130,13 @@ export function Sidebar({
             active={activeNav === "topics"}
             onClick={() => setActiveNav("topics")}
           />
-          <div className="my-4 border-t border-slate-50" />
+          <NavItem
+            icon={Clock}
+            label="History"
+            active={activeNav === "history"}
+            onClick={() => setActiveNav("history")}
+          />
+          <div className="my-3 border-t border-line/50" />
           <NavItem
             icon={Settings}
             label={t("nav_settings", language)}
@@ -88,25 +145,35 @@ export function Sidebar({
           />
         </nav>
 
-        {/* Trust badges at bottom instead of user profile */}
-        <div className="mt-auto p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            {t("badge_private", language)}
+        {/* Trust badges at bottom */}
+        <div className="mt-auto rounded-2xl bg-surface-2/70 border border-line/50 p-3.5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-accent-500/15 flex items-center justify-center">
+              <ShieldCheck size={14} className="text-accent-500" />
+            </div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+              {t("trust_source_chip", language)}
+            </span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            {t("badge_no_signup", language)}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            {t("badge_free", language)}
-          </div>
+          <ul className="space-y-1.5 text-[11px] text-ink-subtle leading-snug">
+            <li className="flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-success-500" />
+              {t("badge_private", language)}
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-success-500" />
+              {t("badge_no_signup", language)}
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-success-500" />
+              {t("badge_free", language)}
+            </li>
+          </ul>
         </div>
-      </div>
+      </aside>
 
       {/* Mobile bottom navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex items-center justify-around px-2 py-1 z-50 safe-area-bottom">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-1/95 backdrop-blur-xl border-t border-line/60 flex items-center justify-around px-2 py-1 z-50 safe-area-bottom">
         <MobileNavButton
           icon={Home}
           label={t("nav_home", language)}
@@ -162,17 +229,19 @@ function MobileNavButton({
       className={`flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl transition-all min-w-[56px] ${
         active
           ? urgent
-            ? "text-red-600"
-            : "text-blue-600"
-          : "text-slate-400"
+            ? "text-danger-500"
+            : "text-brand-600"
+          : "text-ink-subtle"
       }`}
     >
       <Icon
         size={22}
-        strokeWidth={active ? 2.5 : 1.5}
-        className={urgent && !active ? "text-red-400" : ""}
+        strokeWidth={active ? 2.5 : 1.75}
+        className={urgent && !active ? "text-danger-500/70" : ""}
       />
-      <span className="text-[10px] font-medium leading-tight">{label}</span>
+      <span className="text-[10px] font-semibold leading-tight tracking-tight">
+        {label}
+      </span>
     </button>
   );
 }

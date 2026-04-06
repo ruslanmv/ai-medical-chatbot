@@ -30,7 +30,7 @@ export function RightPanel({
   onStartVoice,
 }: RightPanelProps) {
   return (
-    <div className="hidden lg:flex w-80 bg-white border-l border-slate-100 p-6 flex-col gap-5 shadow-[-4px_0_24px_rgba(0,0,0,0.01)] z-20 overflow-y-auto">
+    <div className="hidden lg:flex w-80 bg-surface-1/70 backdrop-blur-xl border-l border-line/60 p-6 flex-col gap-5 z-20 overflow-y-auto">
       {/* Context-aware content */}
       {!hasActiveChat ? (
         <>

@@ -37,6 +37,7 @@ describe('Provider Integration Tests', () => {
       const result = await verifyConnection({
         provider: 'openai',
         apiKey: 'invalid-key',
+        messages: [{ role: 'user', content: 'Hi' }],
       });
 
       expect(result.success).toBe(false);

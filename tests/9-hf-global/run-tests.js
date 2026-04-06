@@ -312,7 +312,7 @@ const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 assert(manifest.name !== undefined, 'manifest.json has name');
 assert(manifest.short_name !== undefined, 'manifest.json has short_name');
 assert(manifest.display === 'standalone', 'manifest.json display is standalone');
-assert(manifest.start_url === '/', 'manifest.json start_url is /');
+assert(manifest.start_url && manifest.start_url.startsWith('/'), 'manifest.json start_url starts with /');
 assert(Array.isArray(manifest.icons), 'manifest.json has icons array');
 
 assert(

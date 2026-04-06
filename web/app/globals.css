@@ -2,98 +2,211 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+ * MedOS design tokens — light + dark
+ * ============================================================ */
+:root {
+  /* Surfaces (light mode — soft white, never pure #FFFFFF) */
+  --surface-0: 247 249 251; /* app backdrop  #F7F9FB */
+  --surface-1: 255 255 255; /* cards          */
+  --surface-2: 241 245 249; /* elevated panels #F1F5F9 */
+  --surface-3: 226 232 240; /* borders / rails */
+
+  --ink-base:    15  23  42; /* slate-900     */
+  --ink-muted:   71  85 105; /* slate-600     */
+  --ink-subtle: 148 163 184; /* slate-400     */
+  --ink-inverse: 255 255 255;
+
+  --line: 226 232 240; /* slate-200 */
+
+  color-scheme: light;
+}
+
+.dark {
+  /* Dark mode — warm deep navy, NOT pure black */
+  --surface-0:  11  18  32; /* #0B1220 */
+  --surface-1:  18  27  45; /* #121B2D elevated card */
+  --surface-2:  24  34  54; /* #182236 panel  */
+  --surface-3:  34  46  71; /* #222E47 border */
+
+  --ink-base:   241 245 249; /* slate-100 */
+  --ink-muted:  148 163 184; /* slate-400 */
+  --ink-subtle: 100 116 139; /* slate-500 */
+  --ink-inverse: 15  23  42;
+
+  --line: 34 46 71;
+
+  color-scheme: dark;
+}
+
 @layer base {
   html,
   body {
     @apply h-full w-full;
   }
 
-  * {
-    @apply border-slate-200;
+  html {
+    font-family: var(--font-sans), Inter, ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", Roboto, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply text-ink-base antialiased;
+    background: theme("backgroundImage.light-app");
+    background-attachment: fixed;
+    line-height: 1.6;
+    letter-spacing: -0.005em;
+  }
+
+  .dark body {
+    background: theme("backgroundImage.dark-app");
+    background-attachment: fixed;
+  }
+
+  /* Slightly larger, more readable body copy — medical trust */
+  p { line-height: 1.65; }
+
+  /* Focus rings that are visible in both modes */
+  :focus-visible {
+    outline: 2px solid rgb(var(--color-brand, 59 130 246));
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-surface-1/80 backdrop-blur-xl border border-line/60 shadow-soft;
+  }
+  .glass-strong {
+    @apply bg-surface-1/95 backdrop-blur-2xl border border-line/70 shadow-card;
+  }
+  /* Section headings inside an AI answer (Summary / Self-care …) */
+  .answer-section {
+    @apply relative pl-4 mt-4 first:mt-0;
+  }
+  .answer-section::before {
+    content: "";
+    @apply absolute left-0 top-1 bottom-1 w-1 rounded-full bg-brand-500/60;
   }
 }
 
 @layer utilities {
-  .animate-in {
-    animation: fadeIn 0.5s ease-in-out;
-  }
+  .animate-in { animation: fadeIn 0.5s ease-in-out; }
+  .slide-in-from-bottom-4 { animation: slideInFromBottom 0.5s ease-in-out; }
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
 
-  .slide-in-from-bottom-4 {
-    animation: slideInFromBottom 0.5s ease-in-out;
+  /* Shimmer utility for the "Analyzing…" typing state */
+  .shimmer-text {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--ink-muted) / 0.5) 0%,
+      rgb(var(--ink-base)) 50%,
+      rgb(var(--ink-muted) / 0.5) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 2.2s linear infinite;
   }
 
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
-
   @keyframes slideInFromBottom {
-    from {
-      opacity: 0;
-      transform: translateY(1rem);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .delay-100 {
-    animation-delay: 100ms;
-  }
-
-  .delay-200 {
-    animation-delay: 200ms;
+    from { opacity: 0; transform: translateY(1rem); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
+/* ------------------------------------------------------------
+ * Dark-mode compatibility layer for legacy screens that still
+ * reference slate/white utility classes directly. Remaps them to
+ * the design-token surfaces so Settings/Records/Schedule/Topics/
+ * Emergency look right in dark mode without a full rewrite.
+ * New components should prefer the `bg-surface-*` and `text-ink-*`
+ * tokens directly and won't be affected by these rules.
+ * ------------------------------------------------------------ */
+.dark .bg-white         { background-color: rgb(var(--surface-1)) !important; }
+.dark .bg-slate-50      { background-color: rgb(var(--surface-2)) !important; }
+.dark .bg-slate-100     { background-color: rgb(var(--surface-2)) !important; }
+.dark .bg-\[\#F8FAFC\]  { background-color: rgb(var(--surface-0)) !important; }
+.dark .bg-\[\#F7F9FB\]  { background-color: rgb(var(--surface-0)) !important; }
 
-::-webkit-scrollbar-track {
-  @apply bg-slate-100;
-}
+.dark .text-slate-900   { color: rgb(var(--ink-base)) !important; }
+.dark .text-slate-800   { color: rgb(var(--ink-base)) !important; }
+.dark .text-slate-700   { color: rgb(var(--ink-base) / 0.92) !important; }
+.dark .text-slate-600   { color: rgb(var(--ink-muted)) !important; }
+.dark .text-slate-500   { color: rgb(var(--ink-muted)) !important; }
+.dark .text-slate-400   { color: rgb(var(--ink-subtle)) !important; }
+.dark .text-slate-300   { color: rgb(var(--ink-subtle) / 0.85) !important; }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full;
-}
+.dark .border-slate-50  { border-color: rgb(var(--line) / 0.55) !important; }
+.dark .border-slate-100 { border-color: rgb(var(--line) / 0.7) !important; }
+.dark .border-slate-200 { border-color: rgb(var(--line) / 0.9) !important; }
 
+.dark .placeholder-slate-400::placeholder { color: rgb(var(--ink-subtle)); }
+
+/* Soft tinted surfaces used on a handful of views (blue-50, rose-50,
+ * amber-50, etc.) — in dark mode dim them into brand/accent tints. */
+.dark .bg-blue-50       { background-color: rgba(59,130,246,0.10) !important; }
+.dark .bg-blue-100      { background-color: rgba(59,130,246,0.18) !important; }
+.dark .bg-indigo-50     { background-color: rgba(99,102,241,0.10) !important; }
+.dark .bg-rose-50       { background-color: rgba(244,63,94,0.10) !important; }
+.dark .bg-red-50        { background-color: rgba(239,68,68,0.10) !important; }
+.dark .bg-amber-50      { background-color: rgba(245,158,11,0.10) !important; }
+.dark .bg-emerald-50    { background-color: rgba(16,185,129,0.10) !important; }
+.dark .bg-purple-50     { background-color: rgba(168,85,247,0.10) !important; }
+
+.dark .border-blue-100  { border-color: rgba(59,130,246,0.28) !important; }
+.dark .border-blue-200  { border-color: rgba(59,130,246,0.38) !important; }
+.dark .border-red-200   { border-color: rgba(239,68,68,0.38) !important; }
+.dark .border-amber-200 { border-color: rgba(245,158,11,0.38) !important; }
+
+/* Scrollbars — subtle in both modes */
+::-webkit-scrollbar        { width: 10px; height: 10px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  {
+  background: rgb(var(--ink-subtle) / 0.35);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400;
+  background: rgb(var(--ink-subtle) / 0.55);
+  background-clip: padding-box;
 }
 
-/* Selection */
 ::selection {
-  @apply bg-blue-100 text-blue-900;
+  background: rgba(59, 130, 246, 0.22);
+  color: inherit;
 }
 
 /* Safe area for mobile bottom nav */
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
 /* RTL support for Arabic */
-[dir="rtl"] .flex {
-  direction: rtl;
+[dir="rtl"] .flex { direction: rtl; }
+
+/* Large tap targets */
+@media (pointer: coarse) {
+  button, a, select, input, textarea { min-height: 44px; }
 }
 
-/* Large tap targets for accessibility */
-@media (pointer: coarse) {
-  button,
-  a,
-  select,
-  input {
-    min-height: 44px;
+/* Respect reduced-motion preferences everywhere */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

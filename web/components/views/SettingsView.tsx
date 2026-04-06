@@ -19,8 +19,52 @@ import {
   BookOpen,
 } from "lucide-react";
 import { Toggle } from "../chat/Toggle";
-import type { Provider } from "@/lib/types";
+import type { Provider, Preset } from "@/lib/types";
 import { PROVIDER_CONFIGS } from "@/lib/types";
+
+const PRESET_OPTIONS: {
+  id: Preset;
+  title: string;
+  description: string;
+  badge: string;
+}[] = [
+  {
+    id: "free-best",
+    title: "Best Quality (Free)",
+    description: "Llama 3.3 70B via Groq with auto fallbacks",
+    badge: "FREE · RECOMMENDED",
+  },
+  {
+    id: "free-fastest",
+    title: "Fastest (Free)",
+    description: "Lowest latency — pinned to Groq",
+    badge: "FREE",
+  },
+  {
+    id: "free-flexible",
+    title: "Flexible (Free)",
+    description: "Qwen 2.5 72B, auto-routed across providers",
+    badge: "FREE",
+  },
+  {
+    id: "deep-reasoning",
+    title: "Deep Reasoning",
+    description: "DeepSeek R1 for complex medical reasoning",
+    badge: "FREE",
+  },
+  {
+    id: "local",
+    title: "Local (Qwen 2.5)",
+    description: "Runs on the server via Ollama — always available",
+    badge: "LOCAL",
+  },
+  {
+    id: "ollabridge",
+    title: "OllaBridge Connection",
+    description: "Custom gateway — use your own GPU / local models",
+    badge: "CUSTOM",
+  },
+];
 import {
   t,
   LANGUAGE_NAMES,
@@ -30,7 +74,13 @@ import {
 import type { TextSize } from "@/lib/hooks/useSettings";
 
 interface SettingsViewProps {
-  // Original provider settings
+  // Preset (patient-friendly default)
+  preset: Preset;
+  setPreset: (p: Preset) => void;
+  hfToken: string;
+  setHfToken: (v: string) => void;
+  clearHfToken: () => void;
+  // Advanced: raw provider settings
   provider: Provider;
   setProvider: (provider: Provider) => void;
   apiKey: string;
@@ -63,6 +113,11 @@ const COUNTRIES = [
 ];
 
 export function SettingsView({
+  preset,
+  setPreset,
+  hfToken,
+  setHfToken,
+  clearHfToken,
   provider,
   setProvider,
   apiKey,
@@ -108,7 +163,7 @@ export function SettingsView({
       const response = await fetch("/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, apiKey }),
+        body: JSON.stringify({ provider, apiKey, userHfToken: hfToken }),
       });
 
       const data = await response.json();
@@ -140,6 +195,94 @@ export function SettingsView({
         <h2 className="text-2xl font-bold text-slate-800 mb-6">
           {t("settings_title", language)}
         </h2>
+
+        {/* ============================================ */}
+        {/* AI MODEL — preset-first, patient-friendly    */}
+        {/* ============================================ */}
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4">
+          <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+            <Cpu size={18} className="text-blue-500" />
+            <h3 className="font-semibold text-slate-700">AI Model</h3>
+          </div>
+          <div className="p-4 space-y-2">
+            {PRESET_OPTIONS.map((opt) => {
+              const active = preset === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setPreset(opt.id)}
+                  className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
+                    active
+                      ? "bg-blue-50 border-blue-500"
+                      : "bg-white border-slate-200 hover:border-blue-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`font-semibold text-sm ${
+                        active ? "text-blue-700" : "text-slate-700"
+                      }`}
+                    >
+                      {opt.title}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        opt.badge.includes("RECOMMENDED")
+                          ? "bg-emerald-100 text-emerald-700"
+                          : opt.badge === "FREE"
+                          ? "bg-blue-100 text-blue-700"
+                          : opt.badge === "LOCAL"
+                          ? "bg-slate-200 text-slate-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {opt.badge}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">{opt.description}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* HuggingFace token (optional) */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4">
+          <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+            <Key size={18} className="text-indigo-500" />
+            <h3 className="font-semibold text-slate-700">
+              HuggingFace Token (Optional)
+            </h3>
+          </div>
+          <div className="p-4">
+            <p className="text-xs text-slate-500 mb-2">
+              Provide your own HF token for higher rate limits. Leave blank to
+              use the server-side default.
+            </p>
+            <div className="relative">
+              <input
+                type="password"
+                value={hfToken}
+                onChange={(e) => setHfToken(e.target.value)}
+                placeholder="hf_..."
+                className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-3 py-2.5 pl-9 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-mono text-sm"
+              />
+              <Key
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                size={14}
+              />
+            </div>
+            {hfToken && (
+              <button
+                onClick={clearHfToken}
+                className="text-xs text-rose-600 hover:underline mt-2"
+              >
+                Clear HF token
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* ============================================ */}
         {/* BASIC PATIENT-FRIENDLY SETTINGS              */}
@@ -457,10 +600,7 @@ export function SettingsView({
                       }`}
                     ></div>
                     <span className="text-[11px] text-slate-500 font-medium">
-                      {verifyStatus.message ||
-                        (provider === "watsonx"
-                          ? "Enterprise Encryption: ACTIVE"
-                          : "Standard Encryption: ACTIVE")}
+                      {verifyStatus.message || "Standard Encryption: ACTIVE"}
                     </span>
                   </div>
                   <button

@@ -6,6 +6,7 @@ import { initViewport } from '@/lib/mobile/viewport';
 import { initPWA } from '@/lib/mobile/pwa';
 import { onConnectivityChange, isOnline } from '@/lib/mobile/offline-cache';
 import { detectCountryFromTimezone } from '@/lib/safety/emergency-numbers';
+import { useGeoDetect } from '@/lib/hooks/useGeoDetect';
 import Sidebar from './chat/Sidebar';
 import RightPanel from './chat/RightPanel';
 import BottomNav from './mobile/BottomNav';
@@ -18,6 +19,7 @@ import SettingsView, { type AppSettings, DEFAULT_SETTINGS } from './views/Settin
 import AboutView from './views/AboutView';
 import DisclaimerBanner from './ui/DisclaimerBanner';
 import OfflineBanner from './ui/OfflineBanner';
+import InstallPrompt from './ui/InstallPrompt';
 
 export type ViewType = 'chat' | 'topics' | 'emergency' | 'language' | 'share' | 'settings' | 'about';
 
@@ -55,6 +57,10 @@ export default function MedOSGlobalApp() {
   const [currentView, setCurrentView] = useState<ViewType>('chat');
   const [language, setLanguage] = useState<SupportedLanguage>('en');
   const [countryCode, setCountryCode] = useState('US');
+  // When the user manually picks a language (via LanguageView or Settings)
+  // we flip this flag so subsequent IP-based auto-detection never
+  // overrides their explicit choice.
+  const [explicitLocale, setExplicitLocale] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [online, setOnline] = useState(true);
@@ -84,7 +90,24 @@ export default function MedOSGlobalApp() {
     };
   }, []);
 
+  // Server-authoritative IP-based geo detection. Runs once on mount,
+  // silently, and only applies its result if the user hasn't made an
+  // explicit locale choice yet — manual picks win forever.
+  const applyGeo = useCallback(
+    (g: { country: string; language: SupportedLanguage }) => {
+      if (explicitLocale) return;
+      setCountryCode(g.country);
+      setLanguage(g.language);
+      const dir = getLanguageDirection(g.language);
+      document.documentElement.setAttribute('dir', dir);
+      document.documentElement.setAttribute('lang', g.language);
+    },
+    [explicitLocale],
+  );
+  useGeoDetect({ skip: explicitLocale, onResult: applyGeo });
+
   const handleLanguageChange = useCallback((lang: SupportedLanguage) => {
+    setExplicitLocale(true);
     setLanguage(lang);
     const dir = getLanguageDirection(lang);
     document.documentElement.setAttribute('dir', dir);
@@ -254,6 +277,7 @@ export default function MedOSGlobalApp() {
   return (
     <div className="h-screen-safe flex flex-col bg-slate-900 pt-safe">
       {!online && <OfflineBanner language={language} />}
+      <InstallPrompt />
 
       <div className="flex flex-1 overflow-hidden">
         <div className="desktop-sidebar w-64 border-r border-slate-700/50 flex-shrink-0">

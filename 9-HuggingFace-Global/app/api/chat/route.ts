@@ -4,6 +4,7 @@ import { streamWithFallback, type ChatMessage } from '@/lib/providers';
 import { triageMessage } from '@/lib/safety/triage';
 import { getEmergencyInfo } from '@/lib/safety/emergency-numbers';
 import { buildRAGContext } from '@/lib/rag/medical-kb';
+import { buildMedicalSystemPrompt } from '@/lib/medical-knowledge';
 
 const RequestSchema = z.object({
   messages: z.array(
@@ -66,24 +67,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Step 2: Build RAG context from medical knowledge base
+    // Step 2: Build RAG context from the medical knowledge base.
     const ragContext = lastUserMessage
       ? buildRAGContext(lastUserMessage.content)
       : '';
 
-    // Step 3: Augment messages with RAG context and language instruction
+    // Step 3: Build a structured, locale-aware system prompt that grounds
+    // the model in WHO/CDC/NHS guidance and pins the response language,
+    // country, emergency number, and measurement system. This replaces
+    // the old inline "respond in X language" instruction.
+    const emergencyInfo = getEmergencyInfo(countryCode);
+    const systemPrompt = buildMedicalSystemPrompt({
+      country: countryCode,
+      language,
+      emergencyNumber: emergencyInfo.emergency,
+    });
+
+    // Step 4: Assemble the final message list: system prompt first, then
+    // the conversation history, with the last user turn augmented by the
+    // retrieved RAG context (kept inline so the model treats it as recent
+    // reference material rather than a background instruction).
+    const priorMessages = messages.slice(0, -1);
+    const finalUserContent = [
+      lastUserMessage?.content || '',
+      ragContext
+        ? `\n\n[Reference material retrieved from the medical knowledge base — use if relevant]\n${ragContext}`
+        : '',
+    ].join('');
+
     const augmentedMessages: ChatMessage[] = [
-      ...messages.slice(0, -1),
-      {
-        role: 'user' as const,
-        content: [
-          lastUserMessage?.content || '',
-          ragContext,
-          language !== 'en'
-            ? `\n\nIMPORTANT: Respond in the user's language (language code: ${language}). The user is writing in their preferred language.`
-            : '',
-        ].join(''),
-      },
+      { role: 'system' as const, content: systemPrompt },
+      ...priorMessages,
+      { role: 'user' as const, content: finalUserContent },
     ];
 
     // Step 4: Stream response from OllaBridge-Cloud (with fallback chain)

@@ -8,34 +8,40 @@ interface NavItemProps {
   urgent?: boolean;
 }
 
-export function NavItem({ icon: Icon, label, active, onClick, urgent }: NavItemProps) {
+export function NavItem({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+  urgent,
+}: NavItemProps) {
   return (
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-1 group ${
         active
           ? urgent
-            ? "bg-red-50 text-red-600 font-medium shadow-sm"
-            : "bg-blue-50 text-blue-600 font-medium shadow-sm"
+            ? "bg-danger-500/10 text-danger-500 font-semibold"
+            : "bg-brand-gradient-soft text-brand-600 font-semibold shadow-soft"
           : urgent
-          ? "text-red-400 hover:bg-red-50 hover:text-red-600"
-          : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+          ? "text-danger-500/70 hover:bg-danger-500/10 hover:text-danger-500"
+          : "text-ink-muted hover:bg-surface-2 hover:text-ink-base"
       }`}
     >
       <Icon
         size={20}
-        strokeWidth={active ? 2 : 1.5}
+        strokeWidth={active ? 2.25 : 1.75}
         className={
           active
             ? urgent
-              ? "text-red-600"
-              : "text-blue-600"
+              ? "text-danger-500"
+              : "text-brand-500"
             : urgent
-            ? "text-red-400 group-hover:text-red-600"
-            : "text-slate-400 group-hover:text-slate-600"
+            ? "text-danger-500/70 group-hover:text-danger-500"
+            : "text-ink-subtle group-hover:text-ink-base"
         }
       />
-      <span className="text-sm">{label}</span>
+      <span className="text-sm tracking-tight">{label}</span>
     </button>
   );
 }

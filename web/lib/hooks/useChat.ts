@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import type { Provider } from "../types";
+import type { Provider, Preset } from "../types";
 
 export type ChatMessage = {
   id: number;
@@ -9,6 +9,26 @@ export type ChatMessage = {
   content: string;
   timestamp: string;
 };
+
+export type SendOptions = {
+  preset?: Preset;
+  provider?: Provider;
+  model?: string;
+  apiKey?: string;
+  userHfToken?: string;
+  context?: {
+    country: string;
+    language: string;
+    emergencyNumber: string;
+    units?: "metric" | "imperial";
+  };
+};
+
+/**
+ * Providers that require the user to supply credentials client-side.
+ * Free presets route via the server's HF_TOKEN, so no key is needed.
+ */
+const BYO_KEY_PROVIDERS: Provider[] = ["openai", "gemini", "claude"];
 
 export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -27,10 +47,16 @@ export function useChat() {
   const [error, setError] = useState<string | null>(null);
 
   const sendMessage = useCallback(
-    async (content: string, provider: Provider, apiKey: string) => {
+    async (content: string, options: SendOptions) => {
       if (!content.trim()) return;
 
-      if (!apiKey.trim()) {
+      // Only require an API key for BYO providers used directly (no preset).
+      if (
+        !options.preset &&
+        options.provider &&
+        BYO_KEY_PROVIDERS.includes(options.provider) &&
+        !options.apiKey?.trim()
+      ) {
         setError("Please add an API key in Settings first.");
         return;
       }
@@ -56,8 +82,12 @@ export function useChat() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            provider,
-            apiKey,
+            preset: options.preset,
+            provider: options.provider,
+            model: options.model,
+            apiKey: options.apiKey,
+            userHfToken: options.userHfToken,
+            context: options.context,
             messages: [...messages, userMessage].map((m) => ({
               role: m.role === "ai" ? "assistant" : "user",
               content: m.content,
@@ -73,7 +103,6 @@ export function useChat() {
           throw new Error("No response body");
         }
 
-        // Read the stream
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let aiContent = "";
@@ -89,48 +118,35 @@ export function useChat() {
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               const data = line.slice(6);
-
-              if (data === "[DONE]") {
-                break;
-              }
-
+              if (data === "[DONE]") break;
               try {
                 const parsed = JSON.parse(data);
-
-                if (parsed.error) {
-                  throw new Error(parsed.error);
-                }
-
+                if (parsed.error) throw new Error(parsed.error);
                 if (parsed.content) {
                   aiContent += parsed.content;
-
-                  // Update the AI message in real-time
                   setMessages((prev) => {
                     const existing = prev.find((m) => m.id === aiMessageId);
                     if (existing) {
                       return prev.map((m) =>
-                        m.id === aiMessageId
-                          ? { ...m, content: aiContent }
-                          : m
+                        m.id === aiMessageId ? { ...m, content: aiContent } : m,
                       );
-                    } else {
-                      return [
-                        ...prev,
-                        {
-                          id: aiMessageId,
-                          role: "ai" as const,
-                          content: aiContent,
-                          timestamp: new Date().toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }),
-                        },
-                      ];
                     }
+                    return [
+                      ...prev,
+                      {
+                        id: aiMessageId,
+                        role: "ai" as const,
+                        content: aiContent,
+                        timestamp: new Date().toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }),
+                      },
+                    ];
                   });
                 }
-              } catch (e) {
-                // Ignore JSON parse errors
+              } catch {
+                // ignore parse errors on keep-alive / partial frames
               }
             }
           }
@@ -144,7 +160,7 @@ export function useChat() {
           {
             id: Date.now() + 2,
             role: "ai",
-            content: `⚠️ Error: ${errorMessage}\n\nPlease check your API key and try again.`,
+            content: `⚠️ Error: ${errorMessage}\n\nPlease check your settings and try again.`,
             timestamp: new Date().toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -155,7 +171,7 @@ export function useChat() {
         setIsTyping(false);
       }
     },
-    [messages]
+    [messages],
   );
 
   const clearMessages = useCallback(() => {

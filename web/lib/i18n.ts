@@ -184,6 +184,51 @@ const TIMEZONE_TO_COUNTRY: Record<string, string> = {
   "Africa/Casablanca": "MA",
 };
 
+/**
+ * Country -> primary language used for auto-selection after IP geolocation.
+ * Only includes countries whose primary language is one of our supported set.
+ * If a country is missing, the caller should fall back to English.
+ */
+export const COUNTRY_TO_LANGUAGE: Record<string, SupportedLanguage> = {
+  // English-speaking
+  US: "en", GB: "en", CA: "en", AU: "en", NZ: "en", IE: "en", ZA: "en",
+  NG: "en", KE: "en", GH: "en", UG: "en", ZM: "en", ZW: "en", PH: "en",
+  SG: "en", MY: "en", IN: "en", PK: "en", BD: "en", LK: "en",
+  // Spanish
+  ES: "es", MX: "es", AR: "es", CO: "es", CL: "es", PE: "es", VE: "es",
+  EC: "es", GT: "es", CU: "es", BO: "es", DO: "es", HN: "es", PY: "es",
+  SV: "es", NI: "es", CR: "es", PA: "es", UY: "es", PR: "es",
+  // Portuguese
+  BR: "pt", PT: "pt", AO: "pt", MZ: "pt",
+  // French
+  FR: "fr", BE: "fr", LU: "fr", MC: "fr", SN: "fr", CI: "fr", CM: "fr",
+  CD: "fr", MG: "fr", HT: "fr", DZ: "fr", TN: "fr",
+  // German
+  DE: "de", AT: "de", CH: "de", LI: "de",
+  // Italian
+  IT: "it", SM: "it", VA: "it",
+  // Dutch
+  NL: "nl", SR: "nl",
+  // Polish
+  PL: "pl",
+  // Russian
+  RU: "ru", BY: "ru", KZ: "ru", KG: "ru",
+  // Turkish
+  TR: "tr",
+  // Arabic
+  SA: "ar", AE: "ar", EG: "ar", MA: "ar", JO: "ar", IQ: "ar", SY: "ar",
+  LB: "ar", YE: "ar", LY: "ar", OM: "ar", QA: "ar", KW: "ar", BH: "ar",
+  SD: "ar", PS: "ar",
+  // East/South Asia
+  ZH: "zh", CN: "zh", TW: "zh", HK: "zh", JP: "ja", KR: "ko",
+  TH: "th", VN: "vi",
+  // Swahili
+  TZ: "sw",
+  // Note: Indonesia (ID), Bangladesh (BD, overridden to "en" above for reach),
+  // and Hindi in India are left unmapped or English by default — users can
+  // switch manually via the language picker.
+};
+
 // Language code to likely country
 const LANGUAGE_TO_COUNTRY: Record<string, string> = {
   en: "US",
@@ -241,6 +286,19 @@ export function detectCountry(): string {
 
 export function getEmergencyNumber(countryCode: string): string {
   return EMERGENCY_NUMBERS[countryCode] || EMERGENCY_NUMBERS.DEFAULT;
+}
+
+/**
+ * Return the best supported language for a given ISO country code.
+ * Guaranteed to return a SupportedLanguage (English fallback).
+ */
+export function getLanguageForCountry(
+  countryCode: string,
+): SupportedLanguage {
+  const code = (countryCode || "").toUpperCase();
+  const lang = COUNTRY_TO_LANGUAGE[code];
+  if (lang && lang in LANGUAGE_NAMES) return lang;
+  return "en";
 }
 
 export function getCountryName(countryCode: string, lang: string = "en"): string {
@@ -420,6 +478,37 @@ export const translations: Record<string, Record<string, string>> = {
     save: "Save",
     on: "On",
     off: "Off",
+
+    // --- v2 UI copy: emotional, trust-first ---
+    home_hero_eyebrow: "Your worldwide medical companion",
+    home_hero_title: "Tell me what's bothering you.",
+    home_hero_subtitle:
+      "I'll help you understand it — calmly, clearly, and privately.",
+
+    ask_hero_title: "I'm listening.",
+    ask_hero_subtitle:
+      "Share your symptoms in your own words. I'll guide you through what it might be and what to do next.",
+
+    ask_placeholder_rotate_1: "I have chest pain since this morning…",
+    ask_placeholder_rotate_2: "My child has a fever of 39 °C…",
+    ask_placeholder_rotate_3: "I've had a headache for three days…",
+    ask_placeholder_rotate_4: "Is this medication safe with pregnancy?",
+    ask_placeholder_rotate_5: "I feel anxious and can't sleep…",
+    ask_suggestions: "Try one of these",
+
+    trust_reviewed: "Aligned with WHO · CDC · NHS guidelines",
+    trust_private: "Private & anonymous",
+    trust_247: "Available 24/7",
+    trust_source_chip: "Reviewed with medical guidelines",
+
+    ai_analyzing: "Analyzing your symptoms…",
+    ai_empathy_default: "I hear you. Let me help.",
+
+    emergency_quick_label: "Emergency",
+    theme_light: "Light",
+    theme_dark: "Dark",
+    theme_auto: "Auto",
+    home_quick_topics: "Quick topics",
   },
 
   es: {

@@ -1,55 +1,59 @@
 {
-  "name": "MedOS Global - Free AI Medical Assistant",
+  "name": "MedOS — free AI medical assistant",
   "short_name": "MedOS",
-  "description": "Free AI medical chatbot. 20 languages. No sign-up. Works offline.",
-  "start_url": "/",
+  "description": "Ask any health question in your own language. Free, private, instant guidance aligned with WHO, CDC, and NHS. No sign-up, no paywall.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#0f172a",
-  "background_color": "#0f172a",
-  "categories": ["health", "medical", "lifestyle"],
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "theme_color": "#0B1220",
+  "background_color": "#0B1220",
+  "categories": ["health", "medical", "lifestyle", "education"],
   "lang": "en",
   "dir": "auto",
-  "icons": [
+  "id": "medos",
+  "shortcuts": [
     {
-      "src": "/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png"
+      "name": "Ask a new question",
+      "short_name": "Ask",
+      "description": "Start a fresh conversation",
+      "url": "/?source=shortcut&new=1",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "src": "/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png"
+      "name": "Emergency numbers",
+      "short_name": "Emergency",
+      "description": "Local emergency contacts",
+      "url": "/?view=emergency",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "src": "/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "name": "Health topics",
+      "short_name": "Topics",
+      "description": "Browse curated health topics",
+      "url": "/?view=topics",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "/api/og",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "MedOS — worldwide medical AI assistant"
+    }
+  ],
+  "icons": [
+    { "src": "/icons/icon-72x72.png",  "sizes": "72x72",   "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-96x96.png",  "sizes": "96x96",   "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-128x128.png","sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-144x144.png","sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-152x152.png","sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192x192.png","sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-384x384.png","sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512x512.png","sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "prefer_related_applications": false
 }
