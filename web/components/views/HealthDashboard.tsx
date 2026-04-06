@@ -48,6 +48,7 @@ export function HealthDashboard({
   isMedTaken,
   getMedStreak,
   onExport,
+  language,
 }: HealthDashboardProps) {
   const today = todayISO();
   const activeMeds = medications.filter((m) => m.active);

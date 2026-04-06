@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { Provider, Preset } from "../types";
+import { buildPatientContext } from "../health-store";
 
 export type ChatMessage = {
   id: number;
@@ -88,9 +89,15 @@ export function useChat() {
             apiKey: options.apiKey,
             userHfToken: options.userHfToken,
             context: options.context,
-            messages: [...messages, userMessage].map((m) => ({
+            messages: [...messages, userMessage].map((m, i) => ({
               role: m.role === "ai" ? "assistant" : "user",
-              content: m.content,
+              // Inject patient context only on the FIRST user message of
+              // the conversation — keeps it concise and avoids bloating
+              // every turn with repeated profile data.
+              content:
+                i === 0 && m.role === "user"
+                  ? m.content + buildPatientContext()
+                  : m.content,
             })),
           }),
         });

@@ -52,6 +52,11 @@ export const GLOBAL_SOURCES = [
   "European Medicines Agency (EMA)",
   "Mayo Clinic patient education",
   "PubMed / Cochrane systematic reviews for evidence",
+  "Società Italiana di Endocrinologia (SIE) for endocrine disorders",
+  "Società Italiana di Diabetologia (SID) for diabetes management",
+  "American Diabetes Association (ADA) Standards of Care",
+  "European Thyroid Association (ETA) guidelines",
+  "Endocrine Society clinical practice guidelines",
 ] as const;
 
 /**
@@ -92,6 +97,13 @@ export const RED_FLAGS = {
   mentalHealth: [
     "active suicidal ideation with plan",
     "intent to harm self or others",
+  ],
+  endocrine: [
+    "diabetic ketoacidosis (DKA): vomiting, fruity breath, rapid breathing, confusion",
+    "severe hypoglycemia: seizures, loss of consciousness, inability to swallow",
+    "thyroid storm: high fever, extreme tachycardia, agitation, delirium",
+    "myxedema coma: hypothermia, altered consciousness, bradycardia",
+    "adrenal crisis: severe hypotension, vomiting, confusion, collapse",
   ],
   other: [
     "uncontrolled bleeding",

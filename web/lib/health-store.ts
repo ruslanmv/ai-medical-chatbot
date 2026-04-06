@@ -96,6 +96,157 @@ export interface ConversationSummary {
 }
 
 // ============================================================
+// EHR Profile — Electronic Health Record wizard data
+// ============================================================
+
+export interface EHRProfile {
+  // Step 1: Basic info
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string; // ISO date
+  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
+  bloodType?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-' | 'unknown';
+  height?: string; // e.g. "175 cm" or "5'9"
+  weight?: string; // e.g. "70 kg"
+
+  // Step 2: Medical history
+  chronicConditions?: string[]; // e.g. ["Type 2 Diabetes", "Hypertension"]
+  pastSurgeries?: string[]; // e.g. ["Appendectomy 2018"]
+  allergies?: string[]; // e.g. ["Penicillin", "Peanuts"]
+  familyHistory?: string[]; // e.g. ["Father: heart disease", "Mother: diabetes"]
+
+  // Step 3: Current medications (references to medication tracker)
+  // No separate field needed — we read from loadMedications()
+
+  // Step 4: Lifestyle
+  smokingStatus?: 'never' | 'former' | 'current' | 'prefer-not-to-say';
+  alcoholUse?: 'none' | 'occasional' | 'moderate' | 'heavy' | 'prefer-not-to-say';
+  exerciseFrequency?: 'none' | '1-2-per-week' | '3-5-per-week' | 'daily';
+  dietType?: 'regular' | 'vegetarian' | 'vegan' | 'mediterranean' | 'low-carb' | 'other';
+
+  // Metadata
+  completedAt?: string; // ISO timestamp when wizard was last completed
+  wizardStep?: number; // Last completed step (for resume)
+}
+
+export const CHRONIC_CONDITIONS_OPTIONS = [
+  'Type 1 Diabetes',
+  'Type 2 Diabetes',
+  'Gestational Diabetes',
+  'Hypertension',
+  'Hypothyroidism (Hashimoto)',
+  'Hyperthyroidism (Graves)',
+  'Asthma',
+  'COPD',
+  'Heart Disease',
+  'Atrial Fibrillation',
+  'Chronic Kidney Disease',
+  'Depression',
+  'Anxiety',
+  'Epilepsy',
+  'Rheumatoid Arthritis',
+  'Osteoporosis',
+  'Cancer (specify)',
+  'HIV/AIDS',
+  'Hepatitis B/C',
+  'Metabolic Syndrome',
+  'Addison Disease',
+  'Cushing Syndrome',
+  'PCOS',
+  'Celiac Disease',
+  'IBD (Crohn/Colitis)',
+  'Other',
+] as const;
+
+export const ALLERGY_COMMON = [
+  'Penicillin',
+  'Sulfonamides',
+  'Aspirin / NSAIDs',
+  'Iodine / Contrast dye',
+  'Latex',
+  'Peanuts',
+  'Shellfish',
+  'Eggs',
+  'Milk / Dairy',
+  'Soy',
+  'Wheat / Gluten',
+  'Bee stings',
+  'None known',
+] as const;
+
+// ============================================================
+// EHR storage (single record per user, keyed as "ehr_profile")
+// ============================================================
+
+const EHR_KEY = 'medos_ehr_profile';
+
+export function loadEHRProfile(): EHRProfile {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(EHR_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveEHRProfile(profile: EHRProfile): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(EHR_KEY, JSON.stringify(profile));
+  } catch {}
+}
+
+/**
+ * Build a COMPACT patient context string optimized for small LLMs (8B).
+ *
+ * Design for small context windows:
+ *   - Under 150 tokens total (critical for Qwen 2.5 7B, Llama 3.2 8B)
+ *   - Key-value pairs on one line, comma-separated
+ *   - Only clinically relevant fields (skip height, blood type, etc.)
+ *   - Medications abbreviated: name+dose only
+ *   - Injected ONCE on the first user message of the conversation
+ *   - Returns empty string if no profile data (guest/empty)
+ */
+export function buildPatientContext(): string {
+  const p = loadEHRProfile();
+  const meds = loadMedications().filter((m) => m.active);
+  const bits: string[] = [];
+
+  // Demographics — one line
+  const demo: string[] = [];
+  if (p.dateOfBirth) {
+    const age = Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / (365.25 * 86400000));
+    demo.push(`${age}y`);
+  }
+  if (p.gender && p.gender !== 'prefer-not-to-say') demo.push(p.gender[0].toUpperCase());
+  if (demo.length) bits.push(demo.join('/'));
+
+  // Conditions — most important for clinical context
+  if (p.chronicConditions?.length) bits.push(`Dx: ${p.chronicConditions.join(', ')}`);
+
+  // Allergies — safety-critical
+  if (p.allergies?.length && !p.allergies.includes('None known')) {
+    bits.push(`Allergies: ${p.allergies.join(', ')}`);
+  }
+
+  // Active medications — abbreviated
+  if (meds.length > 0) {
+    bits.push(`Meds: ${meds.map((m) => `${m.name} ${m.dose}`).join(', ')}`);
+  }
+
+  // Lifestyle — compact
+  const life: string[] = [];
+  if (p.smokingStatus === 'current') life.push('smoker');
+  if (p.smokingStatus === 'former') life.push('ex-smoker');
+  if (p.alcoholUse === 'heavy') life.push('heavy alcohol');
+  if (life.length) bits.push(life.join(', '));
+
+  if (bits.length === 0) return '';
+  return `\n[Patient: ${bits.join(' | ')}]`;
+}
+
+// ============================================================
 // Vital type metadata (units, labels, normal ranges)
 // ============================================================
 
