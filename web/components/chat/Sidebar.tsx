@@ -29,6 +29,7 @@ export type NavView =
   | "appointments"
   | "vitals"
   | "health-dashboard"
+  | "schedule"
   | "history"
   | "settings"
   | "login"
@@ -93,6 +94,12 @@ export function Sidebar({
             label={t("nav_dashboard", language)}
             active={activeNav === "health-dashboard"}
             onClick={() => setActiveNav("health-dashboard")}
+          />
+          <NavItem
+            icon={Calendar}
+            label="Schedule"
+            active={activeNav === "schedule"}
+            onClick={() => setActiveNav("schedule")}
           />
           <NavItem
             icon={Pill}
