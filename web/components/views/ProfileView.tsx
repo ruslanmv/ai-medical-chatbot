@@ -47,11 +47,17 @@ export function ProfileView({
             <User2 size={28} className="text-white" />
           </div>
           <h2 className="text-2xl font-bold text-ink-base tracking-tight">
-            {user.displayName || user.username}
+            {user.displayName || user.email}
           </h2>
-          <p className="text-sm text-ink-muted mt-1">@{user.username}</p>
-          {user.email && (
-            <p className="text-xs text-ink-subtle mt-0.5">{user.email}</p>
+          <p className="text-sm text-ink-muted mt-1">{user.email}</p>
+          {user.emailVerified ? (
+            <span className="inline-flex items-center gap-1 text-xs text-success-500 mt-1">
+              <Shield size={10} /> Email verified
+            </span>
+          ) : (
+            <span className="text-xs text-warning-500 mt-1">
+              Email not verified
+            </span>
           )}
         </div>
 

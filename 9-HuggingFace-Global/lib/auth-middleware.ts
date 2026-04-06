@@ -1,14 +1,9 @@
-/**
- * Shared auth helper for protected API routes.
- * Extracts the Bearer token, validates the session, and returns the user ID.
- * Returns null if unauthenticated — callers decide whether to 401 or proceed as guest.
- */
-
 import { getDb, pruneExpiredSessions } from './db';
 
 export interface AuthUser {
   id: string;
-  username: string;
+  email: string;
+  isAdmin: boolean;
 }
 
 export function authenticateRequest(req: Request): AuthUser | null {
@@ -21,11 +16,17 @@ export function authenticateRequest(req: Request): AuthUser | null {
 
   const row = db
     .prepare(
-      `SELECT u.id, u.username
+      `SELECT u.id, u.email, u.is_admin
        FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token = ? AND s.expires_at > datetime('now')`,
     )
     .get(token) as any;
 
-  return row ? { id: row.id, username: row.username } : null;
+  return row ? { id: row.id, email: row.email, isAdmin: !!row.is_admin } : null;
+}
+
+/** Require admin — returns null if not admin. */
+export function requireAdmin(req: Request): AuthUser | null {
+  const user = authenticateRequest(req);
+  return user?.isAdmin ? user : null;
 }

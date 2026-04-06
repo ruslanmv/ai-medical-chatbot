@@ -254,13 +254,25 @@ function MedOSAppInner() {
       case "login":
         return (
           <LoginView
-            onLogin={async (u, p) => {
-              const res = await auth.login(u, p);
+            onLogin={async (e, p) => {
+              const res = await auth.login(e, p);
               if (res.ok) setActiveNav("home");
               return res;
             }}
-            onRegister={async (u, p, o) => {
-              const res = await auth.register(u, p, o);
+            onRegister={async (e, p, o) => {
+              const res = await auth.register(e, p, o);
+              if (res.ok && !res.needsVerification) setActiveNav("home");
+              return res;
+            }}
+            onVerifyEmail={async (code) => {
+              const res = await auth.verifyEmail(code);
+              if (res.ok) setActiveNav("home");
+              return res;
+            }}
+            onResendVerification={auth.resendVerification}
+            onForgotPassword={auth.forgotPassword}
+            onResetPassword={async (e, c, p) => {
+              const res = await auth.resetPassword(e, c, p);
               if (res.ok) setActiveNav("home");
               return res;
             }}
@@ -284,16 +296,20 @@ function MedOSAppInner() {
           />
         ) : (
           <LoginView
-            onLogin={async (u, p) => {
-              const res = await auth.login(u, p);
+            onLogin={async (e, p) => {
+              const res = await auth.login(e, p);
               if (res.ok) setActiveNav("profile");
               return res;
             }}
-            onRegister={async (u, p, o) => {
-              const res = await auth.register(u, p, o);
-              if (res.ok) setActiveNav("profile");
+            onRegister={async (e, p, o) => {
+              const res = await auth.register(e, p, o);
+              if (res.ok && !res.needsVerification) setActiveNav("profile");
               return res;
             }}
+            onVerifyEmail={auth.verifyEmail}
+            onResendVerification={auth.resendVerification}
+            onForgotPassword={auth.forgotPassword}
+            onResetPassword={auth.resetPassword}
             language={settings.language}
           />
         );

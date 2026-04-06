@@ -4,156 +4,169 @@ import { useState, useEffect, useCallback } from "react";
 
 export interface User {
   id: string;
-  username: string;
-  email?: string;
+  email: string;
   displayName?: string;
+  emailVerified: boolean;
   createdAt?: string;
-}
-
-interface AuthState {
-  user: User | null;
-  token: string | null;
-  loading: boolean;
 }
 
 const TOKEN_KEY = "medos_auth_token";
 
-/**
- * Authentication hook. Guest-first: everything works without login.
- *
- * When logged in:
- *  - token stored in localStorage (for JS access) AND as an httpOnly cookie
- *    (for the proxy route to inject into backend calls).
- *  - /api/proxy/auth/me validates the session on mount.
- *
- * Cookie is set via document.cookie — in production the proxy route reads it.
- */
 export function useAuth() {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    token: null,
-    loading: true,
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setTokenState] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const persistToken = useCallback((t: string | null) => {
+    setTokenState(t);
+    if (t) {
+      localStorage.setItem(TOKEN_KEY, t);
+      const secure = window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `medos_token=${t}; path=/; max-age=${30 * 86400}; SameSite=Lax${secure}`;
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+      document.cookie = "medos_token=; path=/; max-age=0";
+    }
+  }, []);
 
   // Restore session on mount.
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setState({ user: null, token: null, loading: false });
-      return;
-    }
-
-    // Validate the token against the backend.
-    fetch("/api/proxy/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (!t) { setLoading(false); return; }
+    fetch("/api/proxy/auth/me", { headers: { Authorization: `Bearer ${t}` } })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.user) {
-          setTokenCookie(token);
-          setState({ user: data.user, token, loading: false });
+          persistToken(t);
+          setUser(data.user);
         } else {
-          // Expired — clean up.
-          clearAuth();
-          setState({ user: null, token: null, loading: false });
+          persistToken(null);
         }
       })
-      .catch(() => {
-        setState({ user: null, token: null, loading: false });
-      });
-  }, []);
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [persistToken]);
 
   const register = useCallback(
-    async (
-      username: string,
-      password: string,
-      opts?: { email?: string; displayName?: string },
-    ): Promise<{ ok: boolean; error?: string }> => {
+    async (email: string, password: string, opts?: { displayName?: string }) => {
       try {
         const res = await fetch("/api/proxy/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username,
-            password,
-            email: opts?.email,
-            displayName: opts?.displayName,
-          }),
+          body: JSON.stringify({ email, password, displayName: opts?.displayName }),
         });
         const data = await res.json();
-        if (!res.ok) return { ok: false, error: data.error || "Registration failed" };
-
-        localStorage.setItem(TOKEN_KEY, data.token);
-        setTokenCookie(data.token);
-        setState({ user: data.user, token: data.token, loading: false });
-        return { ok: true };
+        if (!res.ok) return { ok: false as const, error: data.error || "Registration failed" };
+        persistToken(data.token);
+        setUser(data.user);
+        return { ok: true as const, needsVerification: !data.user.emailVerified };
       } catch {
-        return { ok: false, error: "Network error" };
+        return { ok: false as const, error: "Network error" };
       }
     },
-    [],
+    [persistToken],
   );
 
   const login = useCallback(
-    async (
-      username: string,
-      password: string,
-    ): Promise<{ ok: boolean; error?: string }> => {
+    async (email: string, password: string) => {
       try {
         const res = await fetch("/api/proxy/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ email, password }),
         });
         const data = await res.json();
-        if (!res.ok) return { ok: false, error: data.error || "Login failed" };
-
-        localStorage.setItem(TOKEN_KEY, data.token);
-        setTokenCookie(data.token);
-        setState({ user: data.user, token: data.token, loading: false });
-        return { ok: true };
+        if (!res.ok) return { ok: false as const, error: data.error || "Login failed" };
+        persistToken(data.token);
+        setUser(data.user);
+        return { ok: true as const };
       } catch {
-        return { ok: false, error: "Network error" };
+        return { ok: false as const, error: "Network error" };
+      }
+    },
+    [persistToken],
+  );
+
+  const verifyEmail = useCallback(
+    async (code: string) => {
+      try {
+        const t = localStorage.getItem(TOKEN_KEY);
+        const res = await fetch("/api/proxy/auth/verify-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+          body: JSON.stringify({ code }),
+        });
+        const data = await res.json();
+        if (!res.ok) return { ok: false as const, error: data.error };
+        setUser((u) => (u ? { ...u, emailVerified: true } : u));
+        return { ok: true as const };
+      } catch {
+        return { ok: false as const, error: "Network error" };
       }
     },
     [],
   );
 
-  const logout = useCallback(async () => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (token) {
-      fetch("/api/proxy/auth/logout", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {});
-    }
-    clearAuth();
-    setState({ user: null, token: null, loading: false });
+  const resendVerification = useCallback(async () => {
+    const t = localStorage.getItem(TOKEN_KEY);
+    await fetch("/api/proxy/auth/resend-verification", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${t}` },
+    }).catch(() => {});
   }, []);
 
+  const forgotPassword = useCallback(async (email: string) => {
+    try {
+      const res = await fetch("/api/proxy/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      return { ok: res.ok, message: data.message || data.error };
+    } catch {
+      return { ok: false, message: "Network error" };
+    }
+  }, []);
+
+  const resetPassword = useCallback(
+    async (email: string, code: string, newPassword: string) => {
+      try {
+        const res = await fetch("/api/proxy/auth/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, code, newPassword }),
+        });
+        const data = await res.json();
+        if (!res.ok) return { ok: false as const, error: data.error };
+        if (data.token) persistToken(data.token);
+        return { ok: true as const };
+      } catch {
+        return { ok: false as const, error: "Network error" };
+      }
+    },
+    [persistToken],
+  );
+
+  const logout = useCallback(async () => {
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (t) fetch("/api/proxy/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${t}` } }).catch(() => {});
+    persistToken(null);
+    setUser(null);
+  }, [persistToken]);
+
   return {
-    user: state.user,
-    token: state.token,
-    isAuthenticated: !!state.user,
-    isGuest: !state.user,
-    loading: state.loading,
+    user,
+    token,
+    isAuthenticated: !!user,
+    isGuest: !user,
+    loading,
     register,
     login,
+    verifyEmail,
+    resendVerification,
+    forgotPassword,
+    resetPassword,
     logout,
   };
-}
-
-function setTokenCookie(token: string): void {
-  // Set as a cookie so the proxy route can read it.
-  // 30-day expiry. SameSite=Lax for same-origin proxy. Secure in production.
-  const secure =
-    typeof window !== "undefined" && window.location.protocol === "https:"
-      ? "; Secure"
-      : "";
-  document.cookie = `medos_token=${token}; path=/; max-age=${30 * 86400}; SameSite=Lax${secure}`;
-}
-
-function clearAuth(): void {
-  localStorage.removeItem(TOKEN_KEY);
-  document.cookie = "medos_token=; path=/; max-age=0";
 }

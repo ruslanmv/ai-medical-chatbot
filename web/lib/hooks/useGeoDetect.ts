@@ -33,7 +33,7 @@ export function useGeoDetect({ skip, onResult }: Options): void {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
 
-    fetch("/api/geo", { signal: controller.signal })
+    fetch("/api/proxy/geo", { signal: controller.signal })
       .then((r) => (r.ok ? r.json() : null))
       .then((data: GeoResult | null) => {
         if (data && data.country) onResult(data);
