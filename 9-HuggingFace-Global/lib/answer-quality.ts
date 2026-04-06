@@ -95,6 +95,11 @@ const CITATION_PATTERNS: Array<{ id: string; re: RegExp; label: string; url: str
   { id: 'ema',     re: /\bEMA\b|European Medicines Agency/i,   label: 'EMA',    url: 'https://www.ema.europa.eu/en/medicines' },
   { id: 'mayo',    re: /Mayo Clinic/i,                          label: 'Mayo Clinic', url: 'https://www.mayoclinic.org/diseases-conditions' },
   { id: 'cochrane',re: /Cochrane/i,                             label: 'Cochrane',    url: 'https://www.cochranelibrary.com/' },
+  { id: 'sie',     re: /\bSIE\b|Società Italiana di Endocrinologia/i, label: 'SIE', url: 'https://www.societaitalianadiendocrinologia.it/' },
+  { id: 'sid',     re: /\bSID\b|Società Italiana di Diabetologia/i,   label: 'SID', url: 'https://www.siditalia.it/' },
+  { id: 'ada',     re: /\bADA\b|American Diabetes Association/i,      label: 'ADA', url: 'https://diabetes.org/about-diabetes' },
+  { id: 'eta',     re: /\bETA\b|European Thyroid Association/i,       label: 'ETA', url: 'https://www.eurothyroid.com/' },
+  { id: 'es',      re: /Endocrine Society/i,                          label: 'Endocrine Society', url: 'https://www.endocrine.org/patient-engagement' },
 ];
 
 export function extractCitations(text: string): Citation[] {

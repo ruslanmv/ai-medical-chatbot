@@ -10,6 +10,7 @@ import {
   Activity,
   FileText,
   Printer,
+  ClipboardList,
 } from "lucide-react";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 import type { User } from "@/lib/hooks/useAuth";
@@ -18,6 +19,7 @@ interface ProfileViewProps {
   user: User;
   onLogout: () => void;
   onExport: () => void;
+  onOpenEHR: () => void;
   medicationCount: number;
   appointmentCount: number;
   vitalCount: number;
@@ -29,6 +31,7 @@ export function ProfileView({
   user,
   onLogout,
   onExport,
+  onOpenEHR,
   medicationCount,
   appointmentCount,
   vitalCount,
@@ -71,6 +74,23 @@ export function ProfileView({
 
         {/* Actions */}
         <div className="space-y-3 mb-8">
+          <button
+            onClick={onOpenEHR}
+            className="w-full flex items-center gap-3 p-4 bg-surface-1 border border-line/60 rounded-2xl shadow-soft text-left hover:border-brand-500/40 transition-all"
+          >
+            <div className="w-10 h-10 rounded-xl bg-accent-500/10 flex items-center justify-center">
+              <ClipboardList size={18} className="text-accent-500" />
+            </div>
+            <div>
+              <span className="font-bold text-sm text-ink-base block">
+                Health Profile (EHR)
+              </span>
+              <span className="text-xs text-ink-muted">
+                Set up your medical history for personalized AI advice
+              </span>
+            </div>
+          </button>
+
           <button
             onClick={onExport}
             className="w-full flex items-center gap-3 p-4 bg-surface-1 border border-line/60 rounded-2xl shadow-soft text-left hover:border-brand-500/40 transition-all"

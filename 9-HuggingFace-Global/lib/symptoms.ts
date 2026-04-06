@@ -278,6 +278,71 @@ export const SYMPTOMS: Symptom[] = [
       },
     ],
   },
+  {
+    slug: 'diabetes',
+    title: 'Diabetes — types, symptoms, management | MedOS',
+    metaDescription:
+      'What diabetes is, how to recognize it, how to manage blood sugar, and when to seek care. Aligned with ADA, SID, and WHO guidelines.',
+    headline: 'Diabetes',
+    summary:
+      'Diabetes is a chronic condition where the body cannot properly regulate blood sugar. Type 1 is autoimmune (requires insulin from diagnosis). Type 2 is the most common form (managed with lifestyle, oral medications, and sometimes insulin). Both types require regular monitoring to prevent complications.',
+    redFlags: [
+      'Diabetic ketoacidosis (DKA): vomiting, fruity-smelling breath, rapid breathing, confusion — call emergency services.',
+      'Severe hypoglycemia: seizures, loss of consciousness — use glucagon if available, call emergency.',
+      'Blood glucose above 300 mg/dL despite medication.',
+      'New onset of blurred vision or sudden vision loss.',
+      'Non-healing foot wound or ulcer.',
+    ],
+    selfCare: [
+      'Monitor blood glucose regularly.',
+      'Follow a balanced diet — reduce refined sugars, increase fiber.',
+      'Aim for 150 minutes of moderate exercise per week.',
+      'Take medications as prescribed — never skip insulin.',
+      'Check feet daily for cuts, blisters, or redness.',
+      'Carry fast-acting glucose at all times if on insulin.',
+    ],
+    whenToSeekCare: [
+      'Blood sugar consistently above 250 mg/dL or below 70 mg/dL.',
+      'Signs of DKA (vomiting, fruity breath, confusion).',
+      'New numbness or tingling in hands or feet.',
+      'A foot wound that does not heal.',
+    ],
+    faqs: [
+      { q: 'What is the difference between Type 1 and Type 2 diabetes?', a: 'Type 1 is autoimmune — the body destroys insulin-producing cells. Type 2 is insulin resistance. Type 2 is more common (90%) and often linked to lifestyle factors.' },
+      { q: 'What is a normal HbA1c?', a: 'Normal is below 5.7%. Prediabetes 5.7–6.4%. Diabetes ≥6.5%. Most patients target below 7%.' },
+      { q: 'What is the Rule of 15 for hypoglycemia?', a: 'If blood sugar <70: eat 15g fast-acting carbs, wait 15 min, recheck. Repeat if still low.' },
+    ],
+  },
+  {
+    slug: 'thyroid',
+    title: 'Thyroid problems — symptoms, types, when to worry | MedOS',
+    metaDescription:
+      'Hypothyroidism, hyperthyroidism, Hashimoto, Graves — symptoms and when to see a doctor. Aligned with SIE and ETA guidelines.',
+    headline: 'Thyroid problems',
+    summary:
+      'The thyroid gland controls metabolism, energy, and body temperature. When it produces too little hormone (hypothyroidism) or too much (hyperthyroidism), it affects nearly every organ. Most thyroid conditions are treatable.',
+    redFlags: [
+      'Thyroid storm: very high fever, extreme rapid heartbeat, confusion — call emergency.',
+      'Myxedema coma: hypothermia, extreme drowsiness, slowed breathing — emergency.',
+      'Sudden severe neck swelling or difficulty breathing.',
+    ],
+    selfCare: [
+      'Take thyroid medication consistently, on empty stomach for levothyroxine.',
+      'Avoid taking with calcium, iron, or coffee — wait 30–60 min.',
+      'Attend regular follow-up for TSH blood tests.',
+    ],
+    whenToSeekCare: [
+      'Persistent fatigue, unexplained weight changes.',
+      'A lump or swelling in the neck.',
+      'Palpitations, tremor, or anxiety worsening.',
+      'Pregnant with known or suspected thyroid issues.',
+    ],
+    faqs: [
+      { q: 'What is the difference between hypo and hyperthyroidism?', a: 'Hypothyroidism (underactive) = too little hormone → fatigue, weight gain, cold. Hyperthyroidism (overactive) = too much → weight loss, rapid heart, anxiety.' },
+      { q: 'What is Hashimoto disease?', a: 'Autoimmune condition where the immune system attacks the thyroid. Most common cause of hypothyroidism. Managed with levothyroxine replacement.' },
+      { q: 'Can thyroid affect pregnancy?', a: 'Yes. Both hypo and hyperthyroidism affect fertility and pregnancy. Levothyroxine dose increases 30–50% during pregnancy. Monitor TSH every 4 weeks.' },
+    ],
+  },
 ];
 
 /** Constant-time lookup by slug. */

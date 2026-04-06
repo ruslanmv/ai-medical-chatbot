@@ -105,6 +105,64 @@ const MEDICAL_KNOWLEDGE: MedicalEntry[] = [
     keywords: ['anemia', 'iron', 'vitamin', 'nutrition', 'deficiency', 'hemoglobin'],
     context: 'Iron deficiency anemia is the most common nutritional deficiency globally, affecting ~1.2 billion people. Diagnosis: low hemoglobin (<12 g/dL women, <13 g/dL men), low ferritin, low MCV. Treatment: oral iron supplementation (ferrous sulfate 325mg 2-3x daily on empty stomach, with vitamin C to enhance absorption). Common in pregnant women, children, and those with chronic blood loss. Other common deficiencies: vitamin D (1 billion affected), B12 (common in vegetarians), and folate (critical in pregnancy for neural tube defect prevention).',
   },
+
+  // ============================================================
+  // Endocrinology & Diabetology
+  // Sources: Società Italiana di Endocrinologia (SIE),
+  //          Società Italiana di Diabetologia (SID),
+  //          American Diabetes Association (ADA 2026),
+  //          European Thyroid Association (ETA),
+  //          Endocrine Society (ES)
+  // ============================================================
+
+  {
+    id: 16,
+    topic: 'Thyroid Disorders (Hypothyroidism & Hashimoto)',
+    keywords: ['thyroid', 'hypothyroidism', 'hashimoto', 'tsh', 'levothyroxine', 'tiroides', 'tiroide', 'tired', 'cold', 'weight gain', 'fatigue', 'sluggish', 'thyroid antibodies', 'tpo'],
+    context: 'Hypothyroidism affects ~5% of the global population, with Hashimoto thyroiditis as the most common cause in iodine-sufficient regions (SIE/ETA). Diagnosis: elevated TSH (>4.5 mIU/L on repeat testing 3 months apart) with low free T4. Subclinical hypothyroidism (elevated TSH, normal T4) is common and not always treated — treatment is recommended when TSH >10 mIU/L or symptoms are significant (ETA guidelines). Symptoms: fatigue, cold intolerance, weight gain, constipation, dry skin, hair loss, depression, menstrual irregularities. Treatment: levothyroxine replacement (starting dose ~1.6 μg/kg/day), taken on empty stomach 30-60 minutes before breakfast. TSH monitoring every 6-8 weeks until stable, then annually. Pregnancy requires dose increase (~30-50%). Avoid taking with calcium, iron, or coffee.',
+  },
+  {
+    id: 17,
+    topic: 'Thyroid Disorders (Hyperthyroidism & Graves)',
+    keywords: ['hyperthyroidism', 'graves', 'overactive thyroid', 'thyrotoxicosis', 'tremor', 'palpitations', 'weight loss', 'eye', 'goiter', 'tachycardia', 'methimazole', 'radioiodine'],
+    context: 'Hyperthyroidism affects ~1-2% of the population, most commonly caused by Graves disease (autoimmune, with TSH receptor antibodies). Diagnosis: suppressed TSH (<0.1 mIU/L) with elevated free T4 and/or T3. Symptoms: tachycardia, tremor, weight loss despite increased appetite, heat intolerance, anxiety, diarrhea, menstrual changes. Graves-specific: diffuse goiter, ophthalmopathy (eye bulging, double vision). Treatment options (ETA/SIE): antithyroid drugs (methimazole first-line, 15-30mg/day for 12-18 months), radioactive iodine ablation, or thyroidectomy. Thyroid storm is a life-threatening emergency: high fever, extreme tachycardia, altered consciousness — requires ICU care. Beta-blockers (propranolol) for symptom control while awaiting antithyroid effect.',
+  },
+  {
+    id: 18,
+    topic: 'Type 1 Diabetes',
+    keywords: ['type 1 diabetes', 'juvenile diabetes', 'insulin dependent', 'autoimmune diabetes', 'ketoacidosis', 'dka', 'insulin pump', 'cgm', 'continuous glucose', 'diabete tipo 1'],
+    context: 'Type 1 diabetes is an autoimmune disease destroying pancreatic beta cells, requiring lifelong insulin therapy. Typically diagnosed in children and young adults but can occur at any age (SID). Presentation: polyuria, polydipsia, weight loss, fatigue, and potentially diabetic ketoacidosis (DKA) — a life-threatening emergency with blood glucose >250 mg/dL, ketones, metabolic acidosis. Treatment (ADA 2026): intensive insulin therapy (basal-bolus or insulin pump), continuous glucose monitoring (CGM) recommended for all patients, target HbA1c <7% for most adults. Carbohydrate counting is essential. DKA prevention: never omit insulin, monitor ketones when blood glucose >250 mg/dL or during illness. Screening for complications: annual retinal exam, kidney function, lipid panel, thyroid function (15-25% develop autoimmune thyroid disease).',
+  },
+  {
+    id: 19,
+    topic: 'Gestational Diabetes',
+    keywords: ['gestational diabetes', 'pregnancy diabetes', 'gdm', 'diabete gestazionale', 'glucose tolerance test', 'ogtt', 'pregnancy blood sugar', 'macrosomia'],
+    context: 'Gestational diabetes mellitus (GDM) affects 6-13% of pregnancies globally. Screening at 24-28 weeks with 75g OGTT (SID/ADA): fasting ≥92 mg/dL, 1-hour ≥180 mg/dL, or 2-hour ≥153 mg/dL. Risk factors: BMI >30, previous GDM, family history of diabetes, age >35, PCOS. Management: medical nutrition therapy (primary), moderate physical activity (150 min/week), blood glucose monitoring (fasting <95, 1-hour postprandial <140, 2-hour postprandial <120 mg/dL). Insulin if targets not met with lifestyle alone (metformin is an alternative in some guidelines). Complications: macrosomia, preeclampsia, neonatal hypoglycemia, increased C-section risk. Postpartum: 40-60% risk of developing Type 2 diabetes within 10 years — annual screening recommended (SID/ADA).',
+  },
+  {
+    id: 20,
+    topic: 'Diabetic Complications',
+    keywords: ['diabetic neuropathy', 'retinopathy', 'nephropathy', 'diabetic foot', 'diabetic kidney', 'microalbuminuria', 'peripheral neuropathy', 'diabetic eye', 'complicanze diabete'],
+    context: 'Long-term diabetes complications are preventable with good glycemic control (SID/ADA). Microvascular: retinopathy (annual dilated eye exam from diagnosis in T2D, 5 years after diagnosis in T1D), nephropathy (annual urine albumin-to-creatinine ratio + eGFR — SGLT2 inhibitors and finerenone are renoprotective), neuropathy (annual comprehensive foot exam, monofilament testing). Macrovascular: cardiovascular disease (leading cause of death — statin therapy for most diabetic patients >40 years, blood pressure target <130/80 mmHg), peripheral arterial disease, cerebrovascular disease. Diabetic foot: inspect daily, proper footwear, immediate care for any wound (non-healing ulcers are a medical urgency). HbA1c target <7% reduces microvascular risk by 25-40% (DCCT/UKPDS).',
+  },
+  {
+    id: 21,
+    topic: 'Metabolic Syndrome',
+    keywords: ['metabolic syndrome', 'insulin resistance', 'prediabetes', 'waist circumference', 'triglycerides', 'hdl', 'sindrome metabolica', 'belly fat', 'pre diabetes', 'impaired fasting glucose'],
+    context: 'Metabolic syndrome (WHO/IDF criteria) is diagnosed with central obesity (waist ≥94 cm men / ≥80 cm women in Europeans, ethnic-specific thresholds exist) plus ≥2 of: elevated triglycerides (≥150 mg/dL), low HDL (<40 mg/dL men / <50 mg/dL women), hypertension (≥130/85 mmHg), and hyperglycemia (fasting glucose ≥100 mg/dL). Affects ~25% of adults globally. Increases risk of Type 2 diabetes (5x), cardiovascular disease (2x), and non-alcoholic fatty liver disease. Management (SIE): lifestyle modification is cornerstone — 5-10% weight loss dramatically improves all parameters, 150+ minutes/week of moderate exercise, Mediterranean diet (shown superior to low-fat diets in the PREDIMED trial). Pharmacotherapy for individual components when lifestyle alone is insufficient.',
+  },
+  {
+    id: 22,
+    topic: 'Hypoglycemia',
+    keywords: ['hypoglycemia', 'low blood sugar', 'low glucose', 'shaking', 'sweating', 'confusion', 'ipoglicemia', 'sugar drop', 'insulin reaction', 'glucagon'],
+    context: 'Hypoglycemia (blood glucose <70 mg/dL) is a common and potentially dangerous complication of diabetes treatment, particularly with insulin and sulfonylureas (SID). Level 1 (<70 mg/dL): autonomic symptoms — sweating, tremor, palpitations, hunger. Level 2 (<54 mg/dL): neuroglycopenic symptoms — confusion, visual changes, difficulty speaking, loss of coordination. Level 3: severe, requiring third-party assistance — seizures, loss of consciousness. Treatment (Rule of 15): 15g fast-acting carbohydrates (4 glucose tablets, 150 mL juice, 1 tablespoon sugar), recheck in 15 minutes, repeat if still <70. Severe hypoglycemia: glucagon injection (1 mg IM/SC) or nasal glucagon if unable to swallow. Prevention: regular meal timing, pre-exercise snacks, never skip meals when taking insulin, carry fast-acting glucose at all times. Hypoglycemia unawareness (loss of warning symptoms) affects ~25% of T1D patients — CGM with alarms is strongly recommended.',
+  },
+  {
+    id: 23,
+    topic: 'Adrenal Disorders',
+    keywords: ['adrenal', 'cortisol', 'cushing', 'addison', 'adrenal insufficiency', 'aldosterone', 'pheochromocytoma', 'surrenale', 'cortisone', 'steroid', 'adrenal crisis'],
+    context: 'Adrenal disorders include Addison disease (primary adrenal insufficiency — autoimmune destruction, prevalence ~100-140/million, SIE), Cushing syndrome (excess cortisol — from exogenous steroids, pituitary adenoma, or adrenal tumor), and pheochromocytoma (catecholamine-producing tumor — hypertensive crises, headache, sweating, palpitations). Addison disease: fatigue, weight loss, hyperpigmentation, salt craving, hypotension, hyponatremia, hyperkalemia. Adrenal crisis is life-threatening: severe hypotension, dehydration, abdominal pain, altered consciousness — treat with IV hydrocortisone 100mg bolus + saline. All patients with adrenal insufficiency must carry emergency hydrocortisone and wear a medical alert bracelet. Sick-day rules: double the oral hydrocortisone dose during fever, vomiting, or surgery. Adrenal incidentalomas (found on imaging for other reasons) require evaluation for cortisol excess and pheochromocytoma (Endocrine Society guidelines).',
+  },
 ];
 
 /**

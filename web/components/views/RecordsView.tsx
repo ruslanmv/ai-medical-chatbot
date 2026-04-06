@@ -12,7 +12,7 @@ import {
   Download,
 } from "lucide-react";
 import { todayISO, type HealthRecord, type RecordType } from "@/lib/health-store";
-import { type SupportedLanguage } from "@/lib/i18n";
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 const RECORD_TYPES: Record<RecordType, { label: string; emoji: string }> = {
   "lab-report": { label: "Lab Report", emoji: "🧪" },
@@ -37,6 +37,7 @@ export function RecordsView({
   onAdd,
   onDelete,
   onExport,
+  language,
 }: RecordsViewProps) {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");

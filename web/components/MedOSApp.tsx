@@ -29,6 +29,8 @@ import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { LoginView } from "./views/LoginView";
 import { ProfileView } from "./views/ProfileView";
+import { EHRWizard } from "./views/EHRWizard";
+import { buildPatientContext } from "@/lib/health-store";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
 export default function MedOSApp() {
@@ -296,6 +298,14 @@ function MedOSAppInner() {
             language={settings.language}
           />
         );
+      case "ehr-wizard":
+        return (
+          <EHRWizard
+            onComplete={() => setActiveNav("profile")}
+            onCancel={() => setActiveNav("home")}
+            language={settings.language}
+          />
+        );
       case "profile":
         return auth.user ? (
           <ProfileView
@@ -305,6 +315,7 @@ function MedOSAppInner() {
               setActiveNav("home");
             }}
             onExport={health.downloadAll}
+            onOpenEHR={() => setActiveNav("ehr-wizard")}
             medicationCount={health.medications.length}
             appointmentCount={health.appointments.length}
             vitalCount={health.vitals.length}

@@ -121,6 +121,39 @@ const TOPICS: Array<{ keywords: string[]; prompts: FollowUp[] }> = [
       { id: 'sleep.doc',     prompt: 'When should I see a sleep specialist?' },
     ],
   },
+  {
+    keywords: ['thyroid', 'tsh', 'levothyroxine', 'hashimoto', 'graves', 'goiter', 'tiroide'],
+    prompts: [
+      { id: 'thyroid.symptoms', prompt: 'What are the symptoms of thyroid problems?' },
+      { id: 'thyroid.test',     prompt: 'What blood tests check the thyroid?' },
+      { id: 'thyroid.meds',     prompt: 'How should I take thyroid medication?' },
+    ],
+  },
+  {
+    keywords: ['insulin', 'hba1c', 'glycemia', 'glycated', 'metformin', 'diabetic', 'ketoacidosis', 'dka', 'glicemia', 'glucometer'],
+    prompts: [
+      { id: 'diab.monitor', prompt: 'How often should I check blood sugar?' },
+      { id: 'diab.hypo',    prompt: 'How do I handle low blood sugar?' },
+      { id: 'diab.foot',    prompt: 'How do I care for diabetic feet?' },
+      { id: 'diab.food',    prompt: 'Best foods for blood sugar control' },
+    ],
+  },
+  {
+    keywords: ['cortisol', 'adrenal', 'addison', 'cushing', 'aldosterone', 'surrenale'],
+    prompts: [
+      { id: 'adrenal.signs',  prompt: 'What are the signs of adrenal problems?' },
+      { id: 'adrenal.crisis', prompt: 'What is an adrenal crisis?' },
+      { id: 'adrenal.stress', prompt: 'How does stress affect the adrenals?' },
+    ],
+  },
+  {
+    keywords: ['metabolic syndrome', 'waist', 'triglycerides', 'hdl', 'prediabet', 'sindrome metabolica'],
+    prompts: [
+      { id: 'metab.reverse',  prompt: 'Can metabolic syndrome be reversed?' },
+      { id: 'metab.diet',     prompt: 'Best diet for metabolic syndrome' },
+      { id: 'metab.exercise', prompt: 'How much exercise do I need?' },
+    ],
+  },
 ];
 
 /**

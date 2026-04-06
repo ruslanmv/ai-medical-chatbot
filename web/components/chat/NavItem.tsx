@@ -6,6 +6,7 @@ interface NavItemProps {
   active: boolean;
   onClick: () => void;
   urgent?: boolean;
+  collapsed?: boolean;
 }
 
 export function NavItem({
@@ -14,11 +15,15 @@ export function NavItem({
   active,
   onClick,
   urgent,
+  collapsed = false,
 }: NavItemProps) {
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 mb-1 group ${
+      title={collapsed ? label : undefined}
+      className={`w-full flex items-center rounded-xl transition-all duration-200 mb-0.5 group ${
+        collapsed ? "justify-center px-2 py-2.5" : "gap-3 px-4 py-2.5"
+      } ${
         active
           ? urgent
             ? "bg-danger-500/10 text-danger-500 font-semibold"
@@ -29,9 +34,9 @@ export function NavItem({
       }`}
     >
       <Icon
-        size={20}
+        size={collapsed ? 20 : 18}
         strokeWidth={active ? 2.25 : 1.75}
-        className={
+        className={`flex-shrink-0 ${
           active
             ? urgent
               ? "text-danger-500"
@@ -39,9 +44,11 @@ export function NavItem({
             : urgent
             ? "text-danger-500/70 group-hover:text-danger-500"
             : "text-ink-subtle group-hover:text-ink-base"
-        }
+        }`}
       />
-      <span className="text-sm tracking-tight">{label}</span>
+      {!collapsed && (
+        <span className="text-sm tracking-tight truncate">{label}</span>
+      )}
     </button>
   );
 }

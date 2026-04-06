@@ -14,6 +14,11 @@ export const metadata: Metadata = {
     "Tell MedOS what's bothering you. Instant, private, multilingual health guidance aligned with WHO, CDC, and NHS.",
   keywords: ["medical AI", "healthcare", "chatbot", "telemedicine", "WHO", "CDC"],
   authors: [{ name: "MedOS Team" }],
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: "/favicon.svg",
+  },
   openGraph: {
     title: "MedOS — your worldwide medical assistant",
     description:
@@ -21,6 +26,13 @@ export const metadata: Metadata = {
     type: "website",
   },
   robots: { index: true, follow: true },
+  appleWebApp: {
+    capable: true,
+    title: "MedOS",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
@@ -31,14 +43,12 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F7F9FB" },
-    { media: "(prefers-color-scheme: dark)",  color: "#0B1220" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B1220" },
   ],
 };
 
 /**
- * Inline pre-hydration script: reads the stored theme (or system
- * preference) and sets `<html class="dark">` BEFORE the first paint.
- * Prevents the light-flash when a dark-mode user refreshes.
+ * Inline pre-hydration script: reads the stored theme before first paint.
  */
 const themeBootstrap = `
 (function() {
@@ -61,10 +71,6 @@ export default function RootLayout({
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="MedOS" />
       </head>
       <body className="min-h-screen antialiased">{children}</body>
     </html>

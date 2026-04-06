@@ -154,6 +154,53 @@ const EMERGENCY_PATTERNS: EmergencyPattern[] = [
       'Vaginal bleeding during pregnancy can be serious. Lie on your left side, do not insert anything vaginally, and go to the nearest hospital or call emergency services IMMEDIATELY.',
     severity: 'critical',
   },
+  {
+    keywords: [
+      'diabetic ketoacidosis', 'dka', 'fruity breath', 'vomiting diabetes',
+      'cetoacidosis', 'acidocétose', 'ketoazidose', 'chetoacidosi',
+      'cetoacidose', 'الحماض الكيتوني', 'कीटोएसिडोसिस', '糖尿病ケトアシドーシス',
+      '당뇨병성 케톤산증', 'ketoacidosis', 'kussmaul breathing',
+    ],
+    category: 'endocrine_emergency',
+    guidance:
+      'Diabetic ketoacidosis (DKA) is life-threatening. Symptoms: vomiting, fruity-smelling breath, rapid deep breathing, confusion, extreme thirst. Call emergency services IMMEDIATELY. If you have insulin, do NOT stop taking it. Drink water if able. This requires urgent IV fluids and insulin in a hospital.',
+    severity: 'critical',
+  },
+  {
+    keywords: [
+      'severe hypoglycemia', 'seizure diabetes', 'unconscious diabetes',
+      'sugar very low', 'cannot wake up diabetes', 'glucagon',
+      'hipoglicemia severa', 'hypoglycémie sévère', 'schwere hypoglykämie',
+      'ipoglicemia grave', 'hipoglicemia grave', 'نقص السكر الحاد',
+      'गंभीर हाइपोग्लाइसीमिया', '重度低血糖', '重症低血糖',
+    ],
+    category: 'endocrine_emergency',
+    guidance:
+      'Severe hypoglycemia (very low blood sugar) is an emergency. If the person is conscious: give 15g fast-acting sugar (juice, glucose tablets, sugar water). If unconscious or seizing: do NOT put anything in their mouth, use glucagon injection if available, place in recovery position, and call emergency services IMMEDIATELY.',
+    severity: 'critical',
+  },
+  {
+    keywords: [
+      'thyroid storm', 'thyroid crisis', 'tormenta tiroidea',
+      'crise thyréotoxique', 'thyreotoxische krise', 'crisi tireotossica',
+      'عاصفة الغدة الدرقية', 'थायराइड तूफान', '甲状腺クリーゼ',
+    ],
+    category: 'endocrine_emergency',
+    guidance:
+      'Thyroid storm is a rare but life-threatening emergency. Symptoms: very high fever (>40°C), extreme rapid heartbeat, agitation, confusion, delirium, vomiting, diarrhea. Call emergency services IMMEDIATELY. This requires ICU care with IV medications to block thyroid hormone.',
+    severity: 'critical',
+  },
+  {
+    keywords: [
+      'adrenal crisis', 'addisonian crisis', 'crisis suprarrenal',
+      'crise surrénalienne', 'nebennierenkrise', 'crisi surrenalica',
+      'أزمة الغدة الكظرية', 'एड्रेनल क्राइसिस', '副腎クリーゼ',
+    ],
+    category: 'endocrine_emergency',
+    guidance:
+      'Adrenal crisis is a life-threatening emergency in people with adrenal insufficiency (Addison disease). Symptoms: severe weakness, vomiting, low blood pressure, confusion, collapse. If the person has emergency hydrocortisone, administer 100mg IM injection IMMEDIATELY. Call emergency services. Give IV fluids if possible.',
+    severity: 'critical',
+  },
 ];
 
 /**

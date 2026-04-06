@@ -35,6 +35,11 @@ export const GLOBAL_SOURCES = [
   'European Medicines Agency (EMA)',
   'Mayo Clinic patient education',
   'PubMed / Cochrane systematic reviews',
+  'Società Italiana di Endocrinologia (SIE) for endocrine disorders',
+  'Società Italiana di Diabetologia (SID) for diabetes management',
+  'American Diabetes Association (ADA) Standards of Care',
+  'European Thyroid Association (ETA) guidelines',
+  'Endocrine Society clinical practice guidelines',
 ] as const;
 
 export const MEDICAL_SCOPE = [
