@@ -124,9 +124,7 @@ export function HeroInput({
               type="button"
               onClick={isListening ? onStopVoice : onStartVoice}
               aria-label={t("ask_tap_speak", language)}
-              className={`flex-shrink-0 rounded-full flex items-center justify-center transition-all ${
-                isHero ? "w-11 h-11" : "w-10 h-10"
-              } ${
+              className={`flex-shrink-0 rounded-full flex items-center justify-center transition-all w-11 h-11 ${
                 isListening
                   ? "bg-danger-500 text-white animate-pulse shadow-danger-glow"
                   : "bg-surface-2 text-ink-muted hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30"
@@ -158,7 +156,7 @@ export function HeroInput({
       {/* Suggestion chips — dynamic, click to send */}
       {suggestions.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2 justify-center">
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
             <Sparkles size={12} className="text-accent-500" />
             {t("ask_suggestions", language)}
           </span>

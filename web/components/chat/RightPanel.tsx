@@ -13,7 +13,6 @@ import {
   Shield,
   Check,
   Circle,
-  Bell,
 } from "lucide-react";
 import {
   VITAL_META,
@@ -261,35 +260,40 @@ export function RightPanel({
 
         {/* Empty state — encourage setup */}
         {!hasHealthData && (
-          <div className="text-center py-8">
-            <Activity size={24} className="mx-auto text-ink-subtle mb-2" />
-            <p className="text-xs text-ink-muted mb-3">
-              Track your vitals and medications to see them here
+          <div className="text-center py-6">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-brand-500/10 flex items-center justify-center">
+              <Activity size={24} className="text-brand-500" />
+            </div>
+            <p className="text-sm font-semibold text-ink-base mb-1">
+              Track your health
+            </p>
+            <p className="text-xs text-ink-muted mb-5 leading-relaxed px-2">
+              Log vitals, medications, and appointments to see your dashboard here.
             </p>
             <button
               onClick={() => onNavigate?.("health-dashboard")}
-              className="text-xs font-semibold text-brand-500 hover:text-brand-600"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-brand-500/10 text-brand-600 border border-brand-500/20 rounded-xl font-bold text-sm hover:bg-brand-500/20 transition-all"
             >
-              Get started <ChevronRight size={12} className="inline" />
+              Get started
+              <ChevronRight size={14} />
             </button>
           </div>
         )}
 
-        {/* Privacy + emergency — always at bottom */}
-        <div className="mt-auto space-y-3">
+        {/* Emergency + Privacy — pinned at bottom */}
+        <div className="mt-auto space-y-3 pt-4">
           <div className="flex items-center gap-2 text-xs text-ink-subtle px-1">
             <Shield size={12} className="text-accent-500 flex-shrink-0" />
             {t("badge_private", language)} · {t("badge_free", language)}
           </div>
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-3 border border-red-200 dark:border-red-700/40">
-            <a
-              href={`tel:${emergencyNumber}`}
-              className="w-full py-2 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
-            >
-              <Phone size={13} />
-              {t("emergency_call", language)} {emergencyNumber}
-            </a>
-          </div>
+          <a
+            href={`tel:${emergencyNumber}`}
+            aria-label={`Call emergency ${emergencyNumber}`}
+            className="flex items-center justify-center gap-2 w-full py-2.5 bg-danger-500 text-white rounded-xl text-sm font-bold hover:bg-danger-600 transition-colors shadow-soft"
+          >
+            <Phone size={14} strokeWidth={2.5} />
+            {t("emergency_call", language)} {emergencyNumber}
+          </a>
         </div>
       </div>
     </div>

@@ -53,7 +53,7 @@ done
 
 # Hooks
 mkdir -p "$BUILD_DIR/lib/hooks"
-for f in useChat.ts useSettings.ts useAuth.ts useHealthStore.ts useNotifications.ts useGeoDetect.ts; do
+for f in useChat.ts useSettings.ts useAuth.ts useHealthStore.ts useNotifications.ts useGeoDetect.ts useMedicineScanner.ts; do
   [ -f "$WEB_DIR/lib/hooks/$f" ] && cp "$WEB_DIR/lib/hooks/$f" "$BUILD_DIR/lib/hooks/"
 done
 

@@ -3,16 +3,24 @@ import type { ChatMessage, ProviderResponse } from './index';
 /**
  * HuggingFace Inference Providers router — OpenAI-compatible endpoint.
  *
- * Defaults to Llama 3.3 70B Instruct pinned to Groq, which gives the best
- * quality-to-latency ratio on the HF free tier (sub-second TTFT, strong
- * medical reasoning). The `:groq` suffix is HF's documented syntax for
- * pinning a specific inference provider; strip it to let the router
- * auto-select. On 429/5xx we transparently fall through to Mixtral via
- * HF-default routing (handled by the caller's fallback chain).
+ * Uses router.huggingface.co with a deep fallback chain of verified
+ * working models (tested 2026-04-07). Provider pinning via :suffix
+ * syntax routes to specific backends (sambanova, together, etc.).
  */
-const DEFAULT_MODEL = 'meta-llama/Llama-3.3-70B-Instruct:groq';
-const FALLBACK_MODEL = 'meta-llama/Llama-3.3-70B-Instruct';
 const HF_BASE_URL = 'https://router.huggingface.co/v1';
+
+/** Ordered fallback chain — all verified working on free tier. */
+const MODEL_CHAIN = [
+  'meta-llama/Llama-3.3-70B-Instruct:sambanova',
+  'meta-llama/Llama-3.3-70B-Instruct:together',
+  'meta-llama/Llama-3.3-70B-Instruct',       // auto-route
+  'Qwen/Qwen2.5-72B-Instruct',
+  'Qwen/Qwen3-235B-A22B',
+  'google/gemma-3-27b-it',
+  'meta-llama/Llama-3.1-70B-Instruct',
+  'Qwen/Qwen3-32B',
+  'deepseek-ai/DeepSeek-V3-0324',
+];
 
 async function callHF(
   messages: ChatMessage[],
@@ -41,15 +49,20 @@ export async function streamWithHuggingFace(
 ): Promise<ReadableStream> {
   const encoder = new TextEncoder();
 
-  // Try the preferred provider-pinned model first, then the auto-routed one.
-  let response = await callHF(messages, DEFAULT_MODEL, true);
-  let activeModel = DEFAULT_MODEL;
-  if (!response.ok) {
-    response = await callHF(messages, FALLBACK_MODEL, true);
-    activeModel = FALLBACK_MODEL;
+  // Try each model in the chain until one succeeds.
+  let response: Response | null = null;
+  let activeModel = MODEL_CHAIN[0];
+  for (const model of MODEL_CHAIN) {
+    const res = await callHF(messages, model, true);
+    if (res.ok) {
+      response = res;
+      activeModel = model;
+      break;
+    }
+    console.log(`[HF] ${model} returned ${res.status}, trying next...`);
   }
-  if (!response.ok) {
-    throw new Error(`HF Inference Providers error: ${response.status}`);
+  if (!response || !response.ok) {
+    throw new Error('All HF Inference models unavailable');
   }
 
   const reader = response.body?.getReader();
@@ -97,14 +110,19 @@ export async function streamWithHuggingFace(
 export async function chatWithHuggingFace(
   messages: ChatMessage[],
 ): Promise<ProviderResponse> {
-  let response = await callHF(messages, DEFAULT_MODEL, false);
-  let activeModel = DEFAULT_MODEL;
-  if (!response.ok) {
-    response = await callHF(messages, FALLBACK_MODEL, false);
-    activeModel = FALLBACK_MODEL;
+  let response: Response | null = null;
+  let activeModel = MODEL_CHAIN[0];
+  for (const model of MODEL_CHAIN) {
+    const res = await callHF(messages, model, false);
+    if (res.ok) {
+      response = res;
+      activeModel = model;
+      break;
+    }
+    console.log(`[HF] ${model} returned ${res.status}, trying next...`);
   }
-  if (!response.ok) {
-    throw new Error(`HF Inference Providers error: ${response.status}`);
+  if (!response || !response.ok) {
+    throw new Error('All HF Inference models unavailable');
   }
 
   const data = await response.json();

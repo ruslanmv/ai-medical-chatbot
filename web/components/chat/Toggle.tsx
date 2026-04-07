@@ -1,17 +1,23 @@
 interface ToggleProps {
   label: string;
+  description?: string;
   enabled: boolean;
   setEnabled: (enabled: boolean) => void;
 }
 
-export function Toggle({ label, enabled, setEnabled }: ToggleProps) {
+export function Toggle({ label, description, enabled, setEnabled }: ToggleProps) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
-      <span className="text-sm text-slate-700 font-medium">{label}</span>
+    <div className="flex items-center justify-between py-3 border-b border-line/40 last:border-0">
+      <div className="flex-1 min-w-0 mr-3">
+        <span className="text-sm text-ink-base font-medium">{label}</span>
+        {description && (
+          <span className="text-xs text-ink-muted block mt-0.5">{description}</span>
+        )}
+      </div>
       <button
         onClick={() => setEnabled(!enabled)}
-        className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ${
-          enabled ? "bg-blue-600" : "bg-slate-200"
+        className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-300 flex-shrink-0 ${
+          enabled ? "bg-brand-500" : "bg-surface-3"
         }`}
       >
         <div

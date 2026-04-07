@@ -5,7 +5,6 @@ import { Heart } from "lucide-react";
 import { useGeoDetect } from "@/lib/hooks/useGeoDetect";
 import { ThemeProvider } from "./ThemeProvider";
 import { ThemeToggle } from "./ThemeToggle";
-import { EmergencyCTA } from "./chat/EmergencyCTA";
 import { Sidebar, NavView } from "./chat/Sidebar";
 import { RightPanel } from "./chat/RightPanel";
 import { NotificationBell } from "./chat/NotificationCenter";
@@ -32,6 +31,7 @@ import { ProfileView } from "./views/ProfileView";
 import { EHRWizard } from "./views/EHRWizard";
 import { MyMedicinesView } from "./views/MyMedicinesView";
 import { ShareView } from "./views/ShareView";
+import { AdminView } from "./views/AdminView";
 import { DisclaimerBanner } from "./ui/DisclaimerBanner";
 import { OfflineBanner } from "./ui/OfflineBanner";
 import { InstallPrompt } from "./ui/InstallPrompt";
@@ -289,6 +289,19 @@ function MedOSAppInner() {
         );
       case "share":
         return <ShareView language={settings.language} />;
+      case "admin":
+        return auth.user?.isAdmin ? (
+          <AdminView language={settings.language} token={auth.token} />
+        ) : (
+          <HomeView
+            language={settings.language}
+            country={settings.country}
+            emergencyNumber={settings.emergencyNumber}
+            onNavigate={handleNavigate}
+            onSendMessage={handleSendMessage}
+            onStartVoice={handleStartVoice}
+          />
+        );
       case "history":
         return (
           <HistoryView
@@ -427,6 +440,7 @@ function MedOSAppInner() {
         language={settings.language}
         advancedMode={settings.advancedMode}
         isAuthenticated={auth.isAuthenticated}
+        isAdmin={auth.user?.isAdmin}
         username={auth.user?.displayName || auth.user?.email}
         onLogout={() => { auth.logout(); setActiveNav("home"); }}
       />
@@ -465,11 +479,6 @@ function MedOSAppInner() {
               onDismissAll={notif.dismissAll}
             />
             <ThemeToggle />
-            <EmergencyCTA
-              number={settings.emergencyNumber}
-              label={t("emergency_quick_label", settings.language)}
-              urgent
-            />
           </div>
         </header>
 

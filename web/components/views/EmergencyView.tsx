@@ -90,7 +90,7 @@ export function EmergencyView({ language, emergencyNumber }: EmergencyViewProps)
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto p-6 pb-mobile-nav scroll-touch">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
