@@ -4,10 +4,11 @@
 
 ## Try MediBot — Free AI Medical Assistant
 
+[![Try MediBot](https://img.shields.io/badge/%F0%9F%8F%A5_Try_MediBot-Free_on_HuggingFace-blue?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
 
-**Free AI medical chatbot for everyone.**
+**Free AI medical chatbot for everyone. 20 languages. No sign-up. Works offline.**
 
-[Try it now](https://ai-medical-chatbot-mtu8x3wa8.vercel.app/) — No account needed. Just ask your health question.
+[Try it now](https://huggingface.co/spaces/ruslanmv/MediBot) — No account needed. Just ask your health question.
 
 ---
 
@@ -17,7 +18,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-
+[![MediBot](https://img.shields.io/badge/MediBot-Live_on_HF_Spaces-green?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
 
 **Production-ready AI Medical Chatbot using IBM WatsonX, OpenAI, and advanced LLM technologies**
 
@@ -326,43 +327,61 @@ Fully discoverable via STDIO, the server also exposes conversation-management he
 
 Explore the project [watsonx-medical-mcp-server](https://github.com/ruslanmv/watsonx-medical-mcp-server).
 
-## 🌐 MedOS - Enterprise Web Application
-![](assets/2025-12-29-02-45-35.png)
+## 🌐 MedOS — Enterprise Medical Platform
 
-MedOS is a production-ready medical interface that combines a professional patient dashboard with modern conversational AI.
+MedOS is a production-ready medical platform built on **Next.js 14**, combining AI-powered health guidance with a full patient health tracker — medications, appointments, vitals, records, and an EHR (Electronic Health Record) wizard.
 
-Built on **Next.js 14** and **Tailwind**, this isn't just a chatbot—it’s a full healthcare UI. We designed it to be privacy-first and strictly **BYOK (Bring Your Own Key)**. This means you can deploy a fully functional medical AI tool without worrying about server-side logging or handling user secrets.
-
-### Why MedOS?
-
-* **⚡ Multi-Model Flexibility:** Switch instantly between **GPT-4**, **Claude 3.5**, or **Gemini 1.5 Pro**. The app handles the streaming response logic for you, offering that "token-by-token" feel regardless of the provider.
-* **🔒 True Privacy (BYOK):** We don't want your keys. Users input their API keys directly in the browser, and they remain stored locally. No server-side persistence, no middle-man logging.
-* **🏥 Patient-Centric UI:** Comes out-of-the-box with a dashboard for vitals, health records, and routine management—not just a text box.
-* **🚀 Vercel Native:** Optimized for the Edge. It uses Server-Sent Events (SSE) for low latency and deploys with zero configuration.
-![](assets/2025-12-29-02-47-19.png)
-### 🛠️ Quick Start
-
-The web application is located in the `/web` directory.
-
-**Run it locally:**
-
-```bash
-cd web
-npm install
-npm run dev
+### Architecture
 
 ```
-## MediBot — Community Free Version
+web/                            ← Frontend (single source of truth)
+  17 views · collapsible sidebar · dark/light theme
+  Health tracker · EHR wizard · My Medicines inventory
+  Schedule timeline · Notifications · Voice input
+  Email auth · PDF export · 20-language i18n
 
-<div align="center">
+9-HuggingFace-Global/           ← Backend (API + DB)
+  Llama 3.3 70B via Groq · 23-topic RAG · 19 triage patterns
+  SQLite (persistent) · Email auth · Admin panel
+  WHO/CDC/NHS/SIE/SID/ADA knowledge grounding
+```
 
-[![Try MediBot Free](https://img.shields.io/badge/%F0%9F%8F%A5_MediBot-Try_Free_on_HuggingFace-blue?style=for-the-badge\&logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
+| Feature | Details |
+|---|---|
+| **AI Model** | Llama 3.3 70B Instruct via HuggingFace Inference Providers (Groq) |
+| **Knowledge** | WHO · CDC · NHS · SIE · SID · ADA · ETA · Endocrine Society |
+| **Languages** | 20 (auto-detected from IP), 9 fully translated sidebar |
+| **Health Tracker** | Medications, appointments, vitals (BP, glucose, temp, weight, HR, O2), records |
+| **EHR Wizard** | 5-step profile: basic info, medical history, medications, lifestyle, review |
+| **My Medicines** | Inventory with expiry tracking, stock alerts, AI-aware context |
+| **Auth** | Email login, verification, password reset, admin panel |
+| **Schedule** | Timeline calendar with live "now" indicator, mark-done |
+| **Notifications** | Overdue meds, upcoming appointments, contextual alerts |
+| **Privacy** | Zero data retention for guests · per-user isolation for accounts |
+| **Data isolation** | Every DB query scoped by user_id · CASCADE delete · E2E tested |
 
-**[https://huggingface.co/spaces/ruslanmv/MediBot](https://huggingface.co/spaces/ruslanmv/MediBot)**
+### Two deployments, one codebase
 
-</div>
+| | Vercel (web/) | HuggingFace Space |
+|---|---|---|
+| **URL** | Your Vercel domain | [huggingface.co/spaces/ruslanmv/MediBot](https://huggingface.co/spaces/ruslanmv/MediBot) |
+| **Role** | Frontend only | Frontend + Backend |
+| **API calls** | Via `/api/proxy/*` → HF | Direct `/api/*` |
+| **Secrets needed** | `NEXT_PUBLIC_BACKEND_URL` only | `HF_TOKEN`, `DB_PATH`, SMTP |
+| **Deploy** | `git push` (auto) | `bash scripts/deploy-hf.sh` |
 
-**MediBot** is the enterprise-ready, community free edition of the AI Medical Chatbot, fully rebuilt from scratch in [`9-HuggingFace-Global/`](./9-HuggingFace-Global/) and deployed on Hugging Face Spaces for instant global access with zero setup or API keys. It replaces the original MedOS (`web/`) with a scalable, production-grade architecture powered by the OllaBridge multi-provider backend and a resilient fallback chain, while adding multilingual support (20 languages), voice capabilities, medical RAG, and real-time emergency triage detection. Designed with modern UX, PWA offline functionality, region-aware health content, and built-in safety layers, MediBot also includes CI/CD automation, Docker-based deployment, and extensive automated testing—making it suitable for both public use and enterprise-level adaptation.
+### Quick start
+
+```bash
+# Run locally (frontend)
+cd web && npm install && npm run dev
+
+# Deploy to HuggingFace (single command)
+HF_TOKEN=hf_xxx bash 9-HuggingFace-Global/scripts/deploy-hf.sh
+
+# Deploy to Vercel
+# Set Root Directory = web, Framework = Next.js, add NEXT_PUBLIC_BACKEND_URL
+```
 
 
 
