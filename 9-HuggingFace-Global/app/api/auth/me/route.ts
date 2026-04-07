@@ -11,7 +11,7 @@ export async function GET(req: Request) {
 
   const row = db
     .prepare(
-      `SELECT u.id, u.email, u.display_name, u.email_verified, u.created_at
+      `SELECT u.id, u.email, u.display_name, u.email_verified, u.is_admin, u.created_at
        FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token = ? AND s.expires_at > datetime('now')`,
     )
@@ -25,6 +25,7 @@ export async function GET(req: Request) {
       email: row.email,
       displayName: row.display_name,
       emailVerified: !!row.email_verified,
+      isAdmin: !!row.is_admin,
       createdAt: row.created_at,
     },
   });

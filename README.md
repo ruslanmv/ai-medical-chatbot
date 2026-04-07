@@ -1,452 +1,320 @@
-# AI Medical Chatbot
-
 <div align="center">
 
-## Try MediBot — Free AI Medical Assistant
+<img src="web/public/favicon.svg" alt="MedOS" width="80" />
 
-[![Try MediBot](https://img.shields.io/badge/%F0%9F%8F%A5_Try_MediBot-Free_on_HuggingFace-blue?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
+# AI Medical Chatbot
 
-**Free AI medical chatbot for everyone. 20 languages. No sign-up. Works offline.**
+### Healthcare is a human right. AI makes it free.
 
-[Try it now](https://huggingface.co/spaces/ruslanmv/MediBot) — No account needed. Just ask your health question.
+<br/>
 
----
+[![Try MedOS Free](https://img.shields.io/badge/%F0%9F%8F%A5%20Try%20MedOS-Free%20for%20Everyone-0078D4?style=for-the-badge&logo=huggingface&logoColor=white)](https://huggingface.co/spaces/ruslanmv/MediBot)
+&nbsp;&nbsp;
+[![GitHub Stars](https://img.shields.io/github/stars/ruslanmv/ai-medical-chatbot?style=for-the-badge&logo=github&label=Star&color=gold)](https://github.com/ruslanmv/ai-medical-chatbot)
 
-![AI Medical Chatbot](assets/images/posts/README/im-778762.png)
+<br/>
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-[![MediBot](https://img.shields.io/badge/MediBot-Live_on_HF_Spaces-green?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
+**Free. Open source. 20 languages. No sign-up. No tracking. No ads. Ever.**
 
-**Production-ready AI Medical Chatbot using IBM WatsonX, OpenAI, and advanced LLM technologies**
+<br/>
 
-[Features](#features) • [Quick Start](#quick-start) • [Installation](#installation) • [Usage](#usage) • [MediBot](#medibot) • [Documentation](#documentation) • [Contributing](#contributing)
+[Use it now](https://huggingface.co/spaces/ruslanmv/MediBot) &nbsp;&bull;&nbsp; [What you get](#-what-you-get) &nbsp;&bull;&nbsp; [The stack](#-the-open-source-stack) &nbsp;&bull;&nbsp; [Run it yourself](#-run-it-yourself) &nbsp;&bull;&nbsp; [Join us](#-contributing)
+
+<br/>
+
+<a href="https://huggingface.co/spaces/ruslanmv/MediBot">
+<img src="assets/images/posts/README/future.jpg" alt="Free Doctor Consultation with Artificial Intelligence" width="100%" />
+</a>
+
+<br/>
 
 </div>
 
 ---
 
-## About
+## Why this exists
 
-The **AI Medical Chatbot** is a production-ready, enterprise-grade conversational AI system designed to provide medical consultation assistance using state-of-the-art technologies including **IBM WatsonX**, **OpenAI GPT models**, and advanced **Retrieval Augmented Generation (RAG)** techniques.
+Billions of people cannot afford a doctor. Millions search the internet for health answers and find ads, misinformation, or paywalls.
 
-**Watsonx.ai** is part of the IBM watsonx platform that brings together new generative AI capabilities, powered by foundation models, and traditional machine learning into a powerful studio spanning the AI lifecycle. With watsonx.ai, you can train, validate, tune, and deploy generative AI, foundation models, and machine learning capabilities with ease and build AI applications in a fraction of the time with a fraction of the data.
+We believe the best medical AI in the world should be **free, private, and available to every human on earth** — regardless of where they live, what language they speak, or how much money they have.
 
-> **Disclaimer:** This program does not replace a real doctor but helps identify possible health solutions. Always consult with a qualified healthcare professional for medical advice.
+This is that project. Built by the community. Free forever.
 
-### Release Information
-
-- **Current Version:** 2.0.0
-- **Release Date:** April 2024
-- **Status:** Production-Ready
+> **Important:** This does not replace a doctor. It helps you understand your health, ask better questions, and know when to seek professional care.
 
 ---
 
-## MediBot
+## What you get
 
-**MediBot** is the free, worldwide deployment of this project — a premium Next.js 14 web app running on Hugging Face Spaces, powered by [OllaBridge-Cloud](https://github.com/ruslanmv/ollabridge) for multi-provider LLM routing.
+### MedOS Platform
 
-### Try it now: [huggingface.co/spaces/ruslanmv/MediBot](https://huggingface.co/spaces/ruslanmv/MediBot)
+The full medical AI experience — chat with the AI, track your health, manage medications, and more.
 
-| Feature | Details |
-|---------|---------|
-| **Cost** | Free forever — no API keys, no sign-up |
-| **Languages** | 20 languages with auto-detection (covers 95%+ of world population) |
-| **Mobile** | PWA — install on your phone like a native app |
-| **Voice** | Speech-to-text and text-to-speech (Web Speech API) |
-| **Offline** | Top medical Q&As cached for offline access |
-| **Emergency** | Detects emergencies, shows local emergency numbers (190+ countries) |
-| **LLM Backend** | OllaBridge routes to best free provider (Gemini, Groq, OpenRouter, HF) |
-| **Settings** | Choose your model, connect your own OllaBridge server |
-| **Privacy** | Zero data retention — no conversations stored |
+<div align="center">
+<a href="https://huggingface.co/spaces/ruslanmv/MediBot">
+<img src="assets/2025-12-29-02-45-35.png" alt="MedOS Chat with AI Doctor" width="700" />
+</a>
+</div>
 
-**Source code:** [`9-HuggingFace-Global/`](./9-HuggingFace-Global/)
+<br/>
 
----
+- Ask anything about your health
+- 20 languages, auto-detected
+- Voice input — speak your symptoms
+- Emergency detection with local numbers
+- Health tracker (meds, vitals, appointments)
+- Medicine scanner (point your camera)
+- Works on any phone as a PWA
+- 100% private, zero data stored
 
-## Features
+### Health Tracker
 
-### Core Capabilities
+Your personal health dashboard — private, encrypted, on your device.
 
-- **Multi-Model Support**: Integration with multiple foundation models including:
-  - **flan-ul2-20b** - Encoder decoder model based on T5 architecture (Google)
-  - **mt0-xxl-13b** - Instruction-tuned iteration on mT5 (BigScience)
-  - **gpt-neox-20b** - 20B parameter autoregressive language model (EleutherAI)
-  - **flan-t5-xxl-11b** - 11B parameter Flan-T5 model (Google)
-  - **mpt-7b-instruct** - Decoder-style transformer pretrained on 1T tokens
-  - OpenAI GPT-4 and GPT-3.5 models
-  - Meta Llama 3 fine-tuned variants
+<div align="center">
+<a href="https://huggingface.co/spaces/ruslanmv/MediBot">
+<img src="assets/2025-12-29-02-47-19.png" alt="MedOS Health Tracker — Schedule & Routine" width="700" />
+</a>
+</div>
 
-- **RAG-Powered Responses**: Utilizes Retrieval Augmented Generation for accurate, context-aware medical information
+<br/>
 
-- **Vector Database Integration**: Milvus, FAISS, and ChromaDB for efficient similarity search
-
-- **Interactive Interfaces**: Gradio-based web UI with medical interviewer capabilities
-
-- **Production-Ready Infrastructure**:
-  - Comprehensive test suite with pytest
-  - Type hints and PEP 8 compliance
-  - Automated CI/CD pipeline support
-  - Makefile-driven development workflow
-  - Comprehensive documentation
+- **Medications** with dose tracking and streaks
+- **Schedule** timeline with live "now" indicator
+- **Vitals** — blood pressure, glucose, temp, weight, heart rate, O2
+- **Appointments** with doctor, location, and reminders
+- **Records** — upload and organize health documents
+- **EHR Wizard** — build your medical history in 5 steps
+- **Export** everything as JSON or print for your doctor
 
 ---
 
-## Quick Start
+## How it works
 
-### Prerequisites
-
-- Python 3.9 or higher
-- UV package manager (recommended) or pip
-- API keys for OpenAI and/or IBM WatsonX
-
-### Installation
-
-#### Using UV (Recommended)
-
-```bash
-# Install uv package manager
-pip install uv
-
-# Clone the repository
-git clone https://github.com/ruslanmv/ai-medical-chatbot.git
-cd ai-medical-chatbot
-
-# Install dependencies
-make install
-
-# For development
-make install-dev
-
-# For GPU support
-make install-gpu
+```
+You speak or type your symptoms
+              |
+         [ MedOS AI ]
+              |
+     Llama 3.3 70B ──── grounded in WHO, CDC, NHS guidelines
+              |
+     Clear answer in your language
+              |
+     Emergency detected? ──> local emergency number instantly
 ```
 
-#### Using pip
-
-```bash
-# Clone the repository
-git clone https://github.com/ruslanmv/ai-medical-chatbot.git
-cd ai-medical-chatbot
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -e .
-```
-
-### Environment Setup
-
-Create a `.env` file in the project root:
-
-```bash
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key_here
-
-# IBM WatsonX Configuration (optional)
-WATSONX_API_KEY=your_watsonx_api_key_here
-WATSONX_PROJECT_ID=your_project_id_here
-
-# Milvus Configuration (optional)
-REMOTE_SERVER=127.0.0.1
-
-# System Configuration
-SYSTEM_MESSAGE=You are a helpful medical assistant.
-```
+The AI runs on **Llama 3.3 70B** via free inference providers. It is grounded in medical guidelines from **WHO, CDC, NHS**, and major medical societies. It does not hallucinate treatment plans — it tells you what doctors would want you to know, and when to see one.
 
 ---
 
-## Usage
+## The open source stack
 
-### Running the Medical Chatbot
+Everything here is free and open. Every piece can be run independently, improved, or adapted for your community.
 
-```bash
-# Using Makefile
-make run-chatbot
+<br/>
 
-# Or directly with Python
-python 5-HuggingFace/app.py
-```
+<div align="center">
 
-### Running the Medical Interviewer
-
-```bash
-# Using Makefile
-make run-interviewer
-
-# Or directly with Python
-python 8-Interviewer/hf/app.py
-```
-
-### Using the Makefile
-
-The project includes a comprehensive Makefile for common operations:
-
-```bash
-# Show all available commands
-make help
-
-# Code quality checks
-make format          # Format code with black and isort
-make lint            # Run linters (flake8, pylint)
-make type-check      # Run mypy type checking
-make check           # Run all quality checks
-
-# Testing
-make test            # Run all tests
-make test-unit       # Run unit tests only
-make test-integration # Run integration tests only
-make test-cov        # Run tests with coverage report
-
-# Cleaning
-make clean           # Remove all artifacts
-```
+<a href="https://huggingface.co/spaces/ruslanmv/MediBot">
+<img src="assets/2025-12-29-02-45-35.png" alt="MedOS" width="700" />
+<br/>
+<img src="https://img.shields.io/badge/MedOS-Web%20App-0078D4?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="MedOS Web App" />
+</a>
+<br/>
+Full medical platform — chat, health tracker, medicines, 20 languages
+<br/><br/>
 
 ---
 
-## Project Structure
-
-The structure of the program contains the following main components:
-
-1. [**Environment creation**](./1-Environment/README.md)
-
-   Here we are going to create the environment to create the models locally that later can be used
-
-2. [**Creation of the Medical Dataset.**](./2-Data/README.md)
-
-   In this part we are going to build the Datasets that will be used create the **Medical Model**
-
-3. [**Creation of the model by using RAG**](./3-Modeling/README.md)
-   In this part we will perform feature engineering and create the model
-
-4. [**Finetuning Models for the Medical Chatbot**](./6-FineTunning/README.md)
-   We create a custom model based on medical information
-
-
-5. [**Multimodal Medical Chatbot**](./7-Multimodal/README.md)
-   We develop a medical chatbot multimodal, that from images can give you a description of the issue. We analazize different Medical Images Datasets.
-
-
-## Chatbot with WatsonX
-
-**Implementation of a chatbot with WatsonX in production.**
-
-Here we will create a chatbot with the capability to answer questions by using the Model created before.
-For Production in WatsonX you can checkout this repo
-
-
-[Watsonx-Assistant-with-Milvus-as-Vector-Database](https://github.com/ruslanmv/Watsonx-Assistant-with-Milvus-as-Vector-Database)
-
-
-## Chatbot with Custom LLM 
-We have also developed another version which uses a custom LLM 
-
-[Medical-Chatbot-with-Langchain-with-a-Custom-LLM](https://github.com/ruslanmv/Medical-Chatbot-with-Langchain-with-a-Custom-LLM)
-
-## Playground Demo 
-
-
-**Medical-Chatbot by RAG method**.
-
-[https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
-
-[![](assets/images/posts/README/future.jpg)](https://huggingface.co/spaces/ruslanmv/AI-Medical-Chatbot)
-
-
-
-**Medical Chatbot by using Medical-Llama3-8B**
-
-[https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
-
-
-[![](assets/2024-05-16-09-23-02.png)](https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot)
-
-
-
-
-## Fine-tunning Models with ai-medical chatbot
-
-Currently there are two base models that were pretrained with ai-medical-chatbot
-
-## Meta Llama 3
-This repository provides a fine-tuned version of the powerful Llama3 8B model, specifically designed to answer medical questions in an informative way. It leverages the rich knowledge contained in the AI Medical Chatbot dataset.
-
-
-
-
-[Medical-Llama3-8B](https://huggingface.co/ruslanmv/Medical-Llama3-8B)
-
-The latest version of the Medical Llama 2 v2 with an improved Chatbot Interface in Google Colab
-
-
-[Medical-Llama3-v2](https://huggingface.co/ruslanmv/Medical-Llama3-v2)
-
-
-
-## Mixtral-7B
-Fine-tuned Mixtral model for answering medical assistance questions. This model is a novel version of mistralai/Mistral-7B-Instruct-v0.2, adapted to a subset of 2.0k records from the AI Medical Chatbot dataset, which contains 250k records . The purpose of this model is to provide a ready chatbot to answer questions related to medical assistance.
-
-[Medical-Mixtral-7B-v2k](https://huggingface.co/ruslanmv/Medical-Mixtral-7B-v2k)
-
-For more details how was pretrained you can visit this post [here](https://ruslanmv.com/blog/How-to-Fine-Tune-Mixtral-87B-Instruct-model-with-PEFT)
-
-> Let us use the best technologies in the world to help us. 
-
-
-
-## Medical Interviewer
-[![](assets/2024-09-08-19-33-56.png)](https://huggingface.co/spaces/ruslanmv/Medical-Interviewer)
-
-Chatbot that perform medical interview
-
-For more details visit [this](./8-Interviewer/README.md)
-
-
-## DeepSeek-R1-Distill-Llama-8B
-
-Currently we are developing  a new AI model in collaboration with the [Tilburg University](https://www.tilburguniversity.edu/), to create a new novel model able to understand your feelings.
-
-The study of emotions and their underlying needs is a critical component of understanding human communication, particularly in contexts such as psychology, nonviolent communication (NVC), and conflict resolution. Emotional states often manifest as evaluative expressions—terms like "betrayed," "belittled," or "manipulated"—which not only convey subjective experiences but also point to unmet needs such as trust, respect, or autonomy. Effectively mapping these evaluative expressions to their associated feelings and corresponding needs is vital for creating tools that enhance emotional understanding and foster constructive dialogue.
-
-[![image-20250203130739209](./assets/image-20250203130739209.png)](https://huggingface.co/spaces/ruslanmv/Empathy_Chatbot_v1)
-You can test our current model [here](
-https://huggingface.co/spaces/ruslanmv/Empathy_Chatbot_v1)
-
-For more details of this project click [here](https://github.com/energycombined/empathyondemand)
-## 🩺 Watsonx Medical MCP Server
-Watsonx Medical MCP Server is a micro-service that wraps IBM watsonx.ai behind the MCP protocol, giving watsonx Orchestrate instant access to both a general-purpose chat endpoint (`chat_with_watsonx`) and a medical-symptom assessment tool (`analyze_medical_symptoms`).  
-
-
-[![](https://github.com/ruslanmv/watsonx-medical-mcp-server/raw/master/docs/assets/2025-07-12-19-17-12.png)](https://github.com/ruslanmv/watsonx-medical-mcp-server/blob/master/docs/README.md)
-
-Fully discoverable via STDIO, the server also exposes conversation-management helpers, rich resources/prompts, and ships with a Makefile-driven workflow for linting, auto-formatting, tests, and Docker packaging.  Zero-downtime reloads are achievable in development, and a lightweight Dockerfile plus CI workflow ensure smooth deployment. 
-
-Explore the project [watsonx-medical-mcp-server](https://github.com/ruslanmv/watsonx-medical-mcp-server).
-
-## 🌐 MedOS — Enterprise Medical Platform
-
-MedOS is a production-ready medical platform built on **Next.js 14**, combining AI-powered health guidance with a full patient health tracker — medications, appointments, vitals, records, and an EHR (Electronic Health Record) wizard.
-
-### Architecture
+<a href="https://huggingface.co/spaces/ruslanmv/Medical-Llama3-Chatbot">
+<img src="assets/2024-05-16-09-23-02.png" alt="Medical Llama3 Chatbot" width="700" />
+<br/>
+<img src="https://img.shields.io/badge/Medical-Llama3%20Chatbot-FF6F00?style=for-the-badge&logo=meta&logoColor=white" alt="Medical Llama3" />
+</a>
+<br/>
+Fine-tuned Llama3 8B on 250K medical Q&As
+<br/><br/>
+
+---
+
+<a href="https://huggingface.co/spaces/ruslanmv/Medical-Interviewer">
+<img src="assets/2024-09-08-19-33-56.png" alt="Medical Interviewer" width="700" />
+<br/>
+<img src="https://img.shields.io/badge/Medical-Interviewer-6C3483?style=for-the-badge&logo=openai&logoColor=white" alt="Medical Interviewer" />
+</a>
+<br/>
+AI that conducts a structured medical interview
+<br/><br/>
+
+---
+
+<a href="https://huggingface.co/spaces/ruslanmv/Empathy_Chatbot_v1">
+<img src="assets/image-20250203130739209.png" alt="Empathy Chatbot" width="700" />
+<br/>
+<img src="https://img.shields.io/badge/Empathy-Chatbot-E91E63?style=for-the-badge&logo=heart&logoColor=white" alt="Empathy Chatbot" />
+</a>
+<br/>
+AI trained to understand emotions (with Tilburg University)
+<br/><br/>
+
+---
+
+<a href="https://github.com/ruslanmv/watsonx-medical-mcp-server">
+<img src="assets/images/posts/README/im-778762.png" alt="WatsonX MCP Server" width="700" />
+<br/>
+<img src="https://img.shields.io/badge/WatsonX-MCP%20Server-054ADA?style=for-the-badge&logo=ibm&logoColor=white" alt="WatsonX" />
+</a>
+<br/>
+IBM WatsonX medical symptoms analysis via MCP protocol
+<br/><br/>
+
+---
+
+<a href="./11-Medicine-Scanner/">
+<img src="https://img.shields.io/badge/%F0%9F%92%8A-Medicine%20Scanner-14B8A6?style=for-the-badge" alt="Medicine Scanner" />
+</a>
+<br/>
+Point your camera at a medicine box — AI reads the label for you
+<br/><br/>
+
+</div>
+
+<br/>
+
+### Full project map
+
+| # | Project | What it does | Links |
+|---|---|---|---|
+| | **[MedOS Web App](./web/)** | Full medical platform — chat, health tracker, medicine inventory, 20 languages | [![Live](https://img.shields.io/badge/Live-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot) |
+| | **[MedOS Backend](./9-HuggingFace-Global/)** | API server — auth, SQLite DB, LLM routing, emergency triage, RAG | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./9-HuggingFace-Global/) |
+| | **[Medicine Scanner](./11-Medicine-Scanner/)** | Camera scan of medicine labels via Qwen2.5-VL multimodal AI | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./11-Medicine-Scanner/) |
+| | **[Medical Llama3 8B](https://huggingface.co/ruslanmv/Medical-Llama3-8B)** | Fine-tuned Llama3 on 250K medical Q&A pairs | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Llama3-8B) |
+| | **[Medical Llama3 v2](https://huggingface.co/ruslanmv/Medical-Llama3-v2)** | Improved medical Llama3 with enhanced chatbot interface | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Llama3-v2) |
+| | **[Medical Mixtral 7B](https://huggingface.co/ruslanmv/Medical-Mixtral-7B-v2k)** | Fine-tuned Mixtral for medical assistance | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Mixtral-7B-v2k) |
+| | **[Medical Interviewer](./8-Interviewer/)** | AI that conducts structured medical interviews and generates reports | [![Live](https://img.shields.io/badge/Live-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/Medical-Interviewer) |
+| | **[Empathy Chatbot](https://github.com/energycombined/empathyondemand)** | AI understanding emotions and unmet needs (Tilburg University) | [![Live](https://img.shields.io/badge/Live-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/Empathy_Chatbot_v1) |
+| | **[WatsonX MCP Server](https://github.com/ruslanmv/watsonx-medical-mcp-server)** | IBM WatsonX medical symptom analysis via MCP protocol | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](https://github.com/ruslanmv/watsonx-medical-mcp-server) |
+| | **[RAG Pipeline](./3-Modeling/)** | Medical knowledge retrieval with FAISS / Milvus / ChromaDB | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./3-Modeling/) |
+| | **[Medical Dataset](./2-Data/)** | 250K curated medical Q&A pairs for training | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./2-Data/) |
+| | **[Fine-tuning](./6-FineTunning/)** | Notebooks to fine-tune your own medical LLMs | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./6-FineTunning/) |
+
+---
+
+## Architecture
 
 ```
-web/                            ← Frontend (single source of truth)
-  17 views · collapsible sidebar · dark/light theme
-  Health tracker · EHR wizard · My Medicines inventory
-  Schedule timeline · Notifications · Voice input
-  Email auth · PDF export · 20-language i18n
+web/                           Frontend (Next.js 14, Tailwind, PWA)
+  20 views, dark/light mode, 20 languages
+  Health tracker, EHR wizard, medicine scanner
+  Voice input, notifications, offline support
 
-9-HuggingFace-Global/           ← Backend (API + DB)
-  Llama 3.3 70B via Groq · 23-topic RAG · 19 triage patterns
-  SQLite (persistent) · Email auth · Admin panel
-  WHO/CDC/NHS/SIE/SID/ADA knowledge grounding
+9-HuggingFace-Global/         Backend (Next.js API + SQLite)
+  Llama 3.3 70B via free providers (Groq, HF, Gemini)
+  23-topic medical RAG, 19 emergency triage patterns
+  Email auth, admin dashboard, health data sync
+
+11-Medicine-Scanner/           Medicine Label AI (Gradio + Qwen2.5-VL)
+  Camera scan -> structured JSON
+  REST API for mobile integration
 ```
 
-| Feature | Details |
-|---|---|
-| **AI Model** | Llama 3.3 70B Instruct via HuggingFace Inference Providers (Groq) |
-| **Knowledge** | WHO · CDC · NHS · SIE · SID · ADA · ETA · Endocrine Society |
-| **Languages** | 20 (auto-detected from IP), 9 fully translated sidebar |
-| **Health Tracker** | Medications, appointments, vitals (BP, glucose, temp, weight, HR, O2), records |
-| **EHR Wizard** | 5-step profile: basic info, medical history, medications, lifestyle, review |
-| **My Medicines** | Inventory with expiry tracking, stock alerts, AI-aware context |
-| **Auth** | Email login, verification, password reset, admin panel |
-| **Schedule** | Timeline calendar with live "now" indicator, mark-done |
-| **Notifications** | Overdue meds, upcoming appointments, contextual alerts |
-| **Privacy** | Zero data retention for guests · per-user isolation for accounts |
-| **Data isolation** | Every DB query scoped by user_id · CASCADE delete · E2E tested |
-
-### Two deployments, one codebase
-
-| | Vercel (web/) | HuggingFace Space |
+| | Vercel | HuggingFace Space |
 |---|---|---|
-| **URL** | Your Vercel domain | [huggingface.co/spaces/ruslanmv/MediBot](https://huggingface.co/spaces/ruslanmv/MediBot) |
-| **Role** | Frontend only | Frontend + Backend |
-| **API calls** | Via `/api/proxy/*` → HF | Direct `/api/*` |
-| **Secrets needed** | `NEXT_PUBLIC_BACKEND_URL` only | `HF_TOKEN`, `DB_PATH`, SMTP |
-| **Deploy** | `git push` (auto) | `bash scripts/deploy-hf.sh` |
+| **Role** | Frontend only | Frontend + Backend + DB |
+| **Cost** | Free | Free |
+| **Deploy** | `git push` | `bash scripts/deploy-hf.sh` |
 
-### Quick start
+---
+
+## Run it yourself
+
+### Use it now (zero install)
+
+[![Open MedOS](https://img.shields.io/badge/%F0%9F%8F%A5%20Open-MedOS-0078D4?style=for-the-badge)](https://huggingface.co/spaces/ruslanmv/MediBot)
+
+Just click. No account. No install. Free.
+
+### Run locally
 
 ```bash
-# Run locally (frontend)
-cd web && npm install && npm run dev
+git clone https://github.com/ruslanmv/ai-medical-chatbot.git
+cd ai-medical-chatbot/web
+npm install && npm run dev
+```
 
-# Deploy to HuggingFace (single command)
+Open `http://localhost:3000`. Done.
+
+### Deploy your own
+
+```bash
+# Deploy to HuggingFace Spaces (free)
 HF_TOKEN=hf_xxx bash 9-HuggingFace-Global/scripts/deploy-hf.sh
 
-# Deploy to Vercel
-# Set Root Directory = web, Framework = Next.js, add NEXT_PUBLIC_BACKEND_URL
+# Deploy to Vercel (free tier)
+# Root Directory = web, Framework = Next.js
+# Env: NEXT_PUBLIC_BACKEND_URL = your HF Space URL
 ```
 
+### Train your own medical model
 
+```bash
+cd 6-FineTunning
+# Follow the notebooks to fine-tune Llama3 or Mixtral
+# on 250K medical Q&A pairs
+```
 
+---
 
 ## Contributing
+
+This project exists because people like you contribute. Every fix, every translation, every idea makes healthcare more accessible for someone, somewhere.
+
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](http://makeapullrequest.com)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
+[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=nextdotjs)](https://nextjs.org)
+
+**Ways to help:**
+- Add a language translation (we support 20, the world has 7,000)
+- Improve medical knowledge accuracy
+- Report bugs or suggest features
+- Share the project with someone who needs it
+- Star the repo so others find it
+
+```bash
+git clone https://github.com/ruslanmv/ai-medical-chatbot.git
+cd ai-medical-chatbot
+git checkout -b my-improvement
+# Make your changes, then open a Pull Request
+```
+
 [![Stargazers over time](https://starchart.cc/ruslanmv/ai-medical-chatbot.svg?variant=adaptive)](https://starchart.cc/ruslanmv/ai-medical-chatbot)
-
-Please free to contribute following the standard guidelines for submitting patches and additions or solutions. Feel free to submit issues and enhancement requests.
-
-To more information visit www.ruslanmv.com
 
 ---
 
 ## License
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-
-```
-Copyright 2024 Ruslan Magana Vsevolodovna
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
-
----
-
-## Author
-
-**Ruslan Magana Vsevolodovna**
-
-- 🌐 Website: [ruslanmv.com](https://ruslanmv.com)
-- 📧 Email: contact@ruslanmv.com
-- 💼 GitHub: [@ruslanmv](https://github.com/ruslanmv)
-- 🤗 Hugging Face: [@ruslanmv](https://huggingface.co/ruslanmv)
-
----
-
-## Acknowledgments
-
-- IBM WatsonX team for their foundation models
-- OpenAI for GPT models and APIs
-- Hugging Face for model hosting and deployment infrastructure
-- Tilburg University for empathy research collaboration
-- The open-source community for their invaluable contributions
+Apache 2.0 — use it, modify it, deploy it, share it. **Free forever.**
 
 ---
 
 <div align="center">
 
-**Made with ❤️ by [Ruslan Magana Vsevolodovna](https://ruslanmv.com)**
+<img src="assets/images/posts/README/future-full.jpg" alt="The future of healthcare" width="100%" />
 
-[⬆ Back to Top](#ai-medical-chatbot)
+<br/><br/>
+
+**Made with care by [Ruslan Magana Vsevolodovna](https://ruslanmv.com) and the open source community**
+
+[![Website](https://img.shields.io/badge/Website-ruslanmv.com-0078D4?style=flat-square&logo=google-chrome&logoColor=white)](https://ruslanmv.com)
+[![GitHub](https://img.shields.io/badge/GitHub-@ruslanmv-181717?style=flat-square&logo=github)](https://github.com/ruslanmv)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-@ruslanmv-FFD21E?style=flat-square&logo=huggingface)](https://huggingface.co/ruslanmv)
+
+<br/>
+
+*The best technology in the world should serve everyone — not just those who can pay for it.*
+
+*Let us use it to heal.*
 
 </div>
-
-
-
-
-

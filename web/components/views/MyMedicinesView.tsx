@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -16,7 +16,14 @@ import {
   ChevronDown,
   ChevronRight,
   Box,
+  Camera,
+  Loader2,
+  CheckCircle2,
+  ScanLine,
+  Focus,
+  Zap,
 } from "lucide-react";
+import { useMedicineScanner } from "@/lib/hooks/useMedicineScanner";
 import {
   getMedicineStatus,
   getStockState,
@@ -87,6 +94,51 @@ export function MyMedicinesView({
   const [filter, setFilter] = useState<FilterTab>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+
+  // Medicine scanner
+  const scanner = useMedicineScanner();
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpenScanner = () => {
+    scanner.reset();
+    setCapturedImage(null);
+    setShowScanner(true);
+    // Small delay so modal renders before file picker opens
+    setTimeout(() => cameraInputRef.current?.click(), 200);
+  };
+
+  const handleScanCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Show preview of captured image
+    const url = URL.createObjectURL(file);
+    setCapturedImage(url);
+    // Start scanning
+    await scanner.scan(file);
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
+  };
+
+  const handleAddScanned = () => {
+    if (scanner.result?.medicine) {
+      onAdd(scanner.result.medicine);
+      scanner.reset();
+      setCapturedImage(null);
+      setShowScanner(false);
+    }
+  };
+
+  const handleCloseScanner = () => {
+    setShowScanner(false);
+    setCapturedImage(null);
+    scanner.reset();
+  };
+
+  // Cleanup object URL on unmount
+  useEffect(() => {
+    return () => { if (capturedImage) URL.revokeObjectURL(capturedImage); };
+  }, [capturedImage]);
 
   // Filter + search
   const filtered = useMemo(() => {
@@ -140,12 +192,36 @@ export function MyMedicinesView({
               <h2 className="text-2xl font-bold text-ink-base">My Medicines</h2>
               <p className="text-sm text-ink-muted mt-0.5">{medicines.length} items in your inventory</p>
             </div>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 transition-all"
-            >
-              <Plus size={16} /> Add Medicine
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Hidden file input */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleScanCapture}
+                className="hidden"
+              />
+              {/* Scan button — prominent, mobile-first */}
+              <button
+                onClick={handleOpenScanner}
+                disabled={scanner.scanning}
+                className="group flex items-center gap-2 px-4 py-2.5 bg-surface-1 border-2 border-brand-500/30 text-brand-600 rounded-xl font-bold text-sm hover:border-brand-500/60 hover:bg-brand-500/5 active:scale-95 transition-all disabled:opacity-50"
+              >
+                <div className="relative">
+                  <Camera size={18} className="transition-transform group-hover:scale-110" />
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-success-500 rounded-full animate-pulse" />
+                </div>
+                <span className="hidden sm:inline">Scan Label</span>
+                <span className="sm:hidden">Scan</span>
+              </button>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-95 transition-all"
+              >
+                <Plus size={16} /> Add
+              </button>
+            </div>
           </div>
 
           {/* Search + Filters */}
@@ -274,6 +350,199 @@ export function MyMedicinesView({
           onAdd={(med) => { onAdd(med); setShowAddForm(false); }}
           onClose={() => setShowAddForm(false)}
         />
+      )}
+
+      {/* ============================================================
+       * Medicine Scanner — full-screen modal with viewfinder
+       * Industry pattern: document scanning (CamScanner, Google Lens)
+       * ============================================================ */}
+      {showScanner && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-surface-1 rounded-t-3xl sm:rounded-2xl shadow-card overflow-hidden max-h-[95vh] flex flex-col animate-in slide-in-from-bottom-4 duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line/40">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center">
+                  <ScanLine size={16} className="text-brand-500" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-ink-base">Medicine Scanner</h3>
+                  <p className="text-[11px] text-ink-muted">AI-powered label recognition</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseScanner}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-subtle hover:text-ink-base hover:bg-surface-2 transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Content area */}
+            <div className="flex-1 overflow-y-auto">
+              {/* STEP 1: No image yet — show instructions */}
+              {!capturedImage && !scanner.scanning && (
+                <div className="p-6 flex flex-col items-center">
+                  {/* Viewfinder illustration */}
+                  <div className="relative w-full aspect-[4/3] max-w-[280px] mb-6">
+                    <div className="absolute inset-0 rounded-2xl border-2 border-dashed border-brand-500/30 bg-surface-2/50 flex items-center justify-center">
+                      {/* Corner brackets — document scanner style */}
+                      <div className="absolute top-2 left-2 w-6 h-6 border-t-3 border-l-3 border-brand-500 rounded-tl-lg" />
+                      <div className="absolute top-2 right-2 w-6 h-6 border-t-3 border-r-3 border-brand-500 rounded-tr-lg" />
+                      <div className="absolute bottom-2 left-2 w-6 h-6 border-b-3 border-l-3 border-brand-500 rounded-bl-lg" />
+                      <div className="absolute bottom-2 right-2 w-6 h-6 border-b-3 border-r-3 border-brand-500 rounded-br-lg" />
+                      {/* Center icon */}
+                      <div className="flex flex-col items-center gap-2 text-ink-subtle">
+                        <Camera size={32} strokeWidth={1.5} />
+                        <span className="text-xs font-medium">Position medicine here</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <h4 className="font-bold text-ink-base text-center mb-2">Scan your medicine label</h4>
+                  <p className="text-xs text-ink-muted text-center leading-relaxed mb-6 max-w-[240px]">
+                    Point your camera at the medicine box or label. Make sure the text is clear and well-lit.
+                  </p>
+
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="w-full max-w-[280px] py-3.5 bg-brand-gradient text-white rounded-2xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    <Camera size={18} />
+                    Open Camera
+                  </button>
+
+                  <p className="text-[10px] text-ink-subtle text-center mt-4">
+                    Supports: Photos, screenshots, or uploaded images
+                  </p>
+                </div>
+              )}
+
+              {/* STEP 2: Image captured — scanning in progress */}
+              {capturedImage && scanner.scanning && (
+                <div className="p-5">
+                  {/* Image preview with scanning animation */}
+                  <div className="relative rounded-2xl overflow-hidden mb-5 animate-scan-success">
+                    <img
+                      src={capturedImage}
+                      alt="Captured medicine"
+                      className="w-full aspect-[4/3] object-cover"
+                    />
+                    {/* Green border overlay */}
+                    <div className="absolute inset-0 rounded-2xl border-3 border-success-500/60 animate-scanner-pulse" />
+                    {/* Scanning line */}
+                    <div className="absolute left-[8%] right-[8%] h-0.5 bg-gradient-to-r from-transparent via-success-500 to-transparent animate-scan-line" />
+                    {/* Corner brackets */}
+                    <div className="absolute top-3 left-3 w-5 h-5 border-t-2 border-l-2 border-success-500 rounded-tl" />
+                    <div className="absolute top-3 right-3 w-5 h-5 border-t-2 border-r-2 border-success-500 rounded-tr" />
+                    <div className="absolute bottom-3 left-3 w-5 h-5 border-b-2 border-l-2 border-success-500 rounded-bl" />
+                    <div className="absolute bottom-3 right-3 w-5 h-5 border-b-2 border-r-2 border-success-500 rounded-br" />
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="relative">
+                        <Loader2 size={20} className="animate-spin text-brand-500" />
+                      </div>
+                      <span className="text-sm font-semibold text-ink-base">
+                        {scanner.waking ? "Waking up scanner..." : "Reading medicine label..."}
+                      </span>
+                    </div>
+                    <p className="text-xs text-ink-muted text-center">
+                      {scanner.waking
+                        ? "The scanner sleeps when idle. Starting up now."
+                        : "AI is extracting drug name, dosage, and instructions"}
+                    </p>
+                    {/* Progress bar */}
+                    <div className="w-full max-w-[200px] h-1 bg-surface-3 rounded-full overflow-hidden">
+                      <div className="h-full bg-brand-500 rounded-full animate-scan-progress" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: Error */}
+              {!scanner.scanning && scanner.error && (
+                <div className="p-6 text-center">
+                  {capturedImage && (
+                    <div className="relative rounded-2xl overflow-hidden mb-5 opacity-60">
+                      <img src={capturedImage} alt="Captured" className="w-full aspect-[4/3] object-cover" />
+                      <div className="absolute inset-0 rounded-2xl border-2 border-danger-500/40" />
+                    </div>
+                  )}
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-warning-500/10 flex items-center justify-center">
+                    <AlertTriangle size={22} className="text-warning-500" />
+                  </div>
+                  <p className="text-sm text-ink-base font-semibold mb-1">Could not read label</p>
+                  <p className="text-xs text-ink-muted mb-5 leading-relaxed max-w-[260px] mx-auto">{scanner.error}</p>
+                  <div className="flex gap-2 max-w-[280px] mx-auto">
+                    <button
+                      onClick={() => { scanner.reset(); setCapturedImage(null); cameraInputRef.current?.click(); }}
+                      className="flex-1 py-3 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                    >
+                      <Camera size={15} /> Retry
+                    </button>
+                    <button
+                      onClick={handleCloseScanner}
+                      className="px-4 py-3 bg-surface-2 text-ink-muted rounded-xl font-semibold text-sm hover:bg-surface-3 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: Success — show extracted data */}
+              {!scanner.scanning && scanner.result?.success && scanner.result.medicine && (
+                <div className="p-5">
+                  {/* Success header with mini preview */}
+                  <div className="flex items-start gap-3 mb-4">
+                    {capturedImage && (
+                      <img src={capturedImage} alt="Scanned" className="w-14 h-14 rounded-xl object-cover border-2 border-success-500/40 flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <CheckCircle2 size={14} className="text-success-500 flex-shrink-0" />
+                        <span className="text-xs font-bold text-success-600 uppercase tracking-wider">Detected</span>
+                      </div>
+                      <h4 className="font-bold text-ink-base text-lg leading-tight truncate">{scanner.result.medicine.name}</h4>
+                      {scanner.result.medicine.brandName && (
+                        <p className="text-xs text-ink-muted truncate">{scanner.result.medicine.brandName}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Data fields */}
+                  <div className="bg-surface-0 rounded-xl border border-line/40 divide-y divide-line/30 mb-4">
+                    <ScanField label="Dose" value={scanner.result.medicine.dose} />
+                    <ScanField label="Form" value={scanner.result.medicine.form} />
+                    {scanner.result.medicine.activeIngredient && <ScanField label="Ingredient" value={scanner.result.medicine.activeIngredient} />}
+                    {scanner.result.medicine.category && <ScanField label="Category" value={scanner.result.medicine.category} />}
+                    {scanner.result.medicine.expiryDate && <ScanField label="Expiry" value={scanner.result.medicine.expiryDate} />}
+                    {scanner.result.medicine.notes && <ScanField label="Notes" value={scanner.result.medicine.notes} />}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleAddScanned}
+                      className="flex-1 py-3 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    >
+                      <Plus size={16} /> Add to Medicines
+                    </button>
+                    <button
+                      onClick={() => { scanner.reset(); setCapturedImage(null); cameraInputRef.current?.click(); }}
+                      className="px-4 py-3 bg-surface-2 text-ink-muted rounded-xl font-semibold text-sm hover:bg-surface-3 active:scale-[0.98] transition-all"
+                    >
+                      Rescan
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -528,6 +797,15 @@ function Field({
         placeholder={placeholder}
         className="w-full bg-surface-2 border border-line/60 text-ink-base rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30"
       />
+    </div>
+  );
+}
+
+function ScanField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between px-3.5 py-2.5">
+      <span className="text-[11px] text-ink-muted font-semibold uppercase tracking-wider flex-shrink-0">{label}</span>
+      <span className="text-sm text-ink-base font-medium text-right ml-3 truncate">{value}</span>
     </div>
   );
 }

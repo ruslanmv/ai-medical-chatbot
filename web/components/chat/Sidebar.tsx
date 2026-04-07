@@ -52,7 +52,8 @@ export type NavView =
   | "profile"
   | "ehr-wizard"
   | "my-medicines"
-  | "share";
+  | "share"
+  | "admin";
 
 interface SidebarProps {
   activeNav: NavView;
@@ -60,6 +61,7 @@ interface SidebarProps {
   language?: SupportedLanguage;
   advancedMode?: boolean;
   isAuthenticated?: boolean;
+  isAdmin?: boolean;
   username?: string;
   onLogout?: () => void;
 }
@@ -71,6 +73,7 @@ export function Sidebar({
   setActiveNav,
   language = "en",
   isAuthenticated = false,
+  isAdmin = false,
   username,
   onLogout,
 }: SidebarProps) {
@@ -161,11 +164,10 @@ export function Sidebar({
 
           <NavItem icon={Heart} label={t("nav_dashboard", language)} active={activeNav === "health-dashboard"} onClick={() => setActiveNav("health-dashboard")} collapsed={collapsed} />
           <NavItem icon={Calendar} label={t("nav_schedule", language)} active={activeNav === "schedule"} onClick={() => setActiveNav("schedule")} collapsed={collapsed} />
-          <NavItem icon={Pill} label={t("nav_medications", language)} active={activeNav === "medications"} onClick={() => setActiveNav("medications")} collapsed={collapsed} />
+          <NavItem icon={Pill} label={t("nav_medications", language)} active={activeNav === "medications" || activeNav === "my-medicines"} onClick={() => setActiveNav("medications")} collapsed={collapsed} />
           <NavItem icon={Calendar} label={t("nav_appointments", language)} active={activeNav === "appointments"} onClick={() => setActiveNav("appointments")} collapsed={collapsed} />
           <NavItem icon={Activity} label={t("nav_vitals", language)} active={activeNav === "vitals"} onClick={() => setActiveNav("vitals")} collapsed={collapsed} />
           <NavItem icon={FileText} label={t("nav_records", language)} active={activeNav === "records"} onClick={() => setActiveNav("records")} collapsed={collapsed} />
-          <NavItem icon={Package} label="My Medicines" active={activeNav === "my-medicines"} onClick={() => setActiveNav("my-medicines")} collapsed={collapsed} />
 
           {!collapsed && <SectionLabel>{t("nav_tools", language)}</SectionLabel>}
           {collapsed && <div className="my-2 border-t border-line/50" />}
@@ -174,6 +176,14 @@ export function Sidebar({
           <NavItem icon={BookOpen} label={t("nav_topics", language)} active={activeNav === "topics"} onClick={() => setActiveNav("topics")} collapsed={collapsed} />
           <NavItem icon={Share2} label="Share" active={activeNav === "share"} onClick={() => setActiveNav("share")} collapsed={collapsed} />
           <NavItem icon={Clock} label={t("nav_history", language)} active={activeNav === "history"} onClick={() => setActiveNav("history")} collapsed={collapsed} />
+
+          {isAdmin && (
+            <>
+              {!collapsed && <SectionLabel>Admin</SectionLabel>}
+              {collapsed && <div className="my-2 border-t border-line/50" />}
+              <NavItem icon={ShieldCheck} label="Admin" active={activeNav === "admin"} onClick={() => setActiveNav("admin")} collapsed={collapsed} />
+            </>
+          )}
         </nav>
 
         {/* ============================================================
@@ -247,22 +257,30 @@ export function Sidebar({
               )}
             </button>
           ) : (
-            /* Guest: clean Sign up / Log in — like ChatGPT */
+            /* Guest: value-focused sign-up prompt — Notion/Spotify pattern.
+             * All features work without an account (localStorage).
+             * Account = cloud sync across devices. */
             collapsed ? (
               <button
                 onClick={() => setActiveNav("login")}
                 className="w-full flex justify-center p-2.5 rounded-xl text-ink-subtle hover:text-ink-base hover:bg-surface-2 transition-all"
-                title="Sign up or log in"
+                title="Sign up to sync across devices"
               >
                 <User2 size={20} />
               </button>
             ) : (
               <div className="space-y-2">
+                {/* Subtle value message — not a gate, a benefit */}
+                <div className="px-3 py-2">
+                  <p className="text-[11px] text-ink-muted leading-snug">
+                    Sign up to sync your health data across all your devices.
+                  </p>
+                </div>
                 <button
                   onClick={() => setActiveNav("login")}
                   className="w-full py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 transition-all"
                 >
-                  Sign up
+                  Sign up free
                 </button>
                 <button
                   onClick={() => setActiveNav("login")}
@@ -270,7 +288,6 @@ export function Sidebar({
                 >
                   Log in
                 </button>
-                {/* Settings gear — small, below auth buttons */}
                 <button
                   onClick={() => setBottomMenuOpen(!bottomMenuOpen)}
                   className="w-full flex items-center justify-center gap-1.5 py-1.5 text-ink-subtle hover:text-ink-base text-xs transition-colors"
@@ -293,7 +310,12 @@ export function Sidebar({
           active={["health-dashboard", "medications", "appointments", "vitals", "records", "schedule", "my-medicines"].includes(activeNav)}
           onClick={() => setActiveNav("health-dashboard")}
         />
-        <MobileNavButton icon={AlertTriangle} label={t("nav_emergency", language)} active={activeNav === "emergency"} onClick={() => setActiveNav("emergency")} urgent />
+        <MobileNavButton
+          icon={User2}
+          label={isAuthenticated ? (username ? username.split(/[\s@]/)[0].slice(0, 8) : t("nav_profile", language)) : t("nav_login", language)}
+          active={activeNav === "profile" || activeNav === "login"}
+          onClick={() => setActiveNav(isAuthenticated ? "profile" : "login")}
+        />
         <MobileNavButton icon={Settings} label={t("nav_settings", language)} active={activeNav === "settings"} onClick={() => setActiveNav("settings")} />
       </div>
       {/* About modal */}
