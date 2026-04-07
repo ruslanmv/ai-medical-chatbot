@@ -4,11 +4,10 @@
 
 ## Try MediBot — Free AI Medical Assistant
 
-[![Try MediBot](https://img.shields.io/badge/%F0%9F%8F%A5_Try_MediBot-Free_on_HuggingFace-blue?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
 
-**Free AI medical chatbot for everyone. 20 languages. No sign-up. Works offline.**
+**Free AI medical chatbot for everyone.**
 
-[Try it now](https://huggingface.co/spaces/ruslanmv/MediBot) — No account needed. Just ask your health question.
+[Try it now](https://ai-medical-chatbot-mtu8x3wa8.vercel.app/) — No account needed. Just ask your health question.
 
 ---
 
@@ -18,7 +17,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-[![MediBot](https://img.shields.io/badge/MediBot-Live_on_HF_Spaces-green?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot)
+
 
 **Production-ready AI Medical Chatbot using IBM WatsonX, OpenAI, and advanced LLM technologies**
 
