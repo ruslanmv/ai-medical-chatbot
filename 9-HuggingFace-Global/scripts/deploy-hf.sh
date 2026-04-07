@@ -1,90 +1,97 @@
-#!/usr/bin/env bash
-# =============================================================================
-# Deploy MedOS Global to Hugging Face Spaces
-# Usage: bash scripts/deploy-hf.sh <HF_TOKEN>
-# =============================================================================
+#!/bin/bash
+# ============================================================
+# deploy-hf.sh — Zero-duplication HuggingFace Space deployer
+#
+# Assembles a complete Next.js app from:
+#   web/                    → frontend (single source of truth)
+#   9-HuggingFace-Global/   → backend (API routes, DB, safety, RAG)
+#
+# Rewrites /api/proxy/ → /api/ and force-pushes to HF Space.
+#
+# Usage:
+#   HF_TOKEN=hf_xxx bash 9-HuggingFace-Global/scripts/deploy-hf.sh
+# ============================================================
 
-set -euo pipefail
+set -e
 
-HF_TOKEN="${1:?ERROR: HF_TOKEN is required as first argument}"
-SPACE_NAME="MedOS-Global"
-HF_USER="ruslanmv"
-SPACE_REPO="${HF_USER}/${SPACE_NAME}"
-SPACE_URL="https://huggingface.co/spaces/${SPACE_REPO}"
-APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+HF_DIR="$REPO_ROOT/9-HuggingFace-Global"
+WEB_DIR="$REPO_ROOT/web"
+BUILD_DIR="/tmp/medos-hf-deploy"
 
-echo ""
-echo "======================================"
-echo "  MedOS Global - HF Spaces Deployment"
-echo "======================================"
-echo ""
-echo "  Space:  ${SPACE_REPO}"
-echo "  Source: ${APP_DIR}"
-echo ""
-
-# Check if huggingface-cli is available, if not use git
-if command -v huggingface-cli &>/dev/null; then
-  echo "[1/4] Logging in to Hugging Face..."
-  echo "${HF_TOKEN}" | huggingface-cli login --token "${HF_TOKEN}" 2>/dev/null || true
+if [ -z "$HF_TOKEN" ]; then
+  echo "ERROR: Set HF_TOKEN environment variable" && exit 1
+fi
+if [ ! -d "$WEB_DIR" ]; then
+  echo "ERROR: web/ not found at $WEB_DIR" && exit 1
 fi
 
-# Create a temporary directory for the space
-TMPDIR=$(mktemp -d)
-trap "rm -rf ${TMPDIR}" EXIT
+echo "[deploy] Assembling from web/ + 9-HuggingFace-Global/..."
+rm -rf "$BUILD_DIR" && mkdir -p "$BUILD_DIR"
 
-echo "[2/4] Preparing Space files..."
+# --- Step 1: Start with HF backend as the base ---
+# This brings Dockerfile, package.json, next.config.js, tsconfig,
+# all /app/api routes, /app/admin, /app/symptoms, /app/stats,
+# lib/db, lib/safety, lib/rag, lib/providers, data/, public/, etc.
+cp -r "$HF_DIR/"* "$BUILD_DIR/"
+cp "$HF_DIR/.gitignore" "$BUILD_DIR/" 2>/dev/null || true
+cp "$HF_DIR/.env.example" "$BUILD_DIR/" 2>/dev/null || true
+rm -f "$BUILD_DIR/tsconfig.tsbuildinfo"
 
-# Clone or create the space repo
-if git ls-remote "https://${HF_USER}:${HF_TOKEN}@huggingface.co/spaces/${SPACE_REPO}" &>/dev/null; then
-  echo "  Space exists, cloning..."
-  git clone "https://${HF_USER}:${HF_TOKEN}@huggingface.co/spaces/${SPACE_REPO}" "${TMPDIR}/space" 2>/dev/null
-else
-  echo "  Creating new Space..."
-  mkdir -p "${TMPDIR}/space"
-  cd "${TMPDIR}/space"
-  git init
-  git remote add origin "https://${HF_USER}:${HF_TOKEN}@huggingface.co/spaces/${SPACE_REPO}"
-fi
-
-cd "${TMPDIR}/space"
-
-echo "[3/4] Copying application files..."
-
-# Copy all application files
-rsync -a --delete \
-  --exclude 'node_modules' \
-  --exclude '.next' \
-  --exclude '.git' \
-  --exclude 'Makefile' \
-  --exclude 'scripts' \
-  "${APP_DIR}/" "${TMPDIR}/space/"
-
-# Ensure README has HF metadata at the top
-echo "[4/4] Pushing to Hugging Face Spaces..."
-
-git add -A
-git diff --cached --quiet && echo "No changes to deploy." && exit 0
-
-git -c user.name="MedOS Deploy" -c user.email="deploy@medos.ai" \
-  commit -m "Deploy MedOS Global $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-# Push with retry
-MAX_RETRIES=4
-RETRY_DELAY=2
-for i in $(seq 1 $MAX_RETRIES); do
-  if git push origin main --force 2>/dev/null || git push origin master --force 2>/dev/null; then
-    echo ""
-    echo "======================================"
-    echo "  Deployment successful!"
-    echo "  ${SPACE_URL}"
-    echo "======================================"
-    echo ""
-    exit 0
-  fi
-  echo "  Push attempt ${i}/${MAX_RETRIES} failed, retrying in ${RETRY_DELAY}s..."
-  sleep $RETRY_DELAY
-  RETRY_DELAY=$((RETRY_DELAY * 2))
+# --- Step 2: Overlay web/ frontend (source of truth) ---
+# Components
+for dir in views chat ui; do
+  rm -rf "$BUILD_DIR/components/$dir"
+  mkdir -p "$BUILD_DIR/components/$dir"
+  cp -r "$WEB_DIR/components/$dir/"* "$BUILD_DIR/components/$dir/" 2>/dev/null || true
 done
 
-echo "ERROR: Failed to push after ${MAX_RETRIES} attempts."
-exit 1
+# Root components
+for f in MedOSApp.tsx ThemeProvider.tsx ThemeToggle.tsx WelcomeScreen.tsx; do
+  [ -f "$WEB_DIR/components/$f" ] && cp "$WEB_DIR/components/$f" "$BUILD_DIR/components/"
+done
+
+# Hooks
+mkdir -p "$BUILD_DIR/lib/hooks"
+for f in useChat.ts useSettings.ts useAuth.ts useHealthStore.ts useNotifications.ts useGeoDetect.ts; do
+  [ -f "$WEB_DIR/lib/hooks/$f" ] && cp "$WEB_DIR/lib/hooks/$f" "$BUILD_DIR/lib/hooks/"
+done
+
+# Shared libs
+for f in health-store.ts i18n.ts types.ts utils.ts; do
+  [ -f "$WEB_DIR/lib/$f" ] && cp "$WEB_DIR/lib/$f" "$BUILD_DIR/lib/"
+done
+
+# Styles + config
+cp "$WEB_DIR/app/globals.css" "$BUILD_DIR/app/"
+cp "$WEB_DIR/app/layout.tsx" "$BUILD_DIR/app/"
+cp "$WEB_DIR/tailwind.config.ts" "$BUILD_DIR/"
+[ -f "$WEB_DIR/app/icon.svg" ] && cp "$WEB_DIR/app/icon.svg" "$BUILD_DIR/app/"
+[ -f "$WEB_DIR/app/manifest.ts" ] && cp "$WEB_DIR/app/manifest.ts" "$BUILD_DIR/app/"
+
+# Page shell
+cat > "$BUILD_DIR/app/page.tsx" << 'EOF'
+import MedOSApp from "@/components/MedOSApp";
+export default function HomePage() { return <MedOSApp />; }
+EOF
+
+# Remove Vercel-only proxy route if it leaked in
+rm -rf "$BUILD_DIR/app/api/proxy" 2>/dev/null || true
+
+# --- Step 3: Rewrite /api/proxy/ → /api/ ---
+echo "[deploy] Rewriting API paths..."
+find "$BUILD_DIR/lib/hooks" "$BUILD_DIR/components" \
+  \( -name "*.ts" -o -name "*.tsx" \) 2>/dev/null | while read f; do
+  sed -i 's|/api/proxy/|/api/|g' "$f"
+done
+
+# --- Step 4: Push to HuggingFace ---
+echo "[deploy] Pushing to HuggingFace Space..."
+cd "$BUILD_DIR"
+git init && git branch -M main
+git add -A
+git -c commit.gpgsign=false commit -m "Deploy: web/ frontend + HF backend (zero duplication)"
+git remote add hf "https://ruslanmv:${HF_TOKEN}@huggingface.co/spaces/ruslanmv/MediBot"
+git push hf main --force 2>&1 | tail -5
+
+echo "[deploy] ✓ Done — https://huggingface.co/spaces/ruslanmv/MediBot"
