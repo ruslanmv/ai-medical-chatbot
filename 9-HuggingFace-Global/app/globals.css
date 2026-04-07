@@ -2,396 +2,260 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== CSS Custom Properties ===== */
+/* ============================================================
+ * MedOS design tokens — light + dark
+ * ============================================================ */
 :root {
-  --vh: 1vh;
-  --color-bg-primary: #f7f9fb;
-  --color-bg-secondary: #f1f5f9;
-  --color-bg-tertiary: #e2e8f0;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-accent: #3b82f6;
-  --color-accent-secondary: #10b981;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
-  --safe-area-top: env(safe-area-inset-top, 0px);
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-area-left: env(safe-area-inset-left, 0px);
-  --safe-area-right: env(safe-area-inset-right, 0px);
+  /* Surfaces (light mode — soft white, never pure #FFFFFF) */
+  --surface-0: 247 249 251; /* app backdrop  #F7F9FB */
+  --surface-1: 255 255 255; /* cards          */
+  --surface-2: 241 245 249; /* elevated panels #F1F5F9 */
+  --surface-3: 226 232 240; /* borders / rails */
+
+  --ink-base:    15  23  42; /* slate-900     */
+  --ink-muted:   71  85 105; /* slate-600     */
+  --ink-subtle: 148 163 184; /* slate-400     */
+  --ink-inverse: 255 255 255;
+
+  --line: 226 232 240; /* slate-200 */
+
   color-scheme: light;
 }
 
 .dark {
-  --color-bg-primary: #0f172a;
-  --color-bg-secondary: #1e293b;
-  --color-bg-tertiary: #334155;
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #94a3b8;
+  /* Dark mode — warm deep navy, NOT pure black */
+  --surface-0:  11  18  32; /* #0B1220 */
+  --surface-1:  18  27  45; /* #121B2D elevated card */
+  --surface-2:  24  34  54; /* #182236 panel  */
+  --surface-3:  34  46  71; /* #222E47 border */
+
+  --ink-base:   241 245 249; /* slate-100 */
+  --ink-muted:  148 163 184; /* slate-400 */
+  --ink-subtle: 100 116 139; /* slate-500 */
+  --ink-inverse: 15  23  42;
+
+  --line: 34 46 71;
+
   color-scheme: dark;
 }
 
+@layer base {
+  html,
+  body {
+    @apply h-full w-full;
+    /* iOS Safari 100vh fix: dvh accounts for the collapsible address bar.
+       Falls back to 100vh for browsers that don't support dvh. */
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  html {
+    font-family: var(--font-sans), Inter, ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", Roboto, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply text-ink-base antialiased;
+    background: theme("backgroundImage.light-app");
+    background-attachment: fixed;
+    line-height: 1.6;
+    letter-spacing: -0.005em;
+  }
+
+  .dark body {
+    background: theme("backgroundImage.dark-app");
+    background-attachment: fixed;
+  }
+
+  /* Slightly larger, more readable body copy — medical trust */
+  p { line-height: 1.65; }
+
+  /* Focus rings that are visible in both modes */
+  :focus-visible {
+    outline: 2px solid rgb(var(--color-brand, 59 130 246));
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-surface-1/80 backdrop-blur-xl border border-line/60 shadow-soft;
+  }
+  .glass-strong {
+    @apply bg-surface-1/95 backdrop-blur-2xl border border-line/70 shadow-card;
+  }
+  /* Section headings inside an AI answer (Summary / Self-care …) */
+  .answer-section {
+    @apply relative pl-4 mt-4 first:mt-0;
+  }
+  .answer-section::before {
+    content: "";
+    @apply absolute left-0 top-1 bottom-1 w-1 rounded-full bg-brand-500/60;
+  }
+}
+
+@layer utilities {
+  .animate-in { animation: fadeIn 0.5s ease-in-out; }
+  .slide-in-from-bottom-4 { animation: slideInFromBottom 0.5s ease-in-out; }
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+
+  /* Shimmer utility for the "Analyzing…" typing state */
+  .shimmer-text {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--ink-muted) / 0.5) 0%,
+      rgb(var(--ink-base)) 50%,
+      rgb(var(--ink-muted) / 0.5) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 2.2s linear infinite;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slideInFromBottom {
+    from { opacity: 0; transform: translateY(1rem); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ------------------------------------------------------------
+ * Dark-mode compatibility layer for legacy screens that still
+ * reference slate/white utility classes directly. Remaps them to
+ * the design-token surfaces so Settings/Records/Schedule/Topics/
+ * Emergency look right in dark mode without a full rewrite.
+ * New components should prefer the `bg-surface-*` and `text-ink-*`
+ * tokens directly and won't be affected by these rules.
+ * ------------------------------------------------------------ */
+.dark .bg-white         { background-color: rgb(var(--surface-1)) !important; }
+.dark .bg-slate-50      { background-color: rgb(var(--surface-2)) !important; }
+.dark .bg-slate-100     { background-color: rgb(var(--surface-2)) !important; }
+.dark .bg-\[\#F8FAFC\]  { background-color: rgb(var(--surface-0)) !important; }
+.dark .bg-\[\#F7F9FB\]  { background-color: rgb(var(--surface-0)) !important; }
+
+.dark .text-slate-900   { color: rgb(var(--ink-base)) !important; }
+.dark .text-slate-800   { color: rgb(var(--ink-base)) !important; }
+.dark .text-slate-700   { color: rgb(var(--ink-base) / 0.92) !important; }
+.dark .text-slate-600   { color: rgb(var(--ink-muted)) !important; }
+.dark .text-slate-500   { color: rgb(var(--ink-muted)) !important; }
+.dark .text-slate-400   { color: rgb(var(--ink-subtle)) !important; }
+.dark .text-slate-300   { color: rgb(var(--ink-subtle) / 0.85) !important; }
+
+.dark .border-slate-50  { border-color: rgb(var(--line) / 0.55) !important; }
+.dark .border-slate-100 { border-color: rgb(var(--line) / 0.7) !important; }
+.dark .border-slate-200 { border-color: rgb(var(--line) / 0.9) !important; }
+
+.dark .placeholder-slate-400::placeholder { color: rgb(var(--ink-subtle)); }
+
+/* Soft tinted surfaces used on a handful of views (blue-50, rose-50,
+ * amber-50, etc.) — in dark mode dim them into brand/accent tints. */
+.dark .bg-blue-50       { background-color: rgba(59,130,246,0.10) !important; }
+.dark .bg-blue-100      { background-color: rgba(59,130,246,0.18) !important; }
+.dark .bg-indigo-50     { background-color: rgba(99,102,241,0.10) !important; }
+.dark .bg-rose-50       { background-color: rgba(244,63,94,0.10) !important; }
+.dark .bg-red-50        { background-color: rgba(239,68,68,0.10) !important; }
+.dark .bg-amber-50      { background-color: rgba(245,158,11,0.10) !important; }
+.dark .bg-emerald-50    { background-color: rgba(16,185,129,0.10) !important; }
+.dark .bg-purple-50     { background-color: rgba(168,85,247,0.10) !important; }
+
+.dark .border-blue-100  { border-color: rgba(59,130,246,0.28) !important; }
+.dark .border-blue-200  { border-color: rgba(59,130,246,0.38) !important; }
+.dark .border-red-200   { border-color: rgba(239,68,68,0.38) !important; }
+.dark .border-amber-200 { border-color: rgba(245,158,11,0.38) !important; }
+
+/* Scrollbars — subtle in both modes */
+::-webkit-scrollbar        { width: 10px; height: 10px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  {
+  background: rgb(var(--ink-subtle) / 0.35);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--ink-subtle) / 0.55);
+  background-clip: padding-box;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.22);
+  color: inherit;
+}
+
+/* Safe area for mobile bottom nav */
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* RTL support for Arabic */
+[dir="rtl"] .flex { direction: rtl; }
+
+/* Large tap targets */
+@media (pointer: coarse) {
+  button, a, select, input, textarea { min-height: 44px; }
+}
+
 /* ============================================================
- * Light-mode compatibility layer.
- *
- * Most components were originally built dark-only with hardcoded
- * slate-700/800/900 classes. Rather than adding dark: prefixes to
- * every single class in every file (15+ views), we remap the most
- * common dark-palette utilities to their light equivalents at the
- * CSS level. In .dark mode these rules don't apply, so the
- * original dark colors remain.
- *
- * This is intentionally !important so it overrides Tailwind's
- * generated utilities (which have equal specificity).
+ * Mobile-first utilities
  * ============================================================ */
 
-/* --- Backgrounds --- */
-:root:not(.dark) .bg-slate-900     { background-color: #ffffff !important; }
-:root:not(.dark) .bg-slate-900\/95 { background-color: rgba(255,255,255,0.95) !important; }
-:root:not(.dark) .bg-slate-900\/85 { background-color: rgba(255,255,255,0.90) !important; }
-:root:not(.dark) .bg-slate-800     { background-color: #f8fafc !important; }
-:root:not(.dark) .bg-slate-800\/50 { background-color: rgba(241,245,249,0.7) !important; }
-:root:not(.dark) .bg-slate-800\/30 { background-color: rgba(241,245,249,0.5) !important; }
-:root:not(.dark) .bg-slate-800\/80 { background-color: rgba(241,245,249,0.85) !important; }
-:root:not(.dark) .bg-slate-700     { background-color: #e2e8f0 !important; }
-:root:not(.dark) .bg-slate-700\/60 { background-color: rgba(226,232,240,0.7) !important; }
-
-/* Tinted surfaces */
-:root:not(.dark) .bg-red-950\/50   { background-color: rgba(254,226,226,0.6) !important; }
-
-/* --- Text --- */
-:root:not(.dark) .text-slate-50    { color: #0f172a !important; }
-:root:not(.dark) .text-slate-100   { color: #1e293b !important; }
-:root:not(.dark) .text-slate-200   { color: #334155 !important; }
-:root:not(.dark) .text-slate-300   { color: #475569 !important; }
-:root:not(.dark) .text-slate-400   { color: #64748b !important; }
-:root:not(.dark) .text-red-300     { color: #dc2626 !important; }
-:root:not(.dark) .text-red-400     { color: #ef4444 !important; }
-:root:not(.dark) .text-blue-200    { color: #3b82f6 !important; }
-:root:not(.dark) .text-teal-300    { color: #0d9488 !important; }
-:root:not(.dark) .text-teal-400    { color: #14b8a6 !important; }
-
-/* --- Borders --- */
-:root:not(.dark) .border-slate-700\/50 { border-color: rgba(226,232,240,0.8) !important; }
-:root:not(.dark) .border-slate-700\/30 { border-color: rgba(226,232,240,0.6) !important; }
-:root:not(.dark) .border-slate-700\/60 { border-color: rgba(226,232,240,0.7) !important; }
-:root:not(.dark) .border-slate-700     { border-color: #e2e8f0 !important; }
-:root:not(.dark) .border-red-700\/50   { border-color: rgba(252,165,165,0.6) !important; }
-:root:not(.dark) .border-red-700\/30   { border-color: rgba(252,165,165,0.4) !important; }
-
-/* --- Placeholder text --- */
-:root:not(.dark) .placeholder-slate-500::placeholder { color: #94a3b8 !important; }
-
-/* --- Hover states --- */
-:root:not(.dark) .hover\:bg-slate-800:hover  { background-color: #f1f5f9 !important; }
-:root:not(.dark) .hover\:bg-slate-700:hover  { background-color: #e2e8f0 !important; }
-:root:not(.dark) .hover\:bg-slate-600:hover  { background-color: #cbd5e1 !important; }
-:root:not(.dark) .hover\:text-slate-200:hover { color: #1e293b !important; }
-:root:not(.dark) .hover\:text-slate-300:hover { color: #334155 !important; }
-:root:not(.dark) .hover\:text-teal-200:hover  { color: #0d9488 !important; }
-
-/* --- Focus rings stay the same (blue) --- */
-
-/* --- Right panel, sidebar, bottom nav overlays --- */
-:root:not(.dark) .bg-slate-800\/95 { background-color: rgba(255,255,255,0.95) !important; }
-
-/* ===== Base Styles ===== */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  overflow: hidden;
-  overscroll-behavior: none;
-  transition: background-color 0.2s, color 0.2s;
-}
-
-/* ===== Mobile Viewport Height Fix (iOS Safari) ===== */
+/* Dynamic viewport height — works on iOS Safari, Android Chrome,
+   and every modern browser. Falls back to 100vh. */
 .h-screen-safe {
-  height: calc(var(--vh, 1vh) * 100);
+  height: 100vh;
+  height: 100dvh;
 }
 
-/* ===== Safe Area Padding ===== */
-.pt-safe {
-  padding-top: var(--safe-area-top);
-}
-.pb-safe {
-  padding-bottom: var(--safe-area-bottom);
-}
-.pl-safe {
-  padding-left: var(--safe-area-left);
-}
-.pr-safe {
-  padding-right: var(--safe-area-right);
+/* Sticky input bar that stays above the mobile keyboard.
+   Uses env(keyboard-inset-height) on supporting browsers and
+   falls back to standard sticky positioning elsewhere. */
+.sticky-bottom-keyboard {
+  position: sticky;
+  bottom: 0;
+  bottom: env(keyboard-inset-height, 0px);
 }
 
-/* ===== Prevent Zoom on Input Focus (iOS) ===== */
-input,
-textarea,
-select {
-  font-size: 16px !important;
+/* Prevent iOS input zoom — any input below 16px triggers a zoom.
+   We force 16px minimum on touch devices and compensate with
+   transforms where we need visually-smaller text. */
+@media (pointer: coarse) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
 }
 
-/* ===== Touch Targets (Apple HIG: 44x44px minimum) ===== */
-.touch-target {
-  min-height: 44px;
-  min-width: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ===== Smooth Scrolling ===== */
-.scroll-smooth {
+/* iOS momentum scrolling */
+.scroll-touch {
   -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
 }
 
-/* ===== Custom Scrollbar ===== */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Bottom padding spacer for content that sits above a fixed bottom nav.
+   The 5.5rem accounts for the nav height + safe-area-inset-bottom. */
+.pb-mobile-nav {
+  padding-bottom: 5.5rem;
 }
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #475569;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-}
-
-/* ===== Selection Style ===== */
-::selection {
-  background-color: rgba(59, 130, 246, 0.3);
-  color: #f8fafc;
-}
-
-/* ===== RTL Support ===== */
-[dir='rtl'] .sidebar-nav {
-  right: 0;
-  left: auto;
-}
-
-[dir='rtl'] .message-user {
-  margin-left: 0;
-  margin-right: auto;
-}
-
-[dir='rtl'] .message-bot {
-  margin-right: 0;
-  margin-left: auto;
-}
-
-[dir='rtl'] .chat-input-area {
-  flex-direction: row-reverse;
-}
-
-/* ===== Sidebar Menu Popup ===== */
-.desktop-sidebar {
-  overflow: visible !important;
-}
-
-/* ===== Animation Utilities ===== */
-.animate-delay-100 {
-  animation-delay: 100ms;
-}
-
-.animate-delay-200 {
-  animation-delay: 200ms;
-}
-
-.animate-delay-300 {
-  animation-delay: 300ms;
-}
-
-/* ===== Typing Indicator ===== */
-.typing-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #64748b;
-  animation: pulseDot 1.4s infinite ease-in-out both;
-}
-
-.typing-dot:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.typing-dot:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-/* ===== Message Markdown Rendering ===== */
-.message-content p {
-  margin-bottom: 0.5rem;
-}
-
-.message-content p:last-child {
-  margin-bottom: 0;
-}
-
-.message-content ul,
-.message-content ol {
-  padding-left: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.message-content li {
-  margin-bottom: 0.25rem;
-}
-
-.message-content code {
-  background-color: rgba(71, 85, 105, 0.5);
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-}
-
-.message-content pre {
-  background-color: rgba(15, 23, 42, 0.8);
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  overflow-x: auto;
-  margin-bottom: 0.5rem;
-}
-
-.message-content pre code {
-  background: none;
-  padding: 0;
-}
-
-.message-content strong {
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.dark .message-content strong {
-  color: #f1f5f9;
-}
-
-.message-content h3,
-.message-content h4 {
-  font-weight: 600;
-  margin-top: 0.75rem;
-  margin-bottom: 0.375rem;
-}
-
-/* ===== Swipe Sheet ===== */
-.swipe-sheet {
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-  will-change: transform;
-}
-
-/* ===== Bottom Navigation ===== */
-.bottom-nav {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  background-color: rgba(255, 255, 255, 0.90);
-}
-
-.dark .bottom-nav {
-  background-color: rgba(15, 23, 42, 0.85);
-}
-
-/* ===== PWA Standalone Mode ===== */
-@media all and (display-mode: standalone) {
-  body {
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
-  .pwa-only {
-    display: block;
-  }
-
-  .browser-only {
-    display: none;
+@media (min-width: 768px) {
+  .pb-mobile-nav {
+    padding-bottom: 0;
   }
 }
 
-@media not all and (display-mode: standalone) {
-  .pwa-only {
-    display: none;
+/* Respect reduced-motion preferences everywhere */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-}
-
-/* ===== Responsive Breakpoints ===== */
-@media (max-width: 768px) {
-  .desktop-sidebar {
-    display: none;
-  }
-
-  .desktop-right-panel {
-    display: none;
-  }
-
-  .mobile-bottom-nav {
-    display: flex;
-  }
-}
-
-@media (min-width: 769px) {
-  .mobile-bottom-nav {
-    display: none;
-  }
-
-  .mobile-header-compact {
-    display: none;
-  }
-}
-
-/* ===== Emergency Pulse Animation ===== */
-@keyframes emergencyPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
-  }
-}
-
-.emergency-pulse {
-  animation: emergencyPulse 2s infinite;
-}
-
-/* ===== Voice Recording Indicator ===== */
-@keyframes voicePulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.7;
-  }
-}
-
-.voice-recording {
-  animation: voicePulse 1s infinite;
 }

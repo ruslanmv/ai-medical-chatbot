@@ -1,25 +1,33 @@
-'use client';
+"use client";
 
-import { ShieldCheck, Globe2, Clock4 } from 'lucide-react';
+import { ShieldCheck, Globe2, Clock4 } from "lucide-react";
+import { t, type SupportedLanguage } from "@/lib/i18n";
+
+interface TrustBarProps {
+  language: SupportedLanguage;
+  compact?: boolean;
+}
 
 /**
- * Compact trust strip shown below the hero headline on the empty chat
- * state and on symptom landing pages. Three icons, three short phrases,
- * one color: muted teal. Communicates clinical credibility without
- * looking salesy.
+ * Trust layer shown under the hero. Communicates clinical credibility
+ * without looking salesy: one line, muted color, subtle icons.
  */
-export default function TrustBar() {
+export function TrustBar({ language, compact = false }: TrustBarProps) {
   const items = [
-    { Icon: ShieldCheck, text: 'Aligned with WHO · CDC · NHS' },
-    { Icon: Globe2,      text: 'Private & anonymous' },
-    { Icon: Clock4,      text: 'Available 24/7' },
+    { Icon: ShieldCheck, key: "trust_reviewed" as const },
+    { Icon: Globe2,      key: "trust_private" as const },
+    { Icon: Clock4,      key: "trust_247" as const },
   ];
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-slate-400">
-      {items.map(({ Icon, text }) => (
-        <span key={text} className="inline-flex items-center gap-1.5 font-medium">
-          <Icon size={13} className="text-teal-400" />
-          {text}
+    <div
+      className={`flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-ink-muted ${
+        compact ? "text-[11px]" : "text-xs"
+      }`}
+    >
+      {items.map(({ Icon, key }) => (
+        <span key={key} className="inline-flex items-center gap-1.5 font-medium">
+          <Icon size={compact ? 12 : 14} className="text-accent-500" />
+          {t(key, language)}
         </span>
       ))}
     </div>

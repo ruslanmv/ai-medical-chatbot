@@ -10,7 +10,7 @@ import {
   ArrowRight,
   Languages,
 } from 'lucide-react';
-import TrustBar from '@/components/chat/TrustBar';
+import { TrustBar } from '@/components/chat/TrustBar';
 
 interface SessionsResponse {
   count: number;
@@ -154,7 +154,7 @@ export default function StatsPage() {
 
         {/* Trust bar */}
         <section className="mb-10">
-          <TrustBar />
+          <TrustBar language="en" />
         </section>
 
         {/* CTA */}

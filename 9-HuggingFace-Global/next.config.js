@@ -5,7 +5,9 @@ const nextConfig = {
   swcMinify: true,
 
   // better-sqlite3 is a native module — exclude from bundling.
-  serverExternalPackages: ['better-sqlite3'],
+  experimental: {
+    serverComponentsExternalPackages: ['better-sqlite3'],
+  },
 
   // Security + CORS headers
   async headers() {

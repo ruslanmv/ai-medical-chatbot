@@ -1,15 +1,22 @@
-# Multi-stage production Dockerfile for MedOS Global on HF Spaces
-# Optimized for Next.js 14 standalone output
+# ============================================================
+# MedOS HuggingFace Space — Production Dockerfile
+#
+# Enterprise architecture:
+#   web/                    = frontend source of truth
+#   9-HuggingFace-Global/   = backend + synced frontend
+#
+# Before deploying, run: bash scripts/sync-frontend.sh
+# This copies web/ frontend, rewrites API paths, then you push.
+# ============================================================
 
-# Stage 1: Install ALL dependencies (including devDeps for build)
-# better-sqlite3 needs python3 + make + g++ to compile the native addon.
+# Stage 1: Install dependencies
 FROM node:18-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
 COPY package.json ./
 RUN npm install --legacy-peer-deps && npm cache clean --force
 
-# Stage 2: Build the application
+# Stage 2: Build
 FROM node:18-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -20,38 +27,27 @@ ENV NODE_ENV=production
 
 RUN npm run build
 
-# Stage 3: Production runner (lean image)
+# Stage 3: Production runner
 FROM node:18-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# HF Spaces REQUIRES port 7860
 ENV PORT=7860
 ENV HOSTNAME=0.0.0.0
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy public assets
 COPY --from=builder /app/public ./public
-
-# Copy standalone build (includes server + minimal node_modules)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Copy data files (health topics, medical KB)
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data
 
-# Persistent storage directory for SQLite DB.
-# HF Spaces mounts /data as persistent volume — the DB survives restarts.
-# Ensure the directory exists and is writable by the nextjs user.
 RUN mkdir -p /data && chown nextjs:nodejs /data
-
 ENV DB_PATH=/data/medos.db
 
 USER nextjs
-
 EXPOSE 7860
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \

@@ -1,6 +1,6 @@
 import type { SupportedLanguage } from '../i18n';
 
-const DISCLAIMERS: Record<SupportedLanguage, string> = {
+const DISCLAIMERS: Record<string, string> = {
   en: 'This AI provides general health information only. It is NOT a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider.',
   es: 'Esta IA proporciona solo informacion de salud general. NO sustituye el consejo medico profesional, diagnostico o tratamiento.',
   zh: '此AI仅提供一般健康信息，不能替代专业医疗建议、诊断或治疗。请始终咨询合格的医疗保健提供者。',
