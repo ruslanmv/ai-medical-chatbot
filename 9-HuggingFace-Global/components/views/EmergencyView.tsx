@@ -1,128 +1,158 @@
-'use client';
+"use client";
 
-import { Phone, AlertTriangle, Heart, Wind, Brain, Baby } from 'lucide-react';
-import { getEmergencyInfo } from '@/lib/safety/emergency-numbers';
-import type { SupportedLanguage } from '@/lib/i18n';
+import { Phone, AlertTriangle, Heart, Wind, Droplets, Brain } from "lucide-react";
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface EmergencyViewProps {
-  countryCode: string;
   language: SupportedLanguage;
+  emergencyNumber: string;
 }
 
-const EMERGENCY_SIGNS = [
-  {
-    icon: Heart,
-    title: 'Heart Attack',
-    signs: ['Chest pain or pressure', 'Pain in arm, jaw, or back', 'Shortness of breath', 'Cold sweat, nausea'],
-    action: 'Call emergency NOW. Chew aspirin if not allergic.',
-  },
-  {
-    icon: Brain,
-    title: 'Stroke (FAST)',
-    signs: ['Face drooping on one side', 'Arm weakness', 'Speech difficulty', 'Sudden severe headache'],
-    action: 'Call emergency NOW. Note the time symptoms started.',
-  },
-  {
-    icon: Wind,
-    title: 'Breathing Emergency',
-    signs: ['Severe difficulty breathing', 'Blue/grey lips or fingertips', 'Cannot speak in sentences', 'Choking'],
-    action: 'Call emergency NOW. Sit upright, stay calm.',
-  },
-  {
-    icon: Baby,
-    title: 'Child Emergency',
-    signs: ['Baby not feeding or very lethargic', 'Fever in infant under 3 months', 'Non-blanching rash', 'Fast or difficult breathing'],
-    action: 'Call emergency NOW. Any fever in newborns is urgent.',
-  },
-];
+interface EmergencyCard {
+  titleKey: string;
+  icon: React.ReactNode;
+  color: string;
+  signs: string[];
+  doNow: string[];
+}
 
-export default function EmergencyView({
-  countryCode,
-}: EmergencyViewProps) {
-  const info = getEmergencyInfo(countryCode);
+export function EmergencyView({ language, emergencyNumber }: EmergencyViewProps) {
+  const cards: EmergencyCard[] = [
+    {
+      titleKey: "emergency_heart_title",
+      icon: <Heart size={24} className="text-red-600" />,
+      color: "red",
+      signs: [
+        t("emergency_heart_1", language),
+        t("emergency_heart_2", language),
+        t("emergency_heart_3", language),
+        t("emergency_heart_4", language),
+      ],
+      doNow: [
+        `${t("emergency_call", language)} ${emergencyNumber}`,
+        t("emergency_sit_still", language),
+        t("emergency_chew_aspirin", language),
+        t("emergency_dont_drive", language),
+      ],
+    },
+    {
+      titleKey: "emergency_stroke_title",
+      icon: <Brain size={24} className="text-purple-600" />,
+      color: "purple",
+      signs: [
+        t("emergency_stroke_1", language),
+        t("emergency_stroke_2", language),
+        t("emergency_stroke_3", language),
+        t("emergency_stroke_4", language),
+      ],
+      doNow: [
+        `${t("emergency_call", language)} ${emergencyNumber}`,
+        t("emergency_sit_still", language),
+        t("emergency_dont_drive", language),
+      ],
+    },
+    {
+      titleKey: "emergency_breathing_title",
+      icon: <Wind size={24} className="text-blue-600" />,
+      color: "blue",
+      signs: [
+        t("emergency_breathing_1", language),
+        t("emergency_breathing_2", language),
+        t("emergency_breathing_3", language),
+        t("emergency_breathing_4", language),
+      ],
+      doNow: [
+        `${t("emergency_call", language)} ${emergencyNumber}`,
+        t("emergency_sit_still", language),
+      ],
+    },
+    {
+      titleKey: "emergency_bleeding_title",
+      icon: <Droplets size={24} className="text-rose-600" />,
+      color: "rose",
+      signs: [
+        t("emergency_bleeding_1", language),
+        t("emergency_bleeding_2", language),
+        t("emergency_bleeding_3", language),
+        t("emergency_bleeding_4", language),
+      ],
+      doNow: [
+        `${t("emergency_call", language)} ${emergencyNumber}`,
+      ],
+    },
+  ];
+
+  const colorMap: Record<string, { bg: string; border: string; badge: string }> = {
+    red: { bg: "bg-red-50", border: "border-red-200", badge: "bg-red-100 text-red-700" },
+    purple: { bg: "bg-purple-50", border: "border-purple-200", badge: "bg-purple-100 text-purple-700" },
+    blue: { bg: "bg-blue-50", border: "border-blue-200", badge: "bg-blue-100 text-blue-700" },
+    rose: { bg: "bg-rose-50", border: "border-rose-200", badge: "bg-rose-100 text-rose-700" },
+  };
 
   return (
-    <div className="flex-1 overflow-y-auto scroll-smooth">
-      {/* Emergency Header */}
-      <div className="px-4 py-4 bg-red-950/30 border-b border-red-800/30">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle size={20} className="text-red-400" />
-          <h2 className="text-lg font-bold text-red-300">Emergency</h2>
-        </div>
-        <p className="text-sm text-slate-400">
-          {info.country} - Know when to call for help
-        </p>
-      </div>
-
-      {/* Emergency Numbers */}
-      <div className="p-4">
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <a
-            href={`tel:${info.emergency}`}
-            className="flex flex-col items-center p-4 rounded-xl bg-red-600 hover:bg-red-500
-                       text-white transition-colors touch-target emergency-pulse"
-          >
-            <Phone size={24} className="mb-2" />
-            <span className="text-2xl font-bold">{info.emergency}</span>
-            <span className="text-xs opacity-80 mt-1">Emergency</span>
-          </a>
-          <a
-            href={`tel:${info.ambulance}`}
-            className="flex flex-col items-center p-4 rounded-xl bg-slate-800 border border-slate-700/50
-                       text-slate-100 hover:bg-slate-700 transition-colors touch-target"
-          >
-            <Phone size={24} className="mb-2" />
-            <span className="text-2xl font-bold">{info.ambulance}</span>
-            <span className="text-xs text-slate-400 mt-1">Ambulance</span>
-          </a>
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+            <AlertTriangle size={32} className="text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">
+            {t("emergency_title", language)}
+          </h1>
         </div>
 
-        {info.crisisHotline && (
-          <a
-            href={`tel:${info.crisisHotline}`}
-            className="flex items-center justify-center gap-2 w-full p-3 rounded-xl
-                       bg-purple-950/30 border border-purple-800/30 text-purple-300
-                       hover:bg-purple-900/40 transition-colors touch-target mb-6"
-          >
-            <Phone size={16} />
-            <span className="text-sm">
-              Crisis Hotline: <strong>{info.crisisHotline}</strong>
-            </span>
-          </a>
-        )}
+        {/* Call button - always prominent */}
+        <a
+          href={`tel:${emergencyNumber}`}
+          className="block w-full py-5 bg-red-600 text-white rounded-2xl font-bold text-xl text-center shadow-lg shadow-red-200 hover:bg-red-700 transition-colors mb-8 flex items-center justify-center gap-3"
+        >
+          <Phone size={24} />
+          {t("emergency_call", language)} {emergencyNumber}
+        </a>
 
-        {/* Emergency Signs */}
-        <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4">
-          When to call emergency
-        </h3>
+        {/* Emergency cards */}
         <div className="space-y-4">
-          {EMERGENCY_SIGNS.map((item) => {
-            const Icon = item.icon;
+          {cards.map((card) => {
+            const colors = colorMap[card.color] || colorMap.red;
             return (
               <div
-                key={item.title}
-                className="rounded-xl bg-slate-800/50 border border-slate-700/30 p-4"
+                key={card.titleKey}
+                className={`${colors.bg} ${colors.border} border-2 rounded-2xl overflow-hidden`}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon size={18} className="text-red-400" />
-                  <h4 className="text-sm font-semibold text-slate-200">
-                    {item.title}
-                  </h4>
+                <div className="p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    {card.icon}
+                    <h3 className="font-bold text-lg text-slate-800">
+                      {t(card.titleKey, language)}
+                    </h3>
+                  </div>
+
+                  {/* Signs */}
+                  <ul className="space-y-1.5 mb-4">
+                    {card.signs.map((sign, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 flex-shrink-0" />
+                        {sign}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Do now */}
+                  <div className={`${colors.badge} rounded-xl p-4`}>
+                    <h4 className="font-bold text-sm mb-2">
+                      {t("emergency_do_now", language)}
+                    </h4>
+                    <ul className="space-y-1">
+                      {card.doNow.map((action, i) => (
+                        <li key={i} className="text-sm font-medium flex items-start gap-2">
+                          <span className="font-bold">{i + 1}.</span>
+                          {action}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <ul className="space-y-1 mb-3">
-                  {item.signs.map((sign) => (
-                    <li
-                      key={sign}
-                      className="text-xs text-slate-400 flex items-start gap-2"
-                    >
-                      <span className="text-red-400 mt-0.5">&#x2022;</span>
-                      {sign}
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-xs font-semibold text-red-300 bg-red-950/30 rounded-lg px-3 py-2">
-                  {item.action}
-                </p>
               </div>
             );
           })}

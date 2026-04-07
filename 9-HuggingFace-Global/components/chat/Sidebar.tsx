@@ -1,278 +1,350 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 import {
-  MessageSquare, BookOpen, AlertTriangle, Share2,
-  Settings, Globe, HelpCircle, Info, Smartphone,
-  ExternalLink, Github, ChevronUp, ChevronRight,
-} from 'lucide-react';
-import type { ViewType } from '../MedOSGlobalApp';
-import type { SupportedLanguage } from '@/lib/i18n';
-import { LANGUAGE_META } from '@/lib/i18n';
+  Home,
+  MessageCircle,
+  AlertTriangle,
+  BookOpen,
+  Settings,
+  Heart,
+  ShieldCheck,
+  Pill,
+  Calendar,
+  Activity,
+  FileText,
+  Package,
+  Clock,
+  User2,
+  LogIn,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Globe,
+  HelpCircle,
+  Share2,
+  Info,
+  ExternalLink,
+  ChevronUp,
+  ChevronDown,
+  Smartphone,
+} from "lucide-react";
+import { NavItem } from "./NavItem";
+import { t, type SupportedLanguage } from "@/lib/i18n";
+
+export type NavView =
+  | "home"
+  | "chat"
+  | "emergency"
+  | "topics"
+  | "records"
+  | "medications"
+  | "appointments"
+  | "vitals"
+  | "health-dashboard"
+  | "schedule"
+  | "history"
+  | "settings"
+  | "login"
+  | "profile"
+  | "ehr-wizard"
+  | "my-medicines"
+  | "share";
 
 interface SidebarProps {
-  currentView: ViewType;
-  onNavigate: (view: ViewType) => void;
-  language: SupportedLanguage;
+  activeNav: NavView;
+  setActiveNav: (nav: NavView) => void;
+  language?: SupportedLanguage;
+  advancedMode?: boolean;
+  isAuthenticated?: boolean;
+  username?: string;
 }
 
-const NAV_ITEMS: Array<{ id: ViewType; icon: typeof MessageSquare; label: string }> = [
-  { id: 'chat', icon: MessageSquare, label: 'Chat' },
-  { id: 'topics', icon: BookOpen, label: 'Health Topics' },
-  { id: 'emergency', icon: AlertTriangle, label: 'Emergency SOS' },
-  { id: 'share', icon: Share2, label: 'Share & Embed' },
-];
+const COLLAPSED_KEY = "medos_sidebar_collapsed";
 
-export default function Sidebar({ currentView, onNavigate, language }: SidebarProps) {
-  const [showMenu, setShowMenu] = useState(false);
+export function Sidebar({
+  activeNav,
+  setActiveNav,
+  language = "en",
+  isAuthenticated = false,
+  username,
+}: SidebarProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [bottomMenuOpen, setBottomMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
+    const stored = localStorage.getItem(COLLAPSED_KEY);
+    if (stored === "true") setCollapsed(true);
+  }, []);
+
+  // Close bottom menu on outside click
+  useEffect(() => {
+    if (!bottomMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setBottomMenuOpen(false);
       }
-    }
-    if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showMenu]);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [bottomMenuOpen]);
 
-  // Close menu on Escape
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setShowMenu(false);
-    }
-    if (showMenu) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
-    }
-  }, [showMenu]);
+  const toggleCollapse = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem(COLLAPSED_KEY, String(next));
+  };
 
-  const currentLangMeta = LANGUAGE_META[language];
+  const navTo = (view: NavView) => {
+    setActiveNav(view);
+    setBottomMenuOpen(false);
+  };
 
   return (
-    <div className="flex flex-col h-full bg-slate-100 dark:bg-slate-900 p-4 transition-colors">
-      {/* Logo */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-slate-50">
-          <span className="text-medical-primary">Med</span>OS
-        </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Free AI Medical Assistant</p>
-      </div>
+    <>
+      {/* Desktop sidebar */}
+      <aside
+        className={`hidden md:flex flex-col z-20 bg-surface-1/70 backdrop-blur-xl border-r border-line/60 transition-all duration-300 ease-in-out ${
+          collapsed ? "w-[68px] p-2" : "w-64 p-4"
+        }`}
+      >
+        {/* Top row: collapse toggle + logo */}
+        <div
+          className={`flex items-center mb-5 ${
+            collapsed ? "flex-col gap-3" : "justify-between"
+          }`}
+        >
+          {/* Collapse toggle — TOP, like ChatGPT/Claude */}
+          <button
+            onClick={toggleCollapse}
+            className="p-2 rounded-xl text-ink-subtle hover:text-ink-base hover:bg-surface-2 transition-all flex-shrink-0"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-1">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentView === item.id;
-          const isEmergency = item.id === 'emergency';
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={`
-                w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-                touch-target transition-all duration-200
-                ${isActive
-                  ? 'bg-blue-50 text-blue-700 dark:bg-slate-700/60 dark:text-slate-50'
-                  : 'text-slate-500 hover:bg-slate-200 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
-                }
-                ${isEmergency && !isActive ? 'text-red-400 hover:text-red-300' : ''}
-              `}
-            >
-              <Icon
-                size={18}
-                className={isEmergency && !isActive ? 'text-red-400' : ''}
-              />
-              <span className="text-sm font-medium">{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* User Menu Area */}
-      <div className="relative" ref={menuRef}>
-        {/* ===== Popup Menu (Claude-style) ===== */}
-        {showMenu && (
-          <div className="absolute bottom-full left-0 right-0 mb-2 z-50">
-            <div className="bg-slate-800 border border-slate-700/60 rounded-2xl shadow-2xl
-                            overflow-hidden animate-slide-up w-full min-w-[240px]">
-
-              {/* Group 1: Core actions */}
-              <div className="p-1.5">
-                <MenuButton
-                  icon={<Settings size={16} />}
-                  label="Settings"
-                  shortcut="Ctrl+,"
-                  onClick={() => { onNavigate('settings'); setShowMenu(false); }}
-                />
-                <MenuButton
-                  icon={<Globe size={16} />}
-                  label="Language"
-                  trailing={
-                    <span className="flex items-center gap-1 text-xs text-slate-500">
-                      {currentLangMeta?.flag} {currentLangMeta?.nativeName}
-                      <ChevronRight size={12} />
-                    </span>
-                  }
-                  onClick={() => { onNavigate('language'); setShowMenu(false); }}
-                />
-                <MenuButton
-                  icon={<HelpCircle size={16} />}
-                  label="Get help"
-                  onClick={() => { onNavigate('about'); setShowMenu(false); }}
-                />
+          {/* Logo */}
+          {!collapsed && (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-brand-gradient flex items-center justify-center text-white shadow-glow flex-shrink-0">
+                <Heart size={16} strokeWidth={2.5} />
               </div>
-
-              {/* Divider */}
-              <div className="h-px bg-slate-700/50 mx-2" />
-
-              {/* Group 2: Product */}
-              <div className="p-1.5">
-                <MenuButton
-                  icon={<Smartphone size={16} />}
-                  label="Install as App"
-                  onClick={() => {
-                    setShowMenu(false);
-                    // Trigger PWA install
-                    window.dispatchEvent(new CustomEvent('pwa-trigger-install'));
-                  }}
-                />
-                <MenuButton
-                  icon={<Share2 size={16} />}
-                  label="Share MedOS"
-                  onClick={() => { onNavigate('share'); setShowMenu(false); }}
-                />
-                <MenuButton
-                  icon={<Info size={16} />}
-                  label="About MedOS"
-                  trailing={<ChevronRight size={12} className="text-slate-600" />}
-                  onClick={() => { onNavigate('about'); setShowMenu(false); }}
-                />
-              </div>
-
-              {/* Divider */}
-              <div className="h-px bg-slate-700/50 mx-2" />
-
-              {/* Group 3: Links */}
-              <div className="p-1.5">
-                <MenuLink
-                  icon={<Github size={16} />}
-                  label="Source Code"
-                  href="https://github.com/ruslanmv/ai-medical-chatbot"
-                />
-                <MenuLink
-                  icon={<ExternalLink size={16} />}
-                  label="OllaBridge Cloud"
-                  href="https://github.com/ruslanmv/ollabridge"
-                />
-              </div>
-
-              {/* Footer */}
-              <div className="bg-slate-850 border-t border-slate-700/40 px-4 py-2.5">
-                <p className="text-[10px] text-slate-500">
-                  MedOS v1.0 &middot; Powered by OllaBridge
-                </p>
-                <p className="text-[10px] text-slate-600">
-                  Free &amp; Open Source &middot; Zero data retention
-                </p>
+              <div className="min-w-0">
+                <h1 className="font-bold text-base text-ink-base tracking-tight leading-none">
+                  MedOS
+                </h1>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ===== User Button (bottom of sidebar) ===== */}
-        <div className="pt-3 border-t border-slate-700/50">
+          {collapsed && (
+            <div className="w-10 h-10 rounded-2xl bg-brand-gradient flex items-center justify-center text-white shadow-glow">
+              <Heart size={18} strokeWidth={2.5} />
+            </div>
+          )}
+        </div>
+
+        {/* Main nav */}
+        <nav className="flex-1 overflow-y-auto space-y-0.5">
+          <NavItem icon={Home} label={t("nav_home", language)} active={activeNav === "home"} onClick={() => setActiveNav("home")} collapsed={collapsed} />
+          <NavItem icon={MessageCircle} label={t("nav_ask", language)} active={activeNav === "chat"} onClick={() => setActiveNav("chat")} collapsed={collapsed} />
+
+          {!collapsed && <SectionLabel>{t("nav_health_tracker", language)}</SectionLabel>}
+          {collapsed && <div className="my-2 border-t border-line/50" />}
+
+          <NavItem icon={Heart} label={t("nav_dashboard", language)} active={activeNav === "health-dashboard"} onClick={() => setActiveNav("health-dashboard")} collapsed={collapsed} />
+          <NavItem icon={Calendar} label={t("nav_schedule", language)} active={activeNav === "schedule"} onClick={() => setActiveNav("schedule")} collapsed={collapsed} />
+          <NavItem icon={Pill} label={t("nav_medications", language)} active={activeNav === "medications"} onClick={() => setActiveNav("medications")} collapsed={collapsed} />
+          <NavItem icon={Calendar} label={t("nav_appointments", language)} active={activeNav === "appointments"} onClick={() => setActiveNav("appointments")} collapsed={collapsed} />
+          <NavItem icon={Activity} label={t("nav_vitals", language)} active={activeNav === "vitals"} onClick={() => setActiveNav("vitals")} collapsed={collapsed} />
+          <NavItem icon={FileText} label={t("nav_records", language)} active={activeNav === "records"} onClick={() => setActiveNav("records")} collapsed={collapsed} />
+          <NavItem icon={Package} label="My Medicines" active={activeNav === "my-medicines"} onClick={() => setActiveNav("my-medicines")} collapsed={collapsed} />
+
+          {!collapsed && <SectionLabel>{t("nav_tools", language)}</SectionLabel>}
+          {collapsed && <div className="my-2 border-t border-line/50" />}
+
+          <NavItem icon={AlertTriangle} label={t("nav_emergency", language)} active={activeNav === "emergency"} onClick={() => setActiveNav("emergency")} urgent collapsed={collapsed} />
+          <NavItem icon={BookOpen} label={t("nav_topics", language)} active={activeNav === "topics"} onClick={() => setActiveNav("topics")} collapsed={collapsed} />
+          <NavItem icon={Share2} label="Share" active={activeNav === "share"} onClick={() => setActiveNav("share")} collapsed={collapsed} />
+          <NavItem icon={Clock} label={t("nav_history", language)} active={activeNav === "history"} onClick={() => setActiveNav("history")} collapsed={collapsed} />
+        </nav>
+
+        {/* ============================================================
+         * Bottom settings drawer — like ChatGPT/Claude/HF Space.
+         * Shows user profile + settings menu that pops UP from the bottom.
+         * ============================================================ */}
+        <div className="mt-auto pt-3 border-t border-line/50 relative" ref={menuRef}>
+          {/* Pop-up menu (opens upward) */}
+          {bottomMenuOpen && !collapsed && (
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-surface-1 border border-line/60 rounded-2xl shadow-card overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200 z-50">
+              <div className="p-2 space-y-0.5">
+                <MenuItem icon={Settings} label={t("nav_settings", language)} shortcut="Ctrl+," onClick={() => navTo("settings")} />
+                <MenuItem icon={Globe} label={`${t("settings_language", language)}`} detail={language.toUpperCase()} onClick={() => navTo("settings")} />
+                <MenuItem icon={HelpCircle} label="Get help" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot/issues", "_blank")} />
+
+                <div className="my-1.5 border-t border-line/40" />
+
+                <MenuItem icon={Smartphone} label="Install as App" onClick={() => {}} />
+                <MenuItem icon={Share2} label="Share MedOS" onClick={() => { if (navigator.share) navigator.share({ title: "MedOS", url: window.location.origin }); }} />
+                <MenuItem icon={Info} label="About MedOS" detail="v1.0" onClick={() => navTo("settings")} />
+
+                <div className="my-1.5 border-t border-line/40" />
+
+                <MenuItem icon={ExternalLink} label="Source Code" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot", "_blank")} external />
+                <MenuItem icon={ExternalLink} label="HuggingFace Space" onClick={() => window.open("https://huggingface.co/spaces/ruslanmv/MediBot", "_blank")} external />
+
+                <div className="my-1.5 border-t border-line/40" />
+
+                <div className="px-3 py-2">
+                  <p className="text-[10px] text-ink-subtle leading-snug">
+                    MedOS v1.0 · Free & Open Source
+                    <br />
+                    Zero data retention · {t("badge_private", language)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* User profile button — triggers the bottom menu */}
           <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="w-full flex items-center gap-2.5 p-2 rounded-xl
-                       hover:bg-slate-800 transition-colors group"
+            onClick={() => {
+              if (collapsed) {
+                setActiveNav(isAuthenticated ? "profile" : "login");
+              } else {
+                setBottomMenuOpen(!bottomMenuOpen);
+              }
+            }}
+            className={`w-full flex items-center rounded-xl transition-all hover:bg-surface-2 ${
+              collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
+            }`}
           >
             {/* Avatar */}
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-medical-primary to-medical-secondary
-                            flex items-center justify-center flex-shrink-0 ring-2 ring-slate-700/50">
-              <span className="text-sm font-bold text-white">G</span>
+            <div
+              className={`flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs ${
+                isAuthenticated
+                  ? "bg-brand-gradient text-white"
+                  : "bg-surface-2 text-ink-muted border border-line/60"
+              } ${collapsed ? "w-9 h-9" : "w-8 h-8"}`}
+            >
+              {isAuthenticated
+                ? (username || "U")[0].toUpperCase()
+                : "G"}
             </div>
 
-            {/* Name & plan */}
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-sm font-medium text-slate-200 truncate">Guest User</p>
-              <p className="text-[11px] text-slate-500">Free plan</p>
-            </div>
-
-            {/* Chevron */}
-            <ChevronUp
-              size={16}
-              className={`text-slate-500 transition-transform duration-200
-                         ${showMenu ? '' : 'rotate-180'}`}
-            />
+            {!collapsed && (
+              <>
+                <div className="flex-1 min-w-0 text-left">
+                  <span className="text-sm font-semibold text-ink-base block truncate">
+                    {isAuthenticated ? (username || t("nav_profile", language)) : "Guest User"}
+                  </span>
+                  <span className="text-[10px] text-ink-subtle block">
+                    {isAuthenticated ? "Account" : "Free plan"}
+                  </span>
+                </div>
+                {bottomMenuOpen ? (
+                  <ChevronDown size={14} className="text-ink-subtle flex-shrink-0" />
+                ) : (
+                  <ChevronUp size={14} className="text-ink-subtle flex-shrink-0" />
+                )}
+              </>
+            )}
           </button>
         </div>
+      </aside>
+
+      {/* Mobile bottom navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-1/95 backdrop-blur-xl border-t border-line/60 flex items-center justify-around px-1 z-50 safe-area-bottom">
+        <MobileNavButton icon={Home} label={t("nav_home", language)} active={activeNav === "home"} onClick={() => setActiveNav("home")} />
+        <MobileNavButton icon={MessageCircle} label={t("nav_ask", language)} active={activeNav === "chat"} onClick={() => setActiveNav("chat")} />
+        <MobileNavButton
+          icon={Heart}
+          label={t("nav_health", language)}
+          active={["health-dashboard", "medications", "appointments", "vitals", "records", "schedule", "my-medicines"].includes(activeNav)}
+          onClick={() => setActiveNav("health-dashboard")}
+        />
+        <MobileNavButton icon={AlertTriangle} label={t("nav_emergency", language)} active={activeNav === "emergency"} onClick={() => setActiveNav("emergency")} urgent />
+        <MobileNavButton icon={Settings} label={t("nav_settings", language)} active={activeNav === "settings"} onClick={() => setActiveNav("settings")} />
       </div>
+    </>
+  );
+}
+
+// ============================================================
+// Sub-components
+// ============================================================
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-4 mb-1.5 px-4">
+      <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-subtle">
+        {children}
+      </span>
     </div>
   );
 }
 
-/* ===== Reusable Menu Button ===== */
-function MenuButton({
-  icon,
+function MenuItem({
+  icon: Icon,
   label,
+  detail,
   shortcut,
-  trailing,
+  external,
   onClick,
 }: {
-  icon: React.ReactNode;
+  icon: any;
   label: string;
+  detail?: string;
   shortcut?: string;
-  trailing?: React.ReactNode;
+  external?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300
-                 hover:bg-slate-700/60 transition-colors text-left group"
+      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-ink-base hover:bg-surface-2 transition-colors"
     >
-      <span className="text-slate-400 group-hover:text-slate-300 transition-colors">
-        {icon}
-      </span>
-      <span className="flex-1 text-sm">{label}</span>
-      {shortcut && (
-        <kbd className="text-[10px] text-slate-600 bg-slate-750 px-1.5 py-0.5 rounded
-                        border border-slate-700/50 font-mono">{shortcut}</kbd>
+      <Icon size={16} className="text-ink-subtle flex-shrink-0" />
+      <span className="flex-1 text-left">{label}</span>
+      {detail && (
+        <span className="text-xs text-ink-subtle">{detail}</span>
       )}
-      {trailing}
+      {shortcut && (
+        <kbd className="text-[10px] text-ink-subtle bg-surface-2 border border-line/60 rounded px-1.5 py-0.5 font-mono">
+          {shortcut}
+        </kbd>
+      )}
+      {external && <ExternalLink size={12} className="text-ink-subtle" />}
     </button>
   );
 }
 
-/* ===== Reusable Menu Link (opens in new tab) ===== */
-function MenuLink({
-  icon,
+function MobileNavButton({
+  icon: Icon,
   label,
-  href,
+  active,
+  onClick,
+  urgent,
 }: {
-  icon: React.ReactNode;
+  icon: any;
   label: string;
-  href: string;
+  active: boolean;
+  onClick: () => void;
+  urgent?: boolean;
 }) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300
-                 hover:bg-slate-700/60 transition-colors group"
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-0.5 min-h-[48px] min-w-[48px] px-2 py-1.5 rounded-2xl transition-all active:scale-95 ${
+        active
+          ? urgent
+            ? "text-danger-500 bg-danger-500/10"
+            : "text-brand-600 bg-brand-500/10"
+          : "text-ink-subtle"
+      }`}
     >
-      <span className="text-slate-400 group-hover:text-slate-300 transition-colors">
-        {icon}
-      </span>
-      <span className="flex-1 text-sm">{label}</span>
-      <ExternalLink size={12} className="text-slate-600" />
-    </a>
+      <Icon size={22} strokeWidth={active ? 2.5 : 1.75} className={urgent && !active ? "text-danger-500/70" : ""} />
+      <span className="text-[10px] font-semibold leading-none tracking-tight">{label}</span>
+    </button>
   );
 }

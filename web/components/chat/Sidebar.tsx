@@ -47,7 +47,8 @@ export type NavView =
   | "login"
   | "profile"
   | "ehr-wizard"
-  | "my-medicines";
+  | "my-medicines"
+  | "share";
 
 interface SidebarProps {
   activeNav: NavView;
@@ -164,6 +165,7 @@ export function Sidebar({
 
           <NavItem icon={AlertTriangle} label={t("nav_emergency", language)} active={activeNav === "emergency"} onClick={() => setActiveNav("emergency")} urgent collapsed={collapsed} />
           <NavItem icon={BookOpen} label={t("nav_topics", language)} active={activeNav === "topics"} onClick={() => setActiveNav("topics")} collapsed={collapsed} />
+          <NavItem icon={Share2} label="Share" active={activeNav === "share"} onClick={() => setActiveNav("share")} collapsed={collapsed} />
           <NavItem icon={Clock} label={t("nav_history", language)} active={activeNav === "history"} onClick={() => setActiveNav("history")} collapsed={collapsed} />
         </nav>
 

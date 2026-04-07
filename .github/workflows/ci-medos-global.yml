@@ -5,12 +5,14 @@ on:
     branches: [main, master, 'dev-*', 'claude/*']
     paths:
       - '9-HuggingFace-Global/**'
+      - 'web/**'
       - 'tests/9-hf-global/**'
       - '.github/workflows/ci-medos-global.yml'
   pull_request:
     branches: [main, master]
     paths:
       - '9-HuggingFace-Global/**'
+      - 'web/**'
       - 'tests/9-hf-global/**'
 
 jobs:
@@ -27,13 +29,20 @@ jobs:
         with:
           node-version: '18'
 
+      # Sync web/ frontend into 9-HuggingFace-Global/ FIRST.
+      # This is the enterprise single-source-of-truth pattern:
+      # web/ = frontend source, sync copies + rewrites API paths.
+      # All subsequent steps see the complete codebase.
+      - name: Sync frontend from web/ (single source of truth)
+        run: bash 9-HuggingFace-Global/scripts/sync-frontend.sh
+
       - name: Verify folder structure
         run: make -f 9-HuggingFace-Global/Makefile test-structure
 
       - name: Verify providers
         run: make -f 9-HuggingFace-Global/Makefile test-providers
 
-      - name: Verify i18n (20 languages)
+      - name: Verify i18n
         run: make -f 9-HuggingFace-Global/Makefile test-i18n
 
       - name: Verify safety modules

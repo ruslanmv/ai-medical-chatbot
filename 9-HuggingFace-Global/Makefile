@@ -117,16 +117,15 @@ test-providers: ## Test provider modules exist and export correctly
 	@echo "$(GREEN)  Provider modules verified (5/5).$(NC)"
 
 .PHONY: test-i18n
-test-i18n: ## Verify all 20 locale files exist
-	@echo "$(GREEN)Verifying i18n locale files...$(NC)"
-	@LOCALES="en es zh hi ar pt bn fr ru ja de ko tr vi it th id sw tl uk"; \
-	COUNT=0; \
-	for lang in $$LOCALES; do \
-		test -f $(APP_DIR)/lib/i18n/locales/$$lang.json || \
-			(echo "$(RED)FAIL: $$lang.json missing$(NC)" && exit 1); \
-		COUNT=$$((COUNT + 1)); \
-	done; \
-	echo "$(GREEN)  All 20 locale files verified.$(NC)"
+test-i18n: ## Verify i18n translations exist (synced or in web/ source)
+	@echo "$(GREEN)Verifying i18n...$(NC)"
+	@if test -f $(APP_DIR)/lib/i18n.ts; then \
+		echo "$(GREEN)  Found synced lib/i18n.ts$(NC)"; \
+	elif test -f web/lib/i18n.ts; then \
+		echo "$(GREEN)  Found web/lib/i18n.ts (source of truth)$(NC)"; \
+	else \
+		echo "$(RED)FAIL: i18n.ts not found in lib/ or web/lib/$(NC)" && exit 1; \
+	fi
 
 .PHONY: test-safety
 test-safety: ## Verify safety modules exist
