@@ -17,6 +17,8 @@ import {
   Clock,
   User2,
   LogIn,
+  LogOut,
+  ClipboardList,
   PanelLeftClose,
   PanelLeftOpen,
   Globe,
@@ -26,9 +28,11 @@ import {
   ExternalLink,
   ChevronUp,
   ChevronDown,
+  MoreHorizontal,
   Smartphone,
 } from "lucide-react";
 import { NavItem } from "./NavItem";
+import { AboutModal } from "../ui/AboutModal";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
 export type NavView =
@@ -57,6 +61,7 @@ interface SidebarProps {
   advancedMode?: boolean;
   isAuthenticated?: boolean;
   username?: string;
+  onLogout?: () => void;
 }
 
 const COLLAPSED_KEY = "medos_sidebar_collapsed";
@@ -67,9 +72,11 @@ export function Sidebar({
   language = "en",
   isAuthenticated = false,
   username,
+  onLogout,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [bottomMenuOpen, setBottomMenuOpen] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -178,20 +185,30 @@ export function Sidebar({
           {bottomMenuOpen && !collapsed && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-surface-1 border border-line/60 rounded-2xl shadow-card overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200 z-50">
               <div className="p-2 space-y-0.5">
-                <MenuItem icon={Settings} label={t("nav_settings", language)} shortcut="Ctrl+," onClick={() => navTo("settings")} />
-                <MenuItem icon={Globe} label={`${t("settings_language", language)}`} detail={language.toUpperCase()} onClick={() => navTo("settings")} />
+                {/* Account section — first, most important */}
+                {isAuthenticated ? (
+                  <>
+                    <MenuItem icon={User2} label={t("nav_profile", language)} onClick={() => navTo("profile")} />
+                    <MenuItem icon={ClipboardList} label="Health Profile (EHR)" onClick={() => navTo("ehr-wizard")} />
+                    <MenuItem icon={LogOut} label="Log out" onClick={() => { setBottomMenuOpen(false); onLogout?.(); }} danger />
+                  </>
+                ) : (
+                  <>
+                    <MenuItem icon={LogIn} label="Log in / Create Account" onClick={() => navTo("login")} />
+                  </>
+                )}
+
+                <div className="my-1.5 border-t border-line/40" />
+
+                <MenuItem icon={Settings} label={t("nav_settings", language)} onClick={() => navTo("settings")} />
+                <MenuItem icon={Globe} label={t("settings_language", language)} detail={language.toUpperCase()} onClick={() => navTo("settings")} />
                 <MenuItem icon={HelpCircle} label="Get help" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot/issues", "_blank")} />
 
                 <div className="my-1.5 border-t border-line/40" />
 
                 <MenuItem icon={Smartphone} label="Install as App" onClick={() => {}} />
-                <MenuItem icon={Share2} label="Share MedOS" onClick={() => { if (navigator.share) navigator.share({ title: "MedOS", url: window.location.origin }); }} />
-                <MenuItem icon={Info} label="About MedOS" detail="v1.0" onClick={() => navTo("settings")} />
-
-                <div className="my-1.5 border-t border-line/40" />
-
-                <MenuItem icon={ExternalLink} label="Source Code" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot", "_blank")} external />
-                <MenuItem icon={ExternalLink} label="HuggingFace Space" onClick={() => window.open("https://huggingface.co/spaces/ruslanmv/MediBot", "_blank")} external />
+                <MenuItem icon={Share2} label="Share MedOS" onClick={() => { if (typeof navigator !== "undefined" && navigator.share) navigator.share({ title: "MedOS", url: window.location.origin }); }} />
+                <MenuItem icon={Info} label="About MedOS" detail="v1.0" onClick={() => { setBottomMenuOpen(false); setShowAbout(true); }} />
 
                 <div className="my-1.5 border-t border-line/40" />
 
@@ -206,50 +223,63 @@ export function Sidebar({
             </div>
           )}
 
-          {/* User profile button — triggers the bottom menu */}
-          <button
-            onClick={() => {
-              if (collapsed) {
-                setActiveNav(isAuthenticated ? "profile" : "login");
-              } else {
-                setBottomMenuOpen(!bottomMenuOpen);
-              }
-            }}
-            className={`w-full flex items-center rounded-xl transition-all hover:bg-surface-2 ${
-              collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
-            }`}
-          >
-            {/* Avatar */}
-            <div
-              className={`flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs ${
-                isAuthenticated
-                  ? "bg-brand-gradient text-white"
-                  : "bg-surface-2 text-ink-muted border border-line/60"
-              } ${collapsed ? "w-9 h-9" : "w-8 h-8"}`}
+          {/* Bottom user section — ChatGPT/Claude pattern */}
+          {isAuthenticated ? (
+            /* Authenticated: avatar + name + menu toggle */
+            <button
+              onClick={() => collapsed ? setActiveNav("profile") : setBottomMenuOpen(!bottomMenuOpen)}
+              className={`w-full flex items-center rounded-xl transition-all hover:bg-surface-2 ${
+                collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
+              }`}
             >
-              {isAuthenticated
-                ? (username || "U")[0].toUpperCase()
-                : "G"}
-            </div>
-
-            {!collapsed && (
-              <>
-                <div className="flex-1 min-w-0 text-left">
-                  <span className="text-sm font-semibold text-ink-base block truncate">
-                    {isAuthenticated ? (username || t("nav_profile", language)) : "Guest User"}
-                  </span>
-                  <span className="text-[10px] text-ink-subtle block">
-                    {isAuthenticated ? "Account" : "Free plan"}
-                  </span>
-                </div>
-                {bottomMenuOpen ? (
-                  <ChevronDown size={14} className="text-ink-subtle flex-shrink-0" />
-                ) : (
-                  <ChevronUp size={14} className="text-ink-subtle flex-shrink-0" />
-                )}
-              </>
-            )}
-          </button>
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center text-white font-bold text-xs">
+                {(username || "U")[0].toUpperCase()}
+              </div>
+              {!collapsed && (
+                <>
+                  <div className="flex-1 min-w-0 text-left">
+                    <span className="text-sm font-medium text-ink-base block truncate">
+                      {username || "Account"}
+                    </span>
+                  </div>
+                  <MoreHorizontal size={16} className="text-ink-subtle flex-shrink-0" />
+                </>
+              )}
+            </button>
+          ) : (
+            /* Guest: clean Sign up / Log in — like ChatGPT */
+            collapsed ? (
+              <button
+                onClick={() => setActiveNav("login")}
+                className="w-full flex justify-center p-2.5 rounded-xl text-ink-subtle hover:text-ink-base hover:bg-surface-2 transition-all"
+                title="Sign up or log in"
+              >
+                <User2 size={20} />
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <button
+                  onClick={() => setActiveNav("login")}
+                  className="w-full py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 transition-all"
+                >
+                  Sign up
+                </button>
+                <button
+                  onClick={() => setActiveNav("login")}
+                  className="w-full py-2.5 border border-line/60 text-ink-base rounded-xl font-semibold text-sm hover:bg-surface-2 transition-all"
+                >
+                  Log in
+                </button>
+                {/* Settings gear — small, below auth buttons */}
+                <button
+                  onClick={() => setBottomMenuOpen(!bottomMenuOpen)}
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 text-ink-subtle hover:text-ink-base text-xs transition-colors"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+              </div>
+            )
+          )}
         </div>
       </aside>
 
@@ -266,6 +296,8 @@ export function Sidebar({
         <MobileNavButton icon={AlertTriangle} label={t("nav_emergency", language)} active={activeNav === "emergency"} onClick={() => setActiveNav("emergency")} urgent />
         <MobileNavButton icon={Settings} label={t("nav_settings", language)} active={activeNav === "settings"} onClick={() => setActiveNav("settings")} />
       </div>
+      {/* About modal */}
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
     </>
   );
 }
@@ -290,6 +322,7 @@ function MenuItem({
   detail,
   shortcut,
   external,
+  danger,
   onClick,
 }: {
   icon: any;
@@ -297,12 +330,17 @@ function MenuItem({
   detail?: string;
   shortcut?: string;
   external?: boolean;
+  danger?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-ink-base hover:bg-surface-2 transition-colors"
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+        danger
+          ? "text-danger-500 hover:bg-danger-500/10"
+          : "text-ink-base hover:bg-surface-2"
+      }`}
     >
       <Icon size={16} className="text-ink-subtle flex-shrink-0" />
       <span className="flex-1 text-left">{label}</span>

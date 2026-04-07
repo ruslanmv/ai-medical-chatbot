@@ -14,7 +14,13 @@ function buildSyncPayload(): Array<{ id: string; type: string; data: any }> {
   for (const a of hs.loadAppointments()) items.push({ id: a.id, type: "appointment", data: a });
   for (const v of hs.loadVitals()) items.push({ id: v.id, type: "vital", data: v });
   for (const r of hs.loadRecords()) items.push({ id: r.id, type: "record", data: r });
+  for (const m of hs.loadMedicines()) items.push({ id: m.id, type: "medicine", data: m });
   for (const c of hs.loadHistory()) items.push({ id: c.id, type: "conversation", data: c });
+  // EHR profile — stored as a single record with a fixed ID per user
+  const ehr = hs.loadEHRProfile();
+  if (ehr.completedAt) {
+    items.push({ id: "ehr-profile", type: "ehr_profile", data: ehr });
+  }
   return items;
 }
 
@@ -36,6 +42,7 @@ export function useHealthStore(authToken?: string | null) {
   const [vitals, setVitals] = useState<hs.VitalReading[]>([]);
   const [records, setRecords] = useState<hs.HealthRecord[]>([]);
   const [medicines, setMedicines] = useState<hs.MedicineItem[]>([]);
+  const [ehrProfile, setEhrProfile] = useState<hs.EHRProfile>({});
   const [history, setHistory] = useState<hs.ConversationSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -46,6 +53,7 @@ export function useHealthStore(authToken?: string | null) {
     setVitals(hs.loadVitals());
     setRecords(hs.loadRecords());
     setMedicines(hs.loadMedicines());
+    setEhrProfile(hs.loadEHRProfile());
     setHistory(hs.loadHistory());
   }, []);
 
@@ -237,6 +245,19 @@ export function useHealthStore(authToken?: string | null) {
     [refresh, syncDelete],
   );
 
+  // --- EHR Profile ---
+  const saveEHR = useCallback(
+    (profile: hs.EHRProfile) => {
+      hs.saveEHRProfile(profile);
+      setEhrProfile(profile);
+      // Sync to server as a single record
+      if (profile.completedAt) {
+        syncItem("ehr-profile", "ehr_profile", profile);
+      }
+    },
+    [syncItem],
+  );
+
   // --- History ---
   const saveSession = useCallback(
     (summary: Omit<hs.ConversationSummary, "id">) => {
@@ -266,6 +287,7 @@ export function useHealthStore(authToken?: string | null) {
     vitals,
     records,
     medicines,
+    ehrProfile,
     history,
     // Medication actions
     addMedication,
@@ -289,6 +311,8 @@ export function useHealthStore(authToken?: string | null) {
     addMedicine,
     editMedicine,
     deleteMedicine,
+    // EHR profile
+    saveEHR,
     // History actions
     saveSession,
     deleteSession,
