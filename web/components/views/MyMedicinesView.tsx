@@ -77,9 +77,18 @@ const STOCK_COLORS: Record<StockState, { text: string; label: string }> = {
   out: { text: "text-danger-500", label: "Out of stock" },
 };
 
-const FORM_EMOJI: Record<MedicineForm, string> = {
-  tablet: "💊", capsule: "💊", syrup: "🧴", inhaler: "💨",
-  injection: "💉", cream: "🧴", drops: "💧", patch: "🩹", other: "📦",
+// Color-coded categories (like real medicine cabinets)
+const CATEGORY_COLORS: Record<string, { bg: string; border: string; icon: string }> = {
+  "Pain Relief":      { bg: "bg-red-50 dark:bg-red-900/15",      border: "border-red-200 dark:border-red-800/40",      icon: "text-red-500" },
+  "Antibiotic":       { bg: "bg-amber-50 dark:bg-amber-900/15",  border: "border-amber-200 dark:border-amber-800/40",  icon: "text-amber-500" },
+  "Cardiovascular":   { bg: "bg-rose-50 dark:bg-rose-900/15",    border: "border-rose-200 dark:border-rose-800/40",    icon: "text-rose-500" },
+  "Diabetes":         { bg: "bg-blue-50 dark:bg-blue-900/15",    border: "border-blue-200 dark:border-blue-800/40",    icon: "text-blue-500" },
+  "Supplement":       { bg: "bg-green-50 dark:bg-green-900/15",  border: "border-green-200 dark:border-green-800/40",  icon: "text-green-500" },
+  "Mental Health":    { bg: "bg-purple-50 dark:bg-purple-900/15", border: "border-purple-200 dark:border-purple-800/40", icon: "text-purple-500" },
+  "Respiratory":      { bg: "bg-sky-50 dark:bg-sky-900/15",      border: "border-sky-200 dark:border-sky-800/40",      icon: "text-sky-500" },
+  "Allergy":          { bg: "bg-orange-50 dark:bg-orange-900/15", border: "border-orange-200 dark:border-orange-800/40", icon: "text-orange-500" },
+  "Gastrointestinal": { bg: "bg-teal-50 dark:bg-teal-900/15",   border: "border-teal-200 dark:border-teal-800/40",   icon: "text-teal-500" },
+  "Thyroid":          { bg: "bg-indigo-50 dark:bg-indigo-900/15", border: "border-indigo-200 dark:border-indigo-800/40", icon: "text-indigo-500" },
 };
 
 export function MyMedicinesView({
@@ -182,75 +191,79 @@ export function MyMedicinesView({
   const selected = selectedId ? medicines.find((m) => m.id === selectedId) : null;
 
   return (
-    <div className="flex-1 flex overflow-hidden">
-      {/* Main content */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-mobile-nav scroll-touch">
-        <div className="max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-5">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-mobile-nav scroll-touch">
+      <div className="max-w-2xl mx-auto">
+        {/* Header — stacks on mobile, inline on desktop */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-ink-base">My Medicines</h2>
-              <p className="text-sm text-ink-muted mt-0.5">{medicines.length} items in your inventory</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-ink-base">{t("medicines_title", language)}</h2>
+              <p className="text-sm text-ink-muted mt-0.5">{medicines.length} {t("medicines_items", language)}</p>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Hidden file input */}
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleScanCapture}
-                className="hidden"
-              />
-              {/* Scan button — prominent, mobile-first */}
-              <button
-                onClick={handleOpenScanner}
-                disabled={scanner.scanning}
-                className="group flex items-center gap-2 px-4 py-2.5 bg-surface-1 border-2 border-brand-500/30 text-brand-600 rounded-xl font-bold text-sm hover:border-brand-500/60 hover:bg-brand-500/5 active:scale-95 transition-all disabled:opacity-50"
-              >
-                <div className="relative">
-                  <Camera size={18} className="transition-transform group-hover:scale-110" />
-                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-success-500 rounded-full animate-pulse" />
-                </div>
-                <span className="hidden sm:inline">Scan Label</span>
-                <span className="sm:hidden">Scan</span>
-              </button>
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-95 transition-all"
-              >
-                <Plus size={16} /> Add
-              </button>
-            </div>
+            {/* Hidden file input for camera */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleScanCapture}
+              className="hidden"
+            />
           </div>
 
-          {/* Search + Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-5">
-            <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search medicines..."
-                className="w-full bg-surface-1 border border-line/60 text-ink-base rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-              />
-            </div>
-            <div className="flex gap-1.5 overflow-x-auto">
-              {(["all", "active", "expiring", "expired", "low"] as FilterTab[]).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                    filter === f
-                      ? "bg-brand-500 text-white"
-                      : "bg-surface-2 text-ink-muted hover:text-ink-base"
-                  }`}
-                >
-                  {f === "all" ? "All" : f === "low" ? "Low Stock" : f.charAt(0).toUpperCase() + f.slice(1)}
-                </button>
-              ))}
-            </div>
+          {/* Action buttons — full width on small mobile, inline on larger */}
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={handleOpenScanner}
+              disabled={scanner.scanning}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-surface-1 border-2 border-brand-500/30 text-brand-600 rounded-xl font-bold text-sm hover:border-brand-500/60 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              <Camera size={18} />
+              <span>{t("scanner_scan_label", language)}</span>
+            </button>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all"
+            >
+              <Plus size={16} /> {t("common_add", language)}
+            </button>
           </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-3">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("contacts_search", language).replace("contacts", "medicines")}
+            className="w-full bg-surface-1 border border-line/60 text-ink-base rounded-xl pl-10 pr-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+          />
+        </div>
+
+        {/* Filter pills — scrollable, large touch targets */}
+        <div className="flex gap-2 overflow-x-auto pb-1 mb-4 -mx-1 px-1 scroll-touch">
+          {(["all", "active", "expiring", "expired", "low"] as FilterTab[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                filter === f
+                  ? f === "expired" ? "bg-danger-500 text-white"
+                  : f === "expiring" ? "bg-warning-500 text-white"
+                  : f === "low" ? "bg-orange-500 text-white"
+                  : "bg-brand-500 text-white"
+                  : "bg-surface-2 text-ink-muted hover:text-ink-base"
+              }`}
+            >
+              {f === "all" ? t("contacts_filter_all", language)
+                : f === "low" ? t("medicines_stock_low", language)
+                : f === "active" ? t("medicines_status_active", language)
+                : f === "expiring" ? t("medicines_status_expiring", language)
+                : t("medicines_status_expired", language)}
+            </button>
+          ))}
+        </div>
 
           {/* AI Insights */}
           {insights.length > 0 && (
@@ -274,55 +287,134 @@ export function MyMedicinesView({
             </div>
           )}
 
-          {/* Medicine grid */}
+          {/* Medicine list — large cards, senior-friendly */}
           {filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <Package size={32} className="mx-auto text-ink-subtle mb-3" />
-              <h3 className="font-bold text-ink-base text-lg mb-1">
-                {medicines.length === 0 ? "No medicines yet" : "No matches"}
+            <div className="text-center py-12">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-brand-500/10 flex items-center justify-center">
+                <Pill size={36} className="text-brand-500" />
+              </div>
+              <h3 className="font-bold text-ink-base text-xl mb-2">
+                {medicines.length === 0 ? t("medicines_no_medicines", language) : t("medicines_no_matches", language)}
               </h3>
-              <p className="text-sm text-ink-muted">
+              <p className="text-base text-ink-muted max-w-[300px] mx-auto">
                 {medicines.length === 0
-                  ? "Add your first medicine to start tracking"
-                  : "Try a different search or filter"}
+                  ? t("medicines_add_first", language)
+                  : t("medicines_try_different", language)}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="space-y-3">
               {filtered.map((med) => {
                 const status = getMedicineStatus(med);
                 const stock = getStockState(med);
-                const colors = STATUS_COLORS[status];
-                const stockInfo = STOCK_COLORS[stock];
-                const emoji = FORM_EMOJI[med.form] || "📦";
+                const statusColors = STATUS_COLORS[status];
+                const catColor = CATEGORY_COLORS[med.category || ""] || { bg: "bg-surface-1", border: "border-line/60", icon: "text-ink-muted" };
+                const isSelected = selectedId === med.id;
+
                 return (
                   <button
                     key={med.id}
-                    onClick={() => setSelectedId(med.id)}
-                    className={`p-4 rounded-2xl border text-left transition-all hover:-translate-y-0.5 hover:shadow-card ${
-                      selectedId === med.id
+                    onClick={() => setSelectedId(isSelected ? null : med.id)}
+                    className={`w-full text-left rounded-2xl border-2 transition-all active:scale-[0.99] ${
+                      isSelected
                         ? "border-brand-500 shadow-glow"
-                        : `bg-surface-1 ${colors.border} shadow-soft`
-                    }`}
+                        : `${catColor.border} shadow-soft`
+                    } ${catColor.bg}`}
                   >
-                    <span className="text-2xl block mb-2">{emoji}</span>
-                    <span className="font-bold text-sm text-ink-base block truncate">{med.name}</span>
-                    <span className="text-xs text-ink-muted block">{med.dose}</span>
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border}`}>
-                        {colors.label}
-                      </span>
-                    </div>
-                    {med.expiryDate && (
-                      <div className="flex items-center gap-1 mt-1.5 text-[10px] text-ink-subtle">
-                        <Clock size={10} />
-                        Exp: {new Date(med.expiryDate).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+                    {/* Main card content — large, readable */}
+                    <div className="p-4 flex items-center gap-4">
+                      {/* Icon — large, color-coded */}
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                        status === "expired" ? "bg-danger-500/15" : status === "expiring" ? "bg-warning-500/15" : "bg-white dark:bg-surface-2"
+                      }`}>
+                        <Pill size={28} className={
+                          status === "expired" ? "text-danger-500" : status === "expiring" ? "text-warning-500" : catColor.icon
+                        } />
                       </div>
-                    )}
-                    {stock !== "ok" && (
-                      <div className={`flex items-center gap-1 mt-1 text-[10px] font-semibold ${stockInfo.text}`}>
-                        <AlertTriangle size={10} />
-                        {stockInfo.label}
+
+                      {/* Text — large for readability */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-bold text-ink-base truncate leading-tight">{med.name}</h3>
+                        <p className="text-sm text-ink-muted mt-0.5">{med.dose} · {med.form}</p>
+
+                        {/* Status badges — clear, large text */}
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${statusColors.bg} ${statusColors.text} ${statusColors.border} border`}>
+                            {statusColors.label}
+                          </span>
+                          {stock !== "ok" && (
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full bg-danger-500/10 text-danger-500 border border-danger-500/30 flex items-center gap-1`}>
+                              <AlertTriangle size={11} />
+                              {STOCK_COLORS[stock].label}
+                            </span>
+                          )}
+                          {med.quantity > 0 && (
+                            <span className="text-xs font-semibold text-ink-muted bg-surface-2 px-2 py-1 rounded-full">
+                              Qty: {med.quantity}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Chevron */}
+                      <ChevronRight size={20} className={`text-ink-subtle flex-shrink-0 transition-transform ${isSelected ? "rotate-90" : ""}`} />
+                    </div>
+
+                    {/* Expanded detail — simple, clear */}
+                    {isSelected && (
+                      <div className="px-4 pb-4 pt-2 border-t border-line/30 space-y-3 animate-in fade-in duration-200">
+                        {/* Info rows — large, readable */}
+                        {med.brandName && (
+                          <InfoRow icon={Package} label="Brand" value={med.brandName} />
+                        )}
+                        {med.activeIngredient && (
+                          <InfoRow icon={Pill} label="Ingredient" value={med.activeIngredient} />
+                        )}
+                        {med.category && (
+                          <InfoRow icon={Box} label="Category" value={med.category} />
+                        )}
+                        {med.expiryDate && (
+                          <InfoRow icon={Clock} label="Expiry" value={new Date(med.expiryDate).toLocaleDateString(undefined, { month: "long", year: "numeric" })} />
+                        )}
+                        {med.notes && (
+                          <div className="p-3 bg-surface-2/50 rounded-xl">
+                            <p className="text-sm text-ink-base leading-relaxed">{med.notes}</p>
+                          </div>
+                        )}
+
+                        {/* Quantity adjuster — large buttons */}
+                        <div className="flex items-center gap-3 py-1">
+                          <span className="text-sm font-semibold text-ink-muted">Quantity:</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onUpdate(med.id, { quantity: Math.max(0, med.quantity - 1) }); }}
+                            className="w-10 h-10 rounded-xl bg-surface-2 border border-line/60 text-ink-base font-bold text-lg hover:bg-surface-3 flex items-center justify-center"
+                          >
+                            −
+                          </button>
+                          <span className="text-lg font-black text-ink-base w-8 text-center">{med.quantity}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onUpdate(med.id, { quantity: med.quantity + 1 }); }}
+                            className="w-10 h-10 rounded-xl bg-surface-2 border border-line/60 text-ink-base font-bold text-lg hover:bg-surface-3 flex items-center justify-center"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* Action buttons — large, clear labels */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onAddToSchedule(med); }}
+                            className="flex-1 py-3 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                          >
+                            <CalendarPlus size={16} /> Add to Schedule
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); if (confirm("Remove this medicine?")) onDelete(med.id); }}
+                            className="py-3 px-4 border-2 border-danger-500/30 text-danger-500 rounded-xl font-bold text-sm hover:bg-danger-500/10 active:scale-[0.98] transition-all flex items-center justify-center gap-1"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
                     )}
                   </button>
@@ -331,20 +423,8 @@ export function MyMedicinesView({
             </div>
           )}
         </div>
-      </div>
 
-      {/* Detail side panel (desktop) */}
-      {selected && (
-        <DetailPanel
-          med={selected}
-          onClose={() => setSelectedId(null)}
-          onDelete={() => { onDelete(selected.id); setSelectedId(null); }}
-          onUpdate={(patch) => onUpdate(selected.id, patch)}
-          onAddToSchedule={() => onAddToSchedule(selected)}
-        />
-      )}
-
-      {/* Add form modal */}
+        {/* Add form modal */}
       {showAddForm && (
         <AddMedicineModal
           onAdd={(med) => { onAdd(med); setShowAddForm(false); }}
@@ -493,52 +573,19 @@ export function MyMedicinesView({
                 </div>
               )}
 
-              {/* STEP 4: Success — show extracted data */}
+              {/* STEP 4: Success — EDITABLE fields for review + correction */}
               {!scanner.scanning && scanner.result?.success && scanner.result.medicine && (
-                <div className="p-5">
-                  {/* Success header with mini preview */}
-                  <div className="flex items-start gap-3 mb-4">
-                    {capturedImage && (
-                      <img src={capturedImage} alt="Scanned" className="w-14 h-14 rounded-xl object-cover border-2 border-success-500/40 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <CheckCircle2 size={14} className="text-success-500 flex-shrink-0" />
-                        <span className="text-xs font-bold text-success-600 uppercase tracking-wider">Detected</span>
-                      </div>
-                      <h4 className="font-bold text-ink-base text-lg leading-tight truncate">{scanner.result.medicine.name}</h4>
-                      {scanner.result.medicine.brandName && (
-                        <p className="text-xs text-ink-muted truncate">{scanner.result.medicine.brandName}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Data fields */}
-                  <div className="bg-surface-0 rounded-xl border border-line/40 divide-y divide-line/30 mb-4">
-                    <ScanField label="Dose" value={scanner.result.medicine.dose} />
-                    <ScanField label="Form" value={scanner.result.medicine.form} />
-                    {scanner.result.medicine.activeIngredient && <ScanField label="Ingredient" value={scanner.result.medicine.activeIngredient} />}
-                    {scanner.result.medicine.category && <ScanField label="Category" value={scanner.result.medicine.category} />}
-                    {scanner.result.medicine.expiryDate && <ScanField label="Expiry" value={scanner.result.medicine.expiryDate} />}
-                    {scanner.result.medicine.notes && <ScanField label="Notes" value={scanner.result.medicine.notes} />}
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleAddScanned}
-                      className="flex-1 py-3 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                    >
-                      <Plus size={16} /> Add to Medicines
-                    </button>
-                    <button
-                      onClick={() => { scanner.reset(); setCapturedImage(null); cameraInputRef.current?.click(); }}
-                      className="px-4 py-3 bg-surface-2 text-ink-muted rounded-xl font-semibold text-sm hover:bg-surface-3 active:scale-[0.98] transition-all"
-                    >
-                      Rescan
-                    </button>
-                  </div>
-                </div>
+                <ScanResultEditor
+                  medicine={scanner.result.medicine}
+                  capturedImage={capturedImage}
+                  onSave={(edited) => {
+                    onAdd(edited);
+                    scanner.reset();
+                    setCapturedImage(null);
+                    setShowScanner(false);
+                  }}
+                  onRescan={() => { scanner.reset(); setCapturedImage(null); cameraInputRef.current?.click(); }}
+                />
               )}
             </div>
           </div>
@@ -549,121 +596,11 @@ export function MyMedicinesView({
 }
 
 // ============================================================
-// Detail side panel
+// Add medicine modal
 // ============================================================
+// (DetailPanel removed — replaced by inline expandable cards above)
+// (DetailRow removed — replaced by InfoRow component)
 
-function DetailPanel({
-  med,
-  onClose,
-  onDelete,
-  onUpdate,
-  onAddToSchedule,
-}: {
-  med: MedicineItem;
-  onClose: () => void;
-  onDelete: () => void;
-  onUpdate: (patch: Partial<MedicineItem>) => void;
-  onAddToSchedule: () => void;
-}) {
-  const status = getMedicineStatus(med);
-  const stock = getStockState(med);
-  const colors = STATUS_COLORS[status];
-  const emoji = FORM_EMOJI[med.form] || "📦";
-
-  return (
-    <div className="hidden lg:flex w-80 flex-col bg-surface-1 border-l border-line/60 overflow-y-auto">
-      <div className="p-5 flex-1">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-3xl">{emoji}</span>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-ink-subtle hover:text-ink-base hover:bg-surface-2">
-            <X size={16} />
-          </button>
-        </div>
-
-        <h3 className="text-xl font-bold text-ink-base mb-1">{med.name}</h3>
-        {med.brandName && <p className="text-sm text-ink-muted mb-3">{med.brandName}</p>}
-
-        <span className={`inline-flex text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${colors.bg} ${colors.text} ${colors.border}`}>
-          {colors.label}
-        </span>
-
-        <div className="mt-5 space-y-3">
-          <DetailRow label="Dose" value={med.dose} icon={Pill} />
-          <DetailRow label="Form" value={med.form} icon={Box} />
-          <DetailRow label="Quantity" value={`${med.quantity} ${med.form === "syrup" ? "mL" : "units"}`} icon={Package} />
-          {med.category && <DetailRow label="Category" value={med.category} icon={Box} />}
-          {med.activeIngredient && <DetailRow label="Active ingredient" value={med.activeIngredient} icon={Pill} />}
-          {med.expiryDate && (
-            <DetailRow
-              label="Expiry date"
-              value={new Date(med.expiryDate).toLocaleDateString()}
-              icon={Clock}
-            />
-          )}
-          {med.refillDate && (
-            <DetailRow
-              label="Next refill"
-              value={new Date(med.refillDate).toLocaleDateString()}
-              icon={CalendarPlus}
-            />
-          )}
-          {med.notes && (
-            <div className="pt-2 border-t border-line/40">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-subtle block mb-1">Notes</span>
-              <p className="text-sm text-ink-base leading-relaxed">{med.notes}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Quantity adjuster */}
-        <div className="mt-5 flex items-center gap-2">
-          <span className="text-xs font-semibold text-ink-muted">Qty:</span>
-          <button
-            onClick={() => onUpdate({ quantity: Math.max(0, med.quantity - 1) })}
-            className="w-8 h-8 rounded-lg bg-surface-2 border border-line/60 text-ink-base font-bold text-sm hover:bg-surface-3"
-          >
-            −
-          </button>
-          <span className="text-sm font-bold text-ink-base w-10 text-center">{med.quantity}</span>
-          <button
-            onClick={() => onUpdate({ quantity: med.quantity + 1 })}
-            className="w-8 h-8 rounded-lg bg-surface-2 border border-line/60 text-ink-base font-bold text-sm hover:bg-surface-3"
-          >
-            +
-          </button>
-        </div>
-
-        {/* Actions */}
-        <div className="mt-6 space-y-2">
-          <button
-            onClick={onAddToSchedule}
-            className="w-full py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 transition-all flex items-center justify-center gap-2"
-          >
-            <CalendarPlus size={15} /> Add to Schedule
-          </button>
-          <button
-            onClick={onDelete}
-            className="w-full py-2.5 border-2 border-danger-500/40 text-danger-500 rounded-xl font-bold text-sm hover:bg-danger-500/10 transition-all flex items-center justify-center gap-2"
-          >
-            <Trash2 size={15} /> Remove
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DetailRow({ label, value, icon: Icon }: { label: string; value: string; icon: any }) {
-  return (
-    <div className="flex items-center gap-3">
-      <Icon size={14} className="text-ink-subtle flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-subtle block">{label}</span>
-        <span className="text-sm text-ink-base">{value}</span>
-      </div>
-    </div>
-  );
-}
 
 // ============================================================
 // Add medicine modal
@@ -801,11 +738,152 @@ function Field({
   );
 }
 
+/**
+ * Editable scan result — lets users review + correct OCR before saving.
+ * Industry pattern: CamScanner, Adobe Scan, Google Lens all let you edit.
+ */
+function ScanResultEditor({
+  medicine,
+  capturedImage,
+  onSave,
+  onRescan,
+}: {
+  medicine: Omit<MedicineItem, "id" | "createdAt">;
+  capturedImage: string | null;
+  onSave: (edited: Omit<MedicineItem, "id" | "createdAt">) => void;
+  onRescan: () => void;
+}) {
+  const [name, setName] = useState(medicine.name || "");
+  const [dose, setDose] = useState(medicine.dose || "");
+  const [form, setForm] = useState<MedicineForm>(medicine.form || "tablet");
+  const [brandName, setBrandName] = useState(medicine.brandName || "");
+  const [activeIngredient, setActiveIngredient] = useState(medicine.activeIngredient || "");
+  const [category, setCategory] = useState(medicine.category || "");
+  const [expiryDate, setExpiryDate] = useState(medicine.expiryDate || "");
+  const [quantity, setQuantity] = useState("1");
+  const [notes, setNotes] = useState(medicine.notes || "");
+
+  const handleSave = () => {
+    if (!name.trim() || !dose.trim()) return;
+    onSave({
+      name: name.trim(),
+      dose: dose.trim(),
+      form,
+      brandName: brandName.trim() || undefined,
+      activeIngredient: activeIngredient.trim() || undefined,
+      category: category || undefined,
+      quantity: parseInt(quantity, 10) || 1,
+      expiryDate: expiryDate || undefined,
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  return (
+    <div className="p-5">
+      {/* Success header */}
+      <div className="flex items-start gap-3 mb-4">
+        {capturedImage && (
+          <img src={capturedImage} alt="Scanned" className="w-12 h-12 rounded-xl object-cover border-2 border-success-500/40 flex-shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <CheckCircle2 size={14} className="text-success-500 flex-shrink-0" />
+            <span className="text-xs font-bold text-success-600 uppercase tracking-wider">{t("scanner_detected", "en")}</span>
+          </div>
+          <p className="text-[11px] text-ink-muted">Review and correct any fields below, then save.</p>
+        </div>
+      </div>
+
+      {/* Editable fields */}
+      <div className="space-y-3 mb-4">
+        <ScanEditField label="Name *" value={name} onChange={setName} />
+        <ScanEditField label="Dose *" value={dose} onChange={setDose} placeholder="e.g. 500mg" />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1">Form</label>
+            <select
+              value={form}
+              onChange={(e) => setForm(e.target.value as MedicineForm)}
+              className="w-full bg-surface-0 border border-line/60 text-ink-base rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+            >
+              {(["tablet", "capsule", "syrup", "inhaler", "injection", "cream", "drops", "patch", "other"] as MedicineForm[]).map((f) => (
+                <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+          <ScanEditField label="Quantity" value={quantity} onChange={setQuantity} type="number" />
+        </div>
+        <ScanEditField label="Brand" value={brandName} onChange={setBrandName} />
+        <ScanEditField label="Active ingredient" value={activeIngredient} onChange={setActiveIngredient} />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full bg-surface-0 border border-line/60 text-ink-base rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+            >
+              <option value="">Select...</option>
+              {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <ScanEditField label="Expiry" value={expiryDate} onChange={setExpiryDate} placeholder="YYYY-MM" />
+        </div>
+        <ScanEditField label="Notes" value={notes} onChange={setNotes} placeholder="Dosage instructions, warnings..." />
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          disabled={!name.trim() || !dose.trim()}
+          className="flex-1 py-3 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          <Plus size={16} /> {t("scanner_add_to_medicines", "en")}
+        </button>
+        <button
+          onClick={onRescan}
+          className="px-4 py-3 bg-surface-2 text-ink-muted rounded-xl font-semibold text-sm hover:bg-surface-3 active:scale-[0.98] transition-all"
+        >
+          {t("scanner_rescan", "en")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ScanEditField({ label, value, onChange, placeholder, type = "text" }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
+}) {
+  return (
+    <div>
+      <label className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider block mb-1">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full bg-surface-0 border border-line/60 text-ink-base rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+      />
+    </div>
+  );
+}
+
 function ScanField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between px-3.5 py-2.5">
       <span className="text-[11px] text-ink-muted font-semibold uppercase tracking-wider flex-shrink-0">{label}</span>
       <span className="text-sm text-ink-base font-medium text-right ml-3 truncate">{value}</span>
+    </div>
+  );
+}
+
+function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3 py-1.5">
+      <Icon size={16} className="text-ink-subtle flex-shrink-0" />
+      <span className="text-xs font-semibold text-ink-muted w-20 flex-shrink-0">{label}</span>
+      <span className="text-sm text-ink-base">{value}</span>
     </div>
   );
 }
