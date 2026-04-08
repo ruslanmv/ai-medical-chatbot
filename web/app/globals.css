@@ -50,7 +50,18 @@
   }
 
   html {
-    font-family: var(--font-sans), Inter, ui-sans-serif, system-ui, -apple-system,
+    font-family: var(--font-sans), Inter,
+      /* CJK fallbacks (Chinese, Japanese, Korean) */
+      "Noto Sans CJK SC", "PingFang SC", "Hiragino Sans", "MS Gothic",
+      "Malgun Gothic", "Apple SD Gothic Neo",
+      /* Arabic */
+      "Noto Sans Arabic", "Geeza Pro", "Tahoma",
+      /* Devanagari (Hindi) */
+      "Noto Sans Devanagari",
+      /* Thai */
+      "Noto Sans Thai",
+      /* System fallbacks */
+      ui-sans-serif, system-ui, -apple-system,
       "Segoe UI", Roboto, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
@@ -226,8 +237,40 @@
   padding-right: env(safe-area-inset-right, 0px);
 }
 
-/* RTL support for Arabic */
+/* ============================================================
+ * RTL (Right-to-Left) support for Arabic (ar) and Urdu (ur)
+ * Set via document.documentElement.dir = "rtl" in MedOSApp.tsx
+ * ============================================================ */
+[dir="rtl"] {
+  /* Base direction */
+  direction: rtl;
+  text-align: right;
+}
+
+/* Flex containers reverse in RTL */
 [dir="rtl"] .flex { direction: rtl; }
+
+/* Fix drawer slide direction (left → right for RTL) */
+[dir="rtl"] aside { left: auto; right: 0; }
+[dir="rtl"] .-translate-x-full { transform: translateX(100%); }
+[dir="rtl"] .translate-x-0 { transform: translateX(0); }
+
+/* Flip margins and paddings for common patterns */
+[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .mr-auto { margin-right: 0; margin-left: auto; }
+[dir="rtl"] .text-left { text-align: right; }
+[dir="rtl"] .text-right { text-align: left; }
+
+/* Fix icon + text alignment in nav items */
+[dir="rtl"] .gap-2 { gap: 0.5rem; }
+[dir="rtl"] .gap-3 { gap: 0.75rem; }
+
+/* Scrollbar on left side for RTL */
+[dir="rtl"] ::-webkit-scrollbar { direction: rtl; }
+
+/* Fix rounded corners (swap left/right) */
+[dir="rtl"] .rounded-tl-sm { border-top-left-radius: 0; border-top-right-radius: 0.125rem; }
+[dir="rtl"] .rounded-tr-sm { border-top-right-radius: 0; border-top-left-radius: 0.125rem; }
 
 /* Large tap targets */
 @media (pointer: coarse) {
@@ -263,6 +306,12 @@
   }
 }
 
+/* CJK word-break — prevents overflow for Chinese/Japanese/Korean text */
+:lang(zh), :lang(ja), :lang(ko) {
+  word-break: break-all;
+  overflow-wrap: break-word;
+}
+
 /* iOS momentum scrolling */
 .scroll-touch {
   -webkit-overflow-scrolling: touch;
@@ -288,4 +337,42 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ============================================================
+ * Print styles — professional PDF export via window.print()
+ * Hides navigation, maximizes content, clean typography
+ * ============================================================ */
+@media print {
+  /* Hide navigation, headers, footers */
+  aside, nav, header, footer,
+  .safe-area-bottom, .pb-mobile-nav,
+  button, [role="navigation"],
+  .md\:hidden, .lg\:flex { display: none !important; }
+
+  /* Full width, no sidebar */
+  body { background: white !important; color: black !important; font-size: 12pt; }
+  .flex-1 { width: 100% !important; max-width: 100% !important; }
+  .overflow-hidden { overflow: visible !important; }
+  .overflow-y-auto { overflow: visible !important; }
+
+  /* Clean card borders for print */
+  .bg-surface-1, .bg-surface-0 { background: white !important; }
+  .border { border-color: #ddd !important; }
+  .shadow-soft, .shadow-card, .shadow-glow { box-shadow: none !important; }
+  .rounded-2xl { border-radius: 8px !important; }
+
+  /* Keep colors readable */
+  .text-ink-base { color: #111 !important; }
+  .text-ink-muted { color: #555 !important; }
+  .text-brand-500, .text-brand-600 { color: #2563eb !important; }
+  .text-danger-500 { color: #dc2626 !important; }
+  .text-success-500 { color: #16a34a !important; }
+
+  /* Page breaks */
+  .stat-card, .rounded-2xl { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+
+  /* Print header */
+  @page { margin: 1.5cm; size: A4; }
 }

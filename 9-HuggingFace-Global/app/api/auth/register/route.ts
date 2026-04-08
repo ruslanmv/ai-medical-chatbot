@@ -3,6 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { getDb, genId, genToken, genVerificationCode, codeExpiry, sessionExpiry } from '@/lib/db';
 import { sendVerificationEmail } from '@/lib/email';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const Schema = z.object({
   email: z.string().email().max(255),
@@ -11,6 +12,16 @@ const Schema = z.object({
 });
 
 export async function POST(req: Request) {
+  // Rate limit: 5 registrations per minute per IP
+  const ip = getClientIp(req);
+  const rl = checkRateLimit(`register:${ip}`, 5, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many registration attempts. Please wait.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } },
+    );
+  }
+
   try {
     const body = await req.json();
     const { email, password, displayName } = Schema.parse(body);

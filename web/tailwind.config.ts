@@ -12,6 +12,16 @@ export default {
         sans: [
           "var(--font-sans)",
           "Inter",
+          /* CJK (Chinese, Japanese, Korean) */
+          "Noto Sans CJK SC",
+          "PingFang SC",
+          "Hiragino Sans",
+          "Apple SD Gothic Neo",
+          "Malgun Gothic",
+          /* Arabic + Devanagari */
+          "Noto Sans Arabic",
+          "Noto Sans Devanagari",
+          /* System fallbacks */
           "ui-sans-serif",
           "system-ui",
           "-apple-system",

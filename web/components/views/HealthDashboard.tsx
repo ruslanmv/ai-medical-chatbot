@@ -11,6 +11,7 @@ import {
   Flame,
   Clock,
   Download,
+  MapPin,
 } from "lucide-react";
 import {
   VITAL_META,
@@ -127,6 +128,21 @@ export function HealthDashboard({
             accent="brand"
           />
         </div>
+
+        {/* Find Nearby — quick access for mobile users */}
+        <button
+          onClick={() => onNavigate("nearby")}
+          className="w-full flex items-center gap-3 p-4 mb-6 bg-surface-1 border border-line/60 rounded-2xl shadow-soft hover:border-brand-500/40 transition-all active:scale-[0.98] text-left"
+        >
+          <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center flex-shrink-0">
+            <MapPin size={18} className="text-brand-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-bold text-ink-base block">Find Nearby</span>
+            <span className="text-xs text-ink-muted">Pharmacies and doctors near you</span>
+          </div>
+          <ChevronRight size={16} className="text-ink-subtle flex-shrink-0" />
+        </button>
 
         {/* Today's medications */}
         {todayMedSlots.length > 0 && (

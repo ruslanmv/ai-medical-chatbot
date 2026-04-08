@@ -16,6 +16,7 @@ function buildSyncPayload(): Array<{ id: string; type: string; data: any }> {
   for (const r of hs.loadRecords()) items.push({ id: r.id, type: "record", data: r });
   for (const m of hs.loadMedicines()) items.push({ id: m.id, type: "medicine", data: m });
   for (const c of hs.loadHistory()) items.push({ id: c.id, type: "conversation", data: c });
+  for (const c of hs.loadContacts()) items.push({ id: c.id, type: "contact", data: c });
   // EHR profile — stored as a single record with a fixed ID per user
   const ehr = hs.loadEHRProfile();
   if (ehr.completedAt) {
@@ -42,6 +43,7 @@ export function useHealthStore(authToken?: string | null) {
   const [vitals, setVitals] = useState<hs.VitalReading[]>([]);
   const [records, setRecords] = useState<hs.HealthRecord[]>([]);
   const [medicines, setMedicines] = useState<hs.MedicineItem[]>([]);
+  const [contacts, setContacts] = useState<hs.MedContact[]>([]);
   const [ehrProfile, setEhrProfile] = useState<hs.EHRProfile>({});
   const [history, setHistory] = useState<hs.ConversationSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -53,6 +55,7 @@ export function useHealthStore(authToken?: string | null) {
     setVitals(hs.loadVitals());
     setRecords(hs.loadRecords());
     setMedicines(hs.loadMedicines());
+    setContacts(hs.loadContacts());
     setEhrProfile(hs.loadEHRProfile());
     setHistory(hs.loadHistory());
   }, []);
@@ -245,6 +248,33 @@ export function useHealthStore(authToken?: string | null) {
     [refresh, syncDelete],
   );
 
+  // --- Contacts (address book) ---
+  const addContact = useCallback(
+    (contact: Omit<hs.MedContact, "id" | "createdAt">) => {
+      const saved = hs.saveContact(contact);
+      refresh();
+      syncItem(saved.id, "contact", saved);
+    },
+    [refresh, syncItem],
+  );
+  const editContact = useCallback(
+    (id: string, patch: Partial<hs.MedContact>) => {
+      hs.updateContact(id, patch);
+      refresh();
+      const updated = hs.loadContacts().find((c) => c.id === id);
+      if (updated) syncItem(id, "contact", updated);
+    },
+    [refresh, syncItem],
+  );
+  const deleteContact = useCallback(
+    (id: string) => {
+      hs.removeContact(id);
+      refresh();
+      syncDelete(id);
+    },
+    [refresh, syncDelete],
+  );
+
   // --- EHR Profile ---
   const saveEHR = useCallback(
     (profile: hs.EHRProfile) => {
@@ -287,6 +317,7 @@ export function useHealthStore(authToken?: string | null) {
     vitals,
     records,
     medicines,
+    contacts,
     ehrProfile,
     history,
     // Medication actions
@@ -311,6 +342,10 @@ export function useHealthStore(authToken?: string | null) {
     addMedicine,
     editMedicine,
     deleteMedicine,
+    // Contact actions
+    addContact,
+    editContact,
+    deleteContact,
     // EHR profile
     saveEHR,
     // History actions

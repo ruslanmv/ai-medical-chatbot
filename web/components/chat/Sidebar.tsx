@@ -22,6 +22,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Globe,
+  MapPin,
+  Contact,
   HelpCircle,
   Share2,
   Info,
@@ -53,7 +55,9 @@ export type NavView =
   | "ehr-wizard"
   | "my-medicines"
   | "share"
-  | "admin";
+  | "admin"
+  | "nearby"
+  | "contacts";
 
 interface SidebarProps {
   activeNav: NavView;
@@ -168,11 +172,13 @@ export function Sidebar({
           <NavItem icon={Calendar} label={t("nav_appointments", language)} active={activeNav === "appointments"} onClick={() => setActiveNav("appointments")} collapsed={collapsed} />
           <NavItem icon={Activity} label={t("nav_vitals", language)} active={activeNav === "vitals"} onClick={() => setActiveNav("vitals")} collapsed={collapsed} />
           <NavItem icon={FileText} label={t("nav_records", language)} active={activeNav === "records"} onClick={() => setActiveNav("records")} collapsed={collapsed} />
+          <NavItem icon={Contact} label="Contacts" active={activeNav === "contacts"} onClick={() => setActiveNav("contacts")} collapsed={collapsed} />
 
           {!collapsed && <SectionLabel>{t("nav_tools", language)}</SectionLabel>}
           {collapsed && <div className="my-2 border-t border-line/50" />}
 
           <NavItem icon={AlertTriangle} label={t("nav_emergency", language)} active={activeNav === "emergency"} onClick={() => setActiveNav("emergency")} urgent collapsed={collapsed} />
+          <NavItem icon={MapPin} label="Nearby" active={activeNav === "nearby"} onClick={() => setActiveNav("nearby")} collapsed={collapsed} />
           <NavItem icon={BookOpen} label={t("nav_topics", language)} active={activeNav === "topics"} onClick={() => setActiveNav("topics")} collapsed={collapsed} />
           <NavItem icon={Share2} label="Share" active={activeNav === "share"} onClick={() => setActiveNav("share")} collapsed={collapsed} />
           <NavItem icon={Clock} label={t("nav_history", language)} active={activeNav === "history"} onClick={() => setActiveNav("history")} collapsed={collapsed} />
@@ -300,24 +306,9 @@ export function Sidebar({
         </div>
       </aside>
 
-      {/* Mobile bottom navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-1/95 backdrop-blur-xl border-t border-line/60 flex items-center justify-around px-1 z-50 safe-area-bottom">
-        <MobileNavButton icon={Home} label={t("nav_home", language)} active={activeNav === "home"} onClick={() => setActiveNav("home")} />
-        <MobileNavButton icon={MessageCircle} label={t("nav_ask", language)} active={activeNav === "chat"} onClick={() => setActiveNav("chat")} />
-        <MobileNavButton
-          icon={Heart}
-          label={t("nav_health", language)}
-          active={["health-dashboard", "medications", "appointments", "vitals", "records", "schedule", "my-medicines"].includes(activeNav)}
-          onClick={() => setActiveNav("health-dashboard")}
-        />
-        <MobileNavButton
-          icon={User2}
-          label={isAuthenticated ? (username ? username.split(/[\s@]/)[0].slice(0, 8) : t("nav_profile", language)) : t("nav_login", language)}
-          active={activeNav === "profile" || activeNav === "login"}
-          onClick={() => setActiveNav(isAuthenticated ? "profile" : "login")}
-        />
-        <MobileNavButton icon={Settings} label={t("nav_settings", language)} active={activeNav === "settings"} onClick={() => setActiveNav("settings")} />
-      </div>
+      {/* Mobile bottom navigation — REMOVED.
+       * Mobile now uses AppDrawer (hamburger ☰ in header).
+       * This gives access to ALL features without the 5-tab limit. */}
       {/* About modal */}
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
     </>

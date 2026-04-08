@@ -13,7 +13,7 @@ export function DisclaimerBanner({ language }: DisclaimerBannerProps) {
       <div className="flex items-start gap-2">
         <AlertTriangle size={11} className="text-warning-500 mt-0.5 flex-shrink-0" />
         <p className="text-[10px] text-ink-muted leading-relaxed">
-          {t("ask_disclaimer", language)}
+          {t("disclaimer_full", language)}
         </p>
       </div>
     </div>
