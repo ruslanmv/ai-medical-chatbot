@@ -115,6 +115,33 @@ export interface ConversationSummary {
 }
 
 // ============================================================
+// Contacts — doctors, pharmacies, drugstores address book
+// ============================================================
+
+export type ContactType = 'doctor' | 'pharmacy' | 'drugstore' | 'hospital' | 'clinic' | 'other';
+
+export interface MedContact {
+  id: string;
+  name: string;
+  type: ContactType;
+  specialty?: string;    // e.g. "Cardiologist", "General Practitioner"
+  phone?: string;
+  email?: string;
+  address?: string;
+  postalCode?: string;
+  city?: string;
+  lat?: number;
+  lon?: number;
+  openingHours?: string;
+  notes?: string;
+  isFavorite?: boolean;
+  source?: string;       // e.g. "osm_overpass", "manual"
+  directionsUrl?: string;
+  mapsUrl?: string;
+  createdAt: string;
+}
+
+// ============================================================
 // EHR Profile — Electronic Health Record wizard data
 // ============================================================
 
@@ -345,6 +372,7 @@ const KEYS = {
   records: 'medos_records',
   history: 'medos_history',
   medicines: 'medos_medicines',
+  contacts: 'medos_contacts',
 } as const;
 
 // ============================================================
@@ -619,6 +647,44 @@ export function clearHistory(): void {
   save(KEYS.history, []);
 }
 
+// --- Contacts (address book) ---
+
+export function loadContacts(): MedContact[] {
+  return load<MedContact>(KEYS.contacts);
+}
+
+export function saveContact(contact: Omit<MedContact, 'id' | 'createdAt'>): MedContact {
+  const all = loadContacts();
+  const item: MedContact = { ...contact, id: genId(), createdAt: new Date().toISOString() };
+  all.push(item);
+  save(KEYS.contacts, all);
+  return item;
+}
+
+export function updateContact(id: string, patch: Partial<MedContact>): void {
+  const all = loadContacts().map((c) => c.id === id ? { ...c, ...patch } : c);
+  save(KEYS.contacts, all);
+}
+
+export function removeContact(id: string): void {
+  save(KEYS.contacts, loadContacts().filter((c) => c.id !== id));
+}
+
+/** Build a compact contacts context string for the AI chat. */
+export function buildContactsContext(): string {
+  const contacts = loadContacts();
+  if (contacts.length === 0) return '';
+  const lines = contacts.map((c) => {
+    const parts = [c.name];
+    if (c.type) parts.push(`(${c.type})`);
+    if (c.specialty) parts.push(c.specialty);
+    if (c.phone) parts.push(`tel:${c.phone}`);
+    if (c.address) parts.push(c.address);
+    return parts.join(' ');
+  });
+  return `\n[My contacts: ${lines.join('; ')}]`;
+}
+
 // ============================================================
 // Export all data as a single JSON object (for backup / sharing
 // with a doctor).
@@ -635,6 +701,7 @@ export interface HealthExport {
   medicines: MedicineItem[];
   history: ConversationSummary[];
   ehrProfile: EHRProfile;
+  contacts: MedContact[];
 }
 
 export function exportAllHealthData(): HealthExport {
@@ -649,6 +716,7 @@ export function exportAllHealthData(): HealthExport {
     medicines: loadMedicines(),
     history: loadHistory(),
     ehrProfile: loadEHRProfile(),
+    contacts: loadContacts(),
   };
 }
 

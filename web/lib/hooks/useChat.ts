@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { Provider, Preset } from "../types";
-import { buildPatientContext, buildMedicineInventoryContext } from "../health-store";
+import { buildPatientContext, buildMedicineInventoryContext, buildContactsContext } from "../health-store";
 
 export type ChatMessage = {
   id: number;
@@ -79,9 +79,14 @@ export function useChat() {
       setError(null);
 
       try {
+        // 45-second timeout — prevents infinite loading on cold starts
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 45000);
+
         const response = await fetch("/api/proxy/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             preset: options.preset,
             provider: options.provider,
@@ -96,11 +101,13 @@ export function useChat() {
               // every turn with repeated profile data.
               content:
                 i === 0 && m.role === "user"
-                  ? m.content + buildPatientContext() + buildMedicineInventoryContext()
+                  ? m.content + buildPatientContext() + buildMedicineInventoryContext() + buildContactsContext()
                   : m.content,
             })),
           }),
         });
+
+        clearTimeout(timeout);
 
         if (!response.ok) {
           throw new Error(`Request failed: ${response.statusText}`);
@@ -159,7 +166,10 @@ export function useChat() {
           }
         }
       } catch (err: any) {
-        const errorMessage = err?.message || "Failed to send message";
+        const errorMessage =
+          err?.name === "AbortError"
+            ? "Response took too long. The AI service may be starting up — please try again in a moment."
+            : err?.message || "Failed to send message";
         setError(errorMessage);
 
         setMessages((prev) => [

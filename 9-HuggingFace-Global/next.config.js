@@ -47,9 +47,23 @@ const nextConfig = {
         source: '/(.*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'X-Frame-Options', value: 'ALLOWALL' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com data:",
+              "img-src 'self' https: data: blob:",
+              "connect-src 'self' https://router.huggingface.co https://api-inference.huggingface.co https://overpass-api.de https://nominatim.openstreetmap.org https://*.hf.space wss:",
+              "frame-src 'self' https://www.openstreetmap.org",
+              "media-src 'self' blob:",
+              "worker-src 'self' blob:",
+            ].join('; '),
+          },
           {
             key: 'Permissions-Policy',
             value: 'microphone=(self), camera=(), geolocation=(self)',
