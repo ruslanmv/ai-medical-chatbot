@@ -1,0 +1,90 @@
+# =============================================================================
+# Deploy Medicine Scanner to HuggingFace Space (ruslanmv/Medicine-Scanner)
+# =============================================================================
+# Pushes the 11-Medicine-Scanner/ Gradio app to HF Space.
+# Uses Gradio SDK (not Docker) — HF manages the runtime.
+#
+# Required Repository Secrets:
+#   HF_TOKEN       - HuggingFace token with write + Spaces permissions
+#   HF_USERNAME    - HuggingFace username (e.g. ruslanmv)
+#   HF_TOKEN_INFERENCE - Token with "Make calls to Inference Providers" permission
+# =============================================================================
+name: Deploy Medicine Scanner to HF Space
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '11-Medicine-Scanner/**'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    name: Deploy Medicine Scanner
+    runs-on: ubuntu-latest
+    concurrency:
+      group: hf-deploy-scanner
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          test -n "${{ secrets.HF_TOKEN }}" || (echo "Missing HF_TOKEN" && exit 1)
+          test -n "${{ secrets.HF_USERNAME }}" || (echo "Missing HF_USERNAME" && exit 1)
+
+      - name: Build and deploy
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+        run: |
+          set -e
+          SPACE="${HF_USERNAME}/Medicine-Scanner"
+          REMOTE="https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${SPACE}"
+
+          echo "::group::Assemble deploy tree"
+          DEPLOY_DIR=$(mktemp -d)
+          cp 11-Medicine-Scanner/app.py "$DEPLOY_DIR/"
+          cp 11-Medicine-Scanner/scanner.py "$DEPLOY_DIR/"
+          cp 11-Medicine-Scanner/requirements.txt "$DEPLOY_DIR/"
+          cp 11-Medicine-Scanner/README.md "$DEPLOY_DIR/"
+          cp -r 11-Medicine-Scanner/examples "$DEPLOY_DIR/" 2>/dev/null || true
+          echo "Files: $(ls "$DEPLOY_DIR/" | wc -l)"
+          echo "::endgroup::"
+
+          echo "::group::Push to HF Space"
+          cd "$DEPLOY_DIR"
+          git init -b main
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy Medicine Scanner from ${GITHUB_SHA::8}"
+
+          for i in 1 2 3 4; do
+            if git push --force "$REMOTE" main 2>&1; then
+              echo "✓ Deployed: https://huggingface.co/spaces/${SPACE}"
+              exit 0
+            fi
+            echo "Retry $i/4 in $((i*2))s..."
+            sleep $((i*2))
+          done
+          echo "Push failed after 4 retries" && exit 1
+          echo "::endgroup::"
+
+      - name: Set HF_TOKEN_INFERENCE secret on Space
+        if: ${{ secrets.HF_TOKEN_INFERENCE != '' }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_TOKEN_INFERENCE: ${{ secrets.HF_TOKEN_INFERENCE }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+        run: |
+          pip install huggingface_hub --quiet
+          python3 -c "
+          from huggingface_hub import HfApi
+          import os
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          api.add_space_secret('${HF_USERNAME}/Medicine-Scanner', 'HF_TOKEN', os.environ['HF_TOKEN_INFERENCE'])
+          print('HF_TOKEN secret set on Medicine-Scanner Space')
+          "

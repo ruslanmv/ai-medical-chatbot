@@ -90,7 +90,7 @@ export function NearbyView({ language, onSaveContact }: NearbyViewProps) {
     }
   }, []);
 
-  /** Get user's GPS location */
+  /** Get user's GPS location + reverse geocode to show address */
   const getGPSLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setError("Geolocation not supported by your browser");
@@ -98,22 +98,43 @@ export function NearbyView({ language, onSaveContact }: NearbyViewProps) {
     }
     setLoading(true);
     setError(null);
+    setLocationName("Detecting your location...");
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLat(pos.coords.latitude);
-        setUserLon(pos.coords.longitude);
-        setLocationName("Current location");
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        setUserLat(lat);
+        setUserLon(lon);
+
+        // Reverse geocode to show a human-readable address
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=16`,
+            { headers: { "User-Agent": "MedOS/1.0" } }
+          );
+          const data = await res.json();
+          const addr = data.address || {};
+          // Build a short, readable location name
+          const parts = [
+            addr.road || addr.neighbourhood || addr.suburb,
+            addr.city || addr.town || addr.village || addr.county,
+          ].filter(Boolean);
+          setLocationName(parts.join(", ") || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+        } catch {
+          setLocationName(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+        }
         setLoading(false);
       },
       (err) => {
+        setLocationName("");
         setError(
           err.code === 1
-            ? "Location access denied. Type a city name or postal code instead."
+            ? "Location access denied. Please enable location in your browser settings, or type a city name."
             : "Could not get location. Type a city name instead."
         );
         setLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000 }
     );
   }, []);
 
@@ -135,37 +156,44 @@ export function NearbyView({ language, onSaveContact }: NearbyViewProps) {
     setResults([]);
     setSelectedId(null);
     setSearched(true);
-
-    // Wake check
-    try {
-      const h = await fetch(NEARBY_API, { signal: AbortSignal.timeout(5000) });
-      if (!h.ok) {
-        setWaking(true);
-        for (let i = 0; i < 18; i++) {
-          await new Promise((r) => setTimeout(r, 5000));
-          const r = await fetch(NEARBY_API, { signal: AbortSignal.timeout(5000) }).catch(() => null);
-          if (r?.ok) break;
-        }
-        setWaking(false);
-      }
-    } catch { setWaking(false); }
+    setWaking(false);
 
     try {
+      // Single POST request — the backend handles wake + search.
+      // Timeout of 60s covers HF Space cold start (~30s) + Overpass query (~10s).
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+
+      // Show "waking" status after 5s if still loading
+      const wakingTimer = setTimeout(() => setWaking(true), 5000);
+
       const res = await fetch(NEARBY_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({ lat, lon, radius_m: 5000, entity_type: entityType, limit: 20 }),
       });
+
+      clearTimeout(timeout);
+      clearTimeout(wakingTimer);
+      setWaking(false);
       const data = await res.json();
       if (data.results?.length > 0) {
         setResults(data.results);
+      } else if (data.error) {
+        setError(data.error);
       } else {
         setError("No pharmacies or doctors found nearby. Try a larger area or different location.");
       }
-    } catch {
-      setError("Search failed. Please try again.");
+    } catch (e: any) {
+      setError(
+        e?.name === "AbortError"
+          ? "Search timed out. The service may be starting up — please try again."
+          : "Search failed. Please try again."
+      );
     } finally {
       setLoading(false);
+      setWaking(false);
     }
   }, [entityType]);
 
@@ -231,12 +259,27 @@ export function NearbyView({ language, onSaveContact }: NearbyViewProps) {
             {loading && !waking ? t("nearby_detecting", language) : t("nearby_use_gps", language)}
           </button>
 
-          {/* Location status */}
-          {userLat !== null && userLon !== null && (
-            <div className="flex items-center gap-2 px-1 pt-1">
-              <div className="w-2 h-2 rounded-full bg-success-500 flex-shrink-0" />
-              <span className="text-xs text-ink-muted truncate">
-                {locationName || `${userLat.toFixed(4)}, ${userLon.toFixed(4)}`}
+          {/* Location status — self-speaking like Google Maps */}
+          {userLat !== null && userLon !== null && locationName && (
+            <div className="flex items-center gap-2.5 p-2.5 bg-success-500/5 border border-success-500/20 rounded-xl">
+              <div className="w-8 h-8 rounded-lg bg-success-500/10 flex items-center justify-center flex-shrink-0">
+                <Navigation size={14} className="text-success-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-semibold text-success-600 block">
+                  {t("nearby_location_set", language)}
+                </span>
+                <span className="text-[11px] text-ink-muted truncate block">
+                  {locationName}
+                </span>
+              </div>
+            </div>
+          )}
+          {loading && locationName === "Detecting your location..." && (
+            <div className="flex items-center gap-2.5 p-2.5 bg-brand-500/5 border border-brand-500/20 rounded-xl">
+              <Loader2 size={16} className="text-brand-500 animate-spin flex-shrink-0" />
+              <span className="text-xs text-brand-600 font-medium">
+                {t("nearby_detecting", language)}
               </span>
             </div>
           )}

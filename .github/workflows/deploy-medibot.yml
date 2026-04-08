@@ -1,0 +1,83 @@
+# =============================================================================
+# Deploy MedOS Main App to HuggingFace Space (ruslanmv/MediBot)
+# =============================================================================
+# Assembles frontend (web/) + backend (9-HuggingFace-Global/) into a single
+# deploy tree, rewrites API proxy paths, and force-pushes to HF Space.
+#
+# Required Repository Secrets:
+#   HF_TOKEN       - HuggingFace token with write + Spaces permissions
+#   HF_USERNAME    - HuggingFace username (e.g. ruslanmv)
+# =============================================================================
+name: Deploy MediBot to HF Space
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '9-HuggingFace-Global/**'
+      - 'web/**'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    name: Deploy MediBot
+    runs-on: ubuntu-latest
+    concurrency:
+      group: hf-deploy-medibot
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          test -n "${{ secrets.HF_TOKEN }}" || (echo "Missing HF_TOKEN" && exit 1)
+          test -n "${{ secrets.HF_USERNAME }}" || (echo "Missing HF_USERNAME" && exit 1)
+
+      - name: Build and deploy
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_USERNAME: ${{ secrets.HF_USERNAME }}
+        run: |
+          set -e
+          SPACE="${HF_USERNAME}/MediBot"
+          REMOTE="https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${SPACE}"
+
+          echo "::group::Assemble deploy tree"
+          bash 9-HuggingFace-Global/scripts/deploy-hf.sh 2>&1 || true
+
+          # The deploy script builds to /tmp/medos-hf-deploy
+          DEPLOY_DIR="/tmp/medos-hf-deploy"
+          if [ ! -d "$DEPLOY_DIR" ]; then
+            echo "Deploy script did not create $DEPLOY_DIR — running manually"
+            DEPLOY_DIR=$(mktemp -d)
+
+            # Copy backend
+            cp -r 9-HuggingFace-Global/* "$DEPLOY_DIR/"
+            cp 9-HuggingFace-Global/.env.example "$DEPLOY_DIR/" 2>/dev/null || true
+            rm -rf "$DEPLOY_DIR/node_modules" "$DEPLOY_DIR/.next" "$DEPLOY_DIR/Makefile" "$DEPLOY_DIR/scripts"
+
+            # Sync frontend
+            bash 9-HuggingFace-Global/scripts/sync-frontend.sh 2>/dev/null || true
+          fi
+          echo "::endgroup::"
+
+          echo "::group::Push to HF Space"
+          cd "$DEPLOY_DIR"
+          git init -b main
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy MediBot from ${GITHUB_SHA::8}"
+
+          for i in 1 2 3 4; do
+            if git push --force "$REMOTE" main 2>&1; then
+              echo "✓ Deployed: https://huggingface.co/spaces/${SPACE}"
+              exit 0
+            fi
+            echo "Retry $i/4 in $((i*2))s..."
+            sleep $((i*2))
+          done
+          echo "Push failed after 4 retries" && exit 1
+          echo "::endgroup::"

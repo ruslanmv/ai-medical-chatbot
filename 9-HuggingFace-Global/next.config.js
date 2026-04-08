@@ -47,7 +47,9 @@ const nextConfig = {
         source: '/(.*)',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          // Note: HF Spaces renders apps inside an iframe — SAMEORIGIN blocks it.
+          // Use CSP frame-ancestors instead (more flexible, same security).
+          // { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
@@ -60,13 +62,14 @@ const nextConfig = {
               "img-src 'self' https: data: blob:",
               "connect-src 'self' https://router.huggingface.co https://api-inference.huggingface.co https://overpass-api.de https://nominatim.openstreetmap.org https://*.hf.space wss:",
               "frame-src 'self' https://www.openstreetmap.org",
+              "frame-ancestors 'self' https://huggingface.co https://*.hf.space",
               "media-src 'self' blob:",
               "worker-src 'self' blob:",
             ].join('; '),
           },
           {
             key: 'Permissions-Policy',
-            value: 'microphone=(self), camera=(), geolocation=(self)',
+            value: 'microphone=(self), camera=(self), geolocation=*',
           },
         ],
       },

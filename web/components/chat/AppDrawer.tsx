@@ -136,14 +136,14 @@ export function AppDrawer({
           <DrawerSection title={t("nav_health_tracker", language)}>
             <DrawerItem icon={Heart} label={t("nav_dashboard", language)} active={activeKey === "health-dashboard"} onClick={() => nav("health-dashboard")} />
             <DrawerItem icon={Calendar} label={t("nav_schedule", language)} active={activeKey === "schedule"} onClick={() => nav("schedule")} />
-            <DrawerItem icon={Pill} label={t("nav_medications", language)} active={activeKey === "medications" || activeKey === "my-medicines"} onClick={() => nav("medications")} />
+            <DrawerItem icon={Pill} label={t("nav_medications", language)} active={activeKey === "medications"} onClick={() => nav("medications")} />
+            <DrawerItem icon={Camera} label={t("medicines_title", language)} active={activeKey === "my-medicines"} onClick={() => nav("my-medicines")} />
             <DrawerItem icon={Activity} label={t("nav_vitals", language)} active={activeKey === "vitals"} onClick={() => nav("vitals")} />
             <DrawerItem icon={FileText} label={t("nav_records", language)} active={activeKey === "records"} onClick={() => nav("records")} />
             <DrawerItem icon={Contact} label={t("contacts_title", language)} active={activeKey === "contacts"} onClick={() => nav("contacts")} />
           </DrawerSection>
 
           <DrawerSection title={t("drawer_section_tools", language)}>
-            <DrawerItem icon={Camera} label={t("drawer_medicine_scanner", language)} active={activeKey === "my-medicines"} onClick={() => nav("my-medicines")} />
             <DrawerItem icon={MapPin} label={t("drawer_nearby", language)} active={activeKey === "nearby"} onClick={() => nav("nearby")} />
             <DrawerItem icon={AlertTriangle} label={t("nav_emergency", language)} active={activeKey === "emergency"} onClick={() => nav("emergency")} urgent />
             <DrawerItem icon={BookOpen} label={t("nav_topics", language)} active={activeKey === "topics"} onClick={() => nav("topics")} />

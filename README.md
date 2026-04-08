@@ -14,7 +14,7 @@
 
 <br/>
 
-**Free. Open source. 20 languages. No sign-up. No tracking. No ads. Ever.**
+**Free. Open source. 13 languages. No sign-up. No tracking. No ads. Ever.**
 
 <br/>
 
@@ -59,7 +59,7 @@ The full medical AI experience — chat with the AI, track your health, manage m
 <br/>
 
 - Ask anything about your health
-- 20 languages, auto-detected
+- 13 languages, auto-detected
 - Voice input — speak your symptoms
 - Emergency detection with local numbers
 - Health tracker (meds, vitals, appointments)
@@ -121,7 +121,7 @@ Everything here is free and open. Every piece can be run independently, improved
 <img src="https://img.shields.io/badge/MedOS-Web%20App-0078D4?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="MedOS Web App" />
 </a>
 <br/>
-Full medical platform — chat, health tracker, medicines, 20 languages
+Full medical platform — chat, health tracker, medicines, 13 languages
 <br/><br/>
 
 ---
@@ -185,7 +185,7 @@ Point your camera at a medicine box — AI reads the label for you
 
 | # | Project | What it does | Links |
 |---|---|---|---|
-| | **[MedOS Web App](./web/)** | Full medical platform — chat, health tracker, medicine inventory, 20 languages | [![Live](https://img.shields.io/badge/Live-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot) |
+| | **[MedOS Web App](./web/)** | Full medical platform — chat, health tracker, medicine inventory, 13 languages | [![Live](https://img.shields.io/badge/Live-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot) |
 | | **[MedOS Backend](./9-HuggingFace-Global/)** | API server — auth, SQLite DB, LLM routing, emergency triage, RAG | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./9-HuggingFace-Global/) |
 | | **[Medicine Scanner](./11-Medicine-Scanner/)** | Camera scan of medicine labels via Qwen2.5-VL multimodal AI | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./11-Medicine-Scanner/) |
 | | **[Medical Llama3 8B](https://huggingface.co/ruslanmv/Medical-Llama3-8B)** | Fine-tuned Llama3 on 250K medical Q&A pairs | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Llama3-8B) |
@@ -204,7 +204,7 @@ Point your camera at a medicine box — AI reads the label for you
 
 ```
 web/                           Frontend (Next.js 14, Tailwind, PWA)
-  20 views, dark/light mode, 20 languages
+  20 views, dark/light mode, 13 languages
   Health tracker, EHR wizard, medicine scanner
   Voice input, notifications, offline support
 

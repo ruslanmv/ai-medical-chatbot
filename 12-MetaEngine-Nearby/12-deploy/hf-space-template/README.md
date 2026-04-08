@@ -3,8 +3,10 @@ title: MedOS Nearby Finder
 emoji: 🏥
 colorFrom: blue
 colorTo: green
-sdk: docker
-app_port: 7860
+sdk: gradio
+sdk_version: 5.25.0
+python_version: 3.11
+app_file: app.py
 pinned: false
 license: mit
 ---
@@ -12,6 +14,5 @@ license: mit
 # MedOS Nearby Finder
 
 Find nearby pharmacies and doctors using OpenStreetMap.
-Used by MedOS to help users locate healthcare services.
 
 **API:** `POST /api/search` with `{lat, lon, radius_m, entity_type, limit}`

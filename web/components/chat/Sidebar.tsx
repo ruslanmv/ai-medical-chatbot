@@ -168,7 +168,8 @@ export function Sidebar({
 
           <NavItem icon={Heart} label={t("nav_dashboard", language)} active={activeNav === "health-dashboard"} onClick={() => setActiveNav("health-dashboard")} collapsed={collapsed} />
           <NavItem icon={Calendar} label={t("nav_schedule", language)} active={activeNav === "schedule"} onClick={() => setActiveNav("schedule")} collapsed={collapsed} />
-          <NavItem icon={Pill} label={t("nav_medications", language)} active={activeNav === "medications" || activeNav === "my-medicines"} onClick={() => setActiveNav("medications")} collapsed={collapsed} />
+          <NavItem icon={Pill} label={t("nav_medications", language)} active={activeNav === "medications"} onClick={() => setActiveNav("medications")} collapsed={collapsed} />
+          <NavItem icon={Package} label={t("medicines_title", language)} active={activeNav === "my-medicines"} onClick={() => setActiveNav("my-medicines")} collapsed={collapsed} />
           <NavItem icon={Calendar} label={t("nav_appointments", language)} active={activeNav === "appointments"} onClick={() => setActiveNav("appointments")} collapsed={collapsed} />
           <NavItem icon={Activity} label={t("nav_vitals", language)} active={activeNav === "vitals"} onClick={() => setActiveNav("vitals")} collapsed={collapsed} />
           <NavItem icon={FileText} label={t("nav_records", language)} active={activeNav === "records"} onClick={() => setActiveNav("records")} collapsed={collapsed} />
