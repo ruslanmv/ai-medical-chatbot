@@ -379,6 +379,21 @@ If SMTP is not configured, all verification codes are **logged to the console**.
 
 ## Medicine Scanner Setup
 
+### How the Scanner Works on Each Platform
+
+| Platform | Behavior |
+|----------|----------|
+| **Desktop (Chrome/Firefox/Edge)** | Live webcam preview inside modal with viewfinder overlay. User positions medicine, clicks "Capture". Falls back to file upload if webcam not available. |
+| **Android** | Opens native camera app directly. Photo is sent to AI immediately. |
+| **iPhone/iPad** | Opens native camera app directly. Same as Android. |
+
+### Webcam Permissions
+
+For the desktop webcam to work:
+- The site must be served over **HTTPS** (required by browsers for `getUserMedia`)
+- User must **allow camera access** when prompted
+- `Permissions-Policy: camera=(self)` header is already set
+
 ### Token Requirements
 
 The Medicine Scanner Space needs a HuggingFace token with **"Make calls to Inference Providers"** permission (same as LLM chat).
@@ -497,6 +512,26 @@ No environment variables needed. Uses free OpenStreetMap APIs.
 1. Check MetaEngine Space is running: visit [huggingface.co/spaces/ruslanmv/MetaEngine-Nearby](https://huggingface.co/spaces/ruslanmv/MetaEngine-Nearby)
 2. Overpass API may be slow — retry after a few seconds
 3. Try a different location (some areas have fewer OSM entries)
+
+### Chat returns 504 on Vercel (ai-medical-chabot.com)
+
+This happens when the MediBot Space is sleeping and the Vercel proxy times out waiting for it to wake.
+
+**Fixes:**
+1. `vercel.json` sets `maxDuration: 60` (increased from 30s)
+2. If still timing out, wake MediBot first: visit [huggingface.co/spaces/ruslanmv/MediBot](https://huggingface.co/spaces/ruslanmv/MediBot) and wait ~30s
+3. For always-on, upgrade the MediBot HF Space to a paid plan
+
+**Why it happens:**
+- Vercel proxy → MediBot (sleeping, 30s cold start) → LLM (5-10s) = 40s total
+- Vercel free tier allows max 60s per function call
+
+### Desktop webcam not working in scanner
+
+1. Ensure the site is served over **HTTPS** (browsers block `getUserMedia` on HTTP)
+2. User must click "Allow" on the camera permission prompt
+3. If webcam is blocked, the scanner shows "Upload photo" as fallback
+4. Check browser settings: Settings → Privacy → Camera → allow your domain
 
 ### Email verification codes not received
 

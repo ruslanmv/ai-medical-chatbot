@@ -473,51 +473,21 @@ export function MyMedicinesView({
 
             {/* Content area */}
             <div className="flex-1 overflow-y-auto">
-              {/* STEP 1: No image yet — show instructions */}
+              {/* STEP 1: No image yet — show webcam (desktop) or instructions (mobile) */}
               {!capturedImage && !scanner.scanning && (
-                <div className="p-6 flex flex-col items-center">
-                  {/* Viewfinder illustration */}
-                  <div className="relative w-full aspect-[4/3] max-w-[280px] mb-6">
-                    <div className="absolute inset-0 rounded-2xl border-2 border-dashed border-brand-500/30 bg-surface-2/50 flex items-center justify-center">
-                      {/* Corner brackets — document scanner style */}
-                      <div className="absolute top-2 left-2 w-6 h-6 border-t-3 border-l-3 border-brand-500 rounded-tl-lg" />
-                      <div className="absolute top-2 right-2 w-6 h-6 border-t-3 border-r-3 border-brand-500 rounded-tr-lg" />
-                      <div className="absolute bottom-2 left-2 w-6 h-6 border-b-3 border-l-3 border-brand-500 rounded-bl-lg" />
-                      <div className="absolute bottom-2 right-2 w-6 h-6 border-b-3 border-r-3 border-brand-500 rounded-br-lg" />
-                      {/* Center icon */}
-                      <div className="flex flex-col items-center gap-2 text-ink-subtle">
-                        <Camera size={32} strokeWidth={1.5} />
-                        <span className="text-xs font-medium">Position medicine here</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <h4 className="font-bold text-ink-base text-center mb-2">Scan your medicine label</h4>
-                  <p className="text-xs text-ink-muted text-center leading-relaxed mb-6 max-w-[240px]">
-                    Point your camera at the medicine box or label. Make sure the text is clear and well-lit.
-                  </p>
-
-                  {/* Desktop: two options. Mobile: camera only (auto-opens) */}
-                  <div className="w-full max-w-[280px] space-y-2">
-                    <button
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="w-full py-3.5 bg-brand-gradient text-white rounded-2xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                    >
-                      <Camera size={18} />
-                      {t("scanner_open_camera", language)}
-                    </button>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-3 border-2 border-line/60 text-ink-base rounded-2xl font-semibold text-sm hover:bg-surface-2 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                    >
-                      <ScanLine size={16} />
-                      Upload photo
-                    </button>
-                  </div>
-
-                  <p className="text-[10px] text-ink-subtle text-center mt-3">
-                    {t("scanner_supports", language)}
-                  </p>
+                <div className="p-5 flex flex-col items-center">
+                  {/* Live webcam preview (desktop) or static viewfinder (mobile) */}
+                  <WebcamCapture
+                    isMobile={isMobile}
+                    onCapture={async (file) => {
+                      const url = URL.createObjectURL(file);
+                      setCapturedImage(url);
+                      await scanner.scan(file);
+                    }}
+                    onOpenCamera={() => cameraInputRef.current?.click()}
+                    onUploadFile={() => fileInputRef.current?.click()}
+                    language={language}
+                  />
                 </div>
               )}
 
@@ -907,6 +877,172 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
       <Icon size={16} className="text-ink-subtle flex-shrink-0" />
       <span className="text-xs font-semibold text-ink-muted w-20 flex-shrink-0">{label}</span>
       <span className="text-sm text-ink-base">{value}</span>
+    </div>
+  );
+}
+
+/**
+ * WebcamCapture — live camera preview for desktop, camera button for mobile.
+ *
+ * Desktop: shows live webcam feed inside a viewfinder overlay with corner
+ * brackets. User positions medicine label, clicks "Capture" to take photo.
+ * Professional appearance — camera stays inside the modal.
+ *
+ * Mobile: shows static viewfinder + "Open Camera" button (launches native
+ * camera app via capture="environment").
+ */
+function WebcamCapture({
+  isMobile,
+  onCapture,
+  onOpenCamera,
+  onUploadFile,
+  language,
+}: {
+  isMobile: boolean;
+  onCapture: (file: File) => void;
+  onOpenCamera: () => void;
+  onUploadFile: () => void;
+  language: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [streaming, setStreaming] = useState(false);
+  const [camError, setCamError] = useState(false);
+
+  // Start webcam on desktop — video element MUST be in DOM first
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (isMobile) return;
+
+    // Small delay to ensure video element is mounted in DOM
+    const timer = setTimeout(() => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCamError(true);
+        return;
+      }
+
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+      })
+        .then((s) => {
+          streamRef.current = s;
+          if (videoRef.current) {
+            videoRef.current.srcObject = s;
+            videoRef.current.play().catch(() => {});
+            setStreaming(true);
+          }
+        })
+        .catch(() => setCamError(true));
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, [isMobile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const captureFrame = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], "webcam-capture.jpg", { type: "image/jpeg" });
+        // Stop webcam
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        setStreaming(false);
+        onCapture(file);
+      }
+    }, "image/jpeg", 0.92);
+  };
+
+  // Mobile: show buttons only
+  if (isMobile) {
+    return (
+      <div className="text-center">
+        <h4 className="font-bold text-ink-base mb-2">{t("scanner_scan_your", language)}</h4>
+        <p className="text-xs text-ink-muted mb-5 max-w-[240px] mx-auto">{t("scanner_scan_desc", language)}</p>
+        <div className="w-full max-w-[280px] mx-auto space-y-2">
+          <button onClick={onOpenCamera}
+            className="w-full py-3.5 bg-brand-gradient text-white rounded-2xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <Camera size={18} /> {t("scanner_open_camera", language)}
+          </button>
+          <button onClick={onUploadFile}
+            className="w-full py-3 border-2 border-line/60 text-ink-base rounded-2xl font-semibold text-sm hover:bg-surface-2 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <ScanLine size={16} /> Upload photo
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: live webcam with viewfinder overlay
+  return (
+    <div className="w-full">
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Live webcam feed — video always in DOM, container hidden until streaming */}
+      <div className={`relative rounded-2xl overflow-hidden mb-4 bg-black ${streaming ? "" : "hidden"}`}>
+        <video ref={videoRef} autoPlay playsInline muted className="w-full aspect-[4/3] object-cover" />
+        {/* Professional viewfinder overlay */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-black/25" style={{ clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 10%, 10% 10%, 10% 90%, 90% 90%, 90% 10%, 0% 10%)" }} />
+          <div className="absolute inset-[10%] border-2 border-white/50 rounded-xl">
+            <div className="absolute -top-px -left-px w-7 h-7 border-t-[3px] border-l-[3px] border-white rounded-tl-lg" />
+            <div className="absolute -top-px -right-px w-7 h-7 border-t-[3px] border-r-[3px] border-white rounded-tr-lg" />
+            <div className="absolute -bottom-px -left-px w-7 h-7 border-b-[3px] border-l-[3px] border-white rounded-bl-lg" />
+            <div className="absolute -bottom-px -right-px w-7 h-7 border-b-[3px] border-r-[3px] border-white rounded-br-lg" />
+          </div>
+          <div className="absolute bottom-4 left-0 right-0 text-center">
+            <span className="text-white text-xs font-medium bg-black/50 backdrop-blur-sm px-4 py-1.5 rounded-full">
+              {t("scanner_position", language)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Buttons — change based on state */}
+      {streaming ? (
+        <div className="space-y-2">
+          <button onClick={captureFrame}
+            className="w-full py-3.5 bg-brand-gradient text-white rounded-2xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <Camera size={18} /> Capture
+          </button>
+          <button onClick={onUploadFile}
+            className="w-full py-2.5 text-ink-muted text-xs font-semibold hover:text-ink-base transition-colors flex items-center justify-center gap-1.5">
+            <ScanLine size={14} /> Or upload a photo instead
+          </button>
+        </div>
+      ) : (
+        <div className="text-center">
+          <div className={`relative w-full aspect-[4/3] max-w-[280px] mx-auto mb-5 rounded-2xl border-2 border-dashed border-line/40 bg-surface-2/30 flex items-center justify-center ${camError ? "" : "animate-pulse"}`}>
+            <div className="text-center text-ink-subtle">
+              <Camera size={32} strokeWidth={1.5} className="mx-auto mb-2" />
+              <p className="text-xs font-medium">{camError ? "Webcam not available" : "Starting camera..."}</p>
+            </div>
+          </div>
+          <div className="w-full max-w-[280px] mx-auto space-y-2">
+            <button onClick={onUploadFile}
+              className="w-full py-3.5 bg-brand-gradient text-white rounded-2xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+              <ScanLine size={18} /> Upload photo
+            </button>
+            <button onClick={onOpenCamera}
+              className="w-full py-3 border-2 border-line/60 text-ink-base rounded-2xl font-semibold text-sm hover:bg-surface-2 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+              <Camera size={16} /> {t("scanner_open_camera", language)}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
