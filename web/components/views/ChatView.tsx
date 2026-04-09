@@ -192,19 +192,6 @@ export function ChatView({
             suggestions={suggestions}
             autoFocus
           />
-          <div className="flex items-center justify-between mt-3 px-1">
-            <p className="text-[11px] text-ink-subtle">
-              {t("ask_disclaimer", language)}
-            </p>
-            <button
-              onClick={onNavigateEmergency}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-danger-500 hover:text-danger-600"
-            >
-              <AlertTriangle size={11} />
-              {t("home_emergency", language)}
-              <ChevronRight size={11} />
-            </button>
-          </div>
         </div>
       </div>
     </>

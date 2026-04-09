@@ -109,13 +109,19 @@ export function MyMedicinesView({
   // Medicine scanner
   const scanner = useMedicineScanner();
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Detect touch device (mobile) vs desktop
+  const isMobile = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
 
   const handleOpenScanner = () => {
     scanner.reset();
     setCapturedImage(null);
     setShowScanner(true);
-    // Small delay so modal renders before file picker opens
-    setTimeout(() => cameraInputRef.current?.click(), 200);
+    // On mobile: open camera directly. On desktop: show modal with options.
+    if (isMobile) {
+      setTimeout(() => cameraInputRef.current?.click(), 200);
+    }
   };
 
   const handleScanCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,12 +206,19 @@ export function MyMedicinesView({
               <h2 className="text-xl sm:text-2xl font-bold text-ink-base">{t("medicines_title", language)}</h2>
               <p className="text-sm text-ink-muted mt-0.5">{medicines.length} {t("medicines_items", language)}</p>
             </div>
-            {/* Hidden file input for camera */}
+            {/* Hidden file inputs — separate for camera vs file upload */}
             <input
               ref={cameraInputRef}
               type="file"
               accept="image/*"
               capture="environment"
+              onChange={handleScanCapture}
+              className="hidden"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
               onChange={handleScanCapture}
               className="hidden"
             />
@@ -484,16 +497,26 @@ export function MyMedicinesView({
                     Point your camera at the medicine box or label. Make sure the text is clear and well-lit.
                   </p>
 
-                  <button
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="w-full max-w-[280px] py-3.5 bg-brand-gradient text-white rounded-2xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                  >
-                    <Camera size={18} />
-                    Open Camera
-                  </button>
+                  {/* Desktop: two options. Mobile: camera only (auto-opens) */}
+                  <div className="w-full max-w-[280px] space-y-2">
+                    <button
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="w-full py-3.5 bg-brand-gradient text-white rounded-2xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    >
+                      <Camera size={18} />
+                      {t("scanner_open_camera", language)}
+                    </button>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full py-3 border-2 border-line/60 text-ink-base rounded-2xl font-semibold text-sm hover:bg-surface-2 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    >
+                      <ScanLine size={16} />
+                      Upload photo
+                    </button>
+                  </div>
 
-                  <p className="text-[10px] text-ink-subtle text-center mt-4">
-                    Supports: Photos, screenshots, or uploaded images
+                  <p className="text-[10px] text-ink-subtle text-center mt-3">
+                    {t("scanner_supports", language)}
                   </p>
                 </div>
               )}
@@ -558,7 +581,7 @@ export function MyMedicinesView({
                   <p className="text-xs text-ink-muted mb-5 leading-relaxed max-w-[260px] mx-auto">{scanner.error}</p>
                   <div className="flex gap-2 max-w-[280px] mx-auto">
                     <button
-                      onClick={() => { scanner.reset(); setCapturedImage(null); cameraInputRef.current?.click(); }}
+                      onClick={() => { scanner.reset(); setCapturedImage(null); (isMobile ? cameraInputRef : fileInputRef).current?.click(); }}
                       className="flex-1 py-3 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                     >
                       <Camera size={15} /> Retry
@@ -584,7 +607,7 @@ export function MyMedicinesView({
                     setCapturedImage(null);
                     setShowScanner(false);
                   }}
-                  onRescan={() => { scanner.reset(); setCapturedImage(null); cameraInputRef.current?.click(); }}
+                  onRescan={() => { scanner.reset(); setCapturedImage(null); (isMobile ? cameraInputRef : fileInputRef).current?.click(); }}
                 />
               )}
             </div>
