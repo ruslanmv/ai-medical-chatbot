@@ -28,6 +28,9 @@ interface ServerConfig {
     defaultPreset: string;
     ollamaUrl: string;
     hfDefaultModel: string;
+    hfToken: string;
+    ollabridgeUrl: string;
+    ollabridgeApiKey: string;
   };
   app: {
     appUrl: string;
@@ -49,6 +52,9 @@ function getDefaultConfig(): ServerConfig {
       defaultPreset: process.env.DEFAULT_PRESET || 'free-best',
       ollamaUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
       hfDefaultModel: process.env.HF_DEFAULT_MODEL || 'meta-llama/Llama-3.3-70B-Instruct',
+      hfToken: process.env.HF_TOKEN ? '••••••••' : '',
+      ollabridgeUrl: process.env.OLLABRIDGE_URL || '',
+      ollabridgeApiKey: process.env.OLLABRIDGE_API_KEY ? '••••••••' : '',
     },
     app: {
       appUrl: process.env.APP_URL || 'https://ruslanmv-medibot.hf.space',
@@ -98,7 +104,13 @@ function redact(config: ServerConfig) {
       recoveryEmail: config.smtp.recoveryEmail,
       configured: !!(config.smtp.host && config.smtp.user && config.smtp.pass),
     },
-    llm: config.llm,
+    llm: {
+      ...config.llm,
+      hfToken: config.llm.hfToken && config.llm.hfToken !== '••••••••' ? '••••••••' : config.llm.hfToken,
+      ollabridgeApiKey: config.llm.ollabridgeApiKey && config.llm.ollabridgeApiKey !== '••••••••' ? '••••••••' : config.llm.ollabridgeApiKey,
+      ollabridgeConfigured: !!(config.llm.ollabridgeUrl),
+      hfConfigured: !!(config.llm.hfToken || process.env.HF_TOKEN),
+    },
     app: config.app,
   };
 }
@@ -136,6 +148,13 @@ export async function PUT(req: Request) {
       if (body.llm.defaultPreset !== undefined) current.llm.defaultPreset = body.llm.defaultPreset;
       if (body.llm.ollamaUrl !== undefined) current.llm.ollamaUrl = body.llm.ollamaUrl;
       if (body.llm.hfDefaultModel !== undefined) current.llm.hfDefaultModel = body.llm.hfDefaultModel;
+      if (body.llm.hfToken !== undefined && body.llm.hfToken !== '••••••••') {
+        current.llm.hfToken = body.llm.hfToken;
+      }
+      if (body.llm.ollabridgeUrl !== undefined) current.llm.ollabridgeUrl = body.llm.ollabridgeUrl;
+      if (body.llm.ollabridgeApiKey !== undefined && body.llm.ollabridgeApiKey !== '••••••••') {
+        current.llm.ollabridgeApiKey = body.llm.ollabridgeApiKey;
+      }
     }
 
     if (body.app) {
