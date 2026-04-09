@@ -73,7 +73,16 @@ interface SmtpConfig {
 
 interface ServerConfig {
   smtp: SmtpConfig;
-  llm: { defaultPreset: string; ollamaUrl: string; hfDefaultModel: string };
+  llm: {
+    defaultPreset: string;
+    ollamaUrl: string;
+    hfDefaultModel: string;
+    hfToken: string;
+    ollabridgeUrl: string;
+    ollabridgeApiKey: string;
+    ollabridgeConfigured?: boolean;
+    hfConfigured?: boolean;
+  };
   app: { appUrl: string; allowedOrigins: string };
 }
 
@@ -683,18 +692,74 @@ export function AdminView({ language, token }: AdminViewProps) {
         {/* ============================================ */}
         {tab === "server" && config && (
           <div className="space-y-4">
-            <AdminCard icon={Server} title="LLM Provider Configuration">
+            {/* OllaBridge Cloud */}
+            <AdminCard icon={Server} title="OllaBridge Cloud Gateway">
               <div className="space-y-4">
-                <ConfigInput label="Default Preset" value={config.llm.defaultPreset} placeholder="free-best"
-                  onChange={(v) => updateConfig("llm", "defaultPreset", v)}
-                  hint="Default AI model preset for new users (free-best, free-fastest, deep-reasoning, local)" />
-                <ConfigInput label="Ollama Base URL" value={config.llm.ollamaUrl} placeholder="http://localhost:11434"
-                  onChange={(v) => updateConfig("llm", "ollamaUrl", v)}
-                  hint="URL for the local Ollama server (used with 'local' preset)" />
-                <ConfigInput label="HuggingFace Default Model" value={config.llm.hfDefaultModel}
+                <div className={`flex items-center gap-2 p-3 rounded-xl border ${
+                  config.llm.ollabridgeConfigured
+                    ? "bg-success-500/5 border-success-500/20"
+                    : "bg-surface-2/50 border-line/40"
+                }`}>
+                  {config.llm.ollabridgeConfigured ? (
+                    <>
+                      <CheckCircle2 size={16} className="text-success-500" />
+                      <span className="text-sm text-success-600 font-medium">OllaBridge connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wifi size={16} className="text-ink-subtle" />
+                      <span className="text-sm text-ink-muted font-medium">OllaBridge not configured — using HF Inference</span>
+                    </>
+                  )}
+                </div>
+                <ConfigInput label="OllaBridge URL" value={config.llm.ollabridgeUrl} placeholder="https://ruslanmv-ollabridge.hf.space"
+                  onChange={(v) => updateConfig("llm", "ollabridgeUrl", v)}
+                  hint="Your OllaBridge server URL (routes to Groq, Gemini, OpenRouter, local Ollama)" />
+                <ConfigInput label="OllaBridge API Key" value={config.llm.ollabridgeApiKey} placeholder="sk-ollabridge-..."
+                  onChange={(v) => updateConfig("llm", "ollabridgeApiKey", v)}
+                  hint="API key for your OllaBridge gateway" />
+              </div>
+            </AdminCard>
+
+            {/* HuggingFace Inference */}
+            <AdminCard icon={Cpu} title="HuggingFace Inference Providers">
+              <div className="space-y-4">
+                <div className={`flex items-center gap-2 p-3 rounded-xl border ${
+                  config.llm.hfConfigured
+                    ? "bg-success-500/5 border-success-500/20"
+                    : "bg-warning-500/5 border-warning-500/20"
+                }`}>
+                  {config.llm.hfConfigured ? (
+                    <>
+                      <CheckCircle2 size={16} className="text-success-500" />
+                      <span className="text-sm text-success-600 font-medium">HF token configured</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle size={16} className="text-warning-500" />
+                      <span className="text-sm text-warning-600 font-medium">HF token not set — LLM health check will fail</span>
+                    </>
+                  )}
+                </div>
+                <ConfigInput label="HuggingFace Token" value={config.llm.hfToken} placeholder="hf_..."
+                  onChange={(v) => updateConfig("llm", "hfToken", v)}
+                  hint="Token with 'Make calls to Inference Providers' permission. Get one at huggingface.co/settings/tokens" />
+                <ConfigInput label="Default Model" value={config.llm.hfDefaultModel}
                   placeholder="meta-llama/Llama-3.3-70B-Instruct"
                   onChange={(v) => updateConfig("llm", "hfDefaultModel", v)}
-                  hint="Default model for HuggingFace Inference API" />
+                  hint="Primary model for the free-best preset" />
+                <ConfigInput label="Default Preset" value={config.llm.defaultPreset} placeholder="free-best"
+                  onChange={(v) => updateConfig("llm", "defaultPreset", v)}
+                  hint="free-best, free-fastest, deep-reasoning, local, ollabridge" />
+              </div>
+            </AdminCard>
+
+            {/* Local Ollama */}
+            <AdminCard icon={Server} title="Local Ollama (Optional)">
+              <div className="space-y-4">
+                <ConfigInput label="Ollama Base URL" value={config.llm.ollamaUrl} placeholder="http://localhost:11434"
+                  onChange={(v) => updateConfig("llm", "ollamaUrl", v)}
+                  hint="URL for a local Ollama server (used with 'local' preset). Leave default if not running Ollama." />
               </div>
             </AdminCard>
 
