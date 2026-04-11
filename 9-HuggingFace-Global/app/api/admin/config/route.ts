@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-middleware';
-import fs from 'fs';
-import path from 'path';
+import { loadConfig, saveConfig, type ServerConfig } from '@/lib/server-config';
 
 /**
  * Admin configuration management.
@@ -11,105 +10,45 @@ import path from 'path';
  *
  * Configuration is persisted to a JSON file on disk so it survives restarts.
  * Environment variables take precedence over the config file on first boot.
+ *
+ * The storage/merge logic lives in @/lib/server-config so other admin routes
+ * (like /api/admin/fetch-models) can read the same source of truth.
  */
-
-const CONFIG_PATH = path.join(process.env.PERSISTENT_DIR || '/data', 'medos-config.json');
-
-interface ServerConfig {
-  smtp: {
-    host: string;
-    port: number;
-    user: string;
-    pass: string;
-    fromEmail: string;
-    recoveryEmail: string;
-  };
-  llm: {
-    defaultPreset: string;
-    ollamaUrl: string;
-    hfDefaultModel: string;
-    hfToken: string;
-    ollabridgeUrl: string;
-    ollabridgeApiKey: string;
-  };
-  app: {
-    appUrl: string;
-    allowedOrigins: string;
-  };
-}
-
-function getDefaultConfig(): ServerConfig {
-  return {
-    smtp: {
-      host: process.env.SMTP_HOST || '',
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      user: process.env.SMTP_USER || '',
-      pass: process.env.SMTP_PASS || '',
-      fromEmail: process.env.FROM_EMAIL || 'MedOS <noreply@medos.health>',
-      recoveryEmail: process.env.RECOVERY_EMAIL || '',
-    },
-    llm: {
-      defaultPreset: process.env.DEFAULT_PRESET || 'free-best',
-      ollamaUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-      hfDefaultModel: process.env.HF_DEFAULT_MODEL || 'meta-llama/Llama-3.3-70B-Instruct',
-      hfToken: process.env.HF_TOKEN ? '••••••••' : '',
-      ollabridgeUrl: process.env.OLLABRIDGE_URL || '',
-      ollabridgeApiKey: process.env.OLLABRIDGE_API_KEY ? '••••••••' : '',
-    },
-    app: {
-      appUrl: process.env.APP_URL || 'https://ruslanmv-medibot.hf.space',
-      allowedOrigins: process.env.ALLOWED_ORIGINS || '',
-    },
-  };
-}
-
-function loadConfig(): ServerConfig {
-  try {
-    if (fs.existsSync(CONFIG_PATH)) {
-      const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
-      const saved = JSON.parse(raw);
-      const defaults = getDefaultConfig();
-      return {
-        smtp: { ...defaults.smtp, ...saved.smtp },
-        llm: { ...defaults.llm, ...saved.llm },
-        app: { ...defaults.app, ...saved.app },
-      };
-    }
-  } catch (e) {
-    console.error('[Config] Failed to load config file:', e);
-  }
-  return getDefaultConfig();
-}
-
-function saveConfig(config: ServerConfig): void {
-  try {
-    const dir = path.dirname(CONFIG_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
-  } catch (e) {
-    console.error('[Config] Failed to save config file:', e);
-    throw new Error('Failed to save configuration');
-  }
-}
 
 /** Redact sensitive fields for GET responses. */
 function redact(config: ServerConfig) {
+  const hasSecret = (v: string) => !!(v && v.length > 0);
+  const mask = (v: string) => (hasSecret(v) ? '••••••••' : '');
   return {
     smtp: {
       host: config.smtp.host,
       port: config.smtp.port,
       user: config.smtp.user,
-      pass: config.smtp.pass ? '••••••••' : '',
+      pass: mask(config.smtp.pass),
       fromEmail: config.smtp.fromEmail,
       recoveryEmail: config.smtp.recoveryEmail,
       configured: !!(config.smtp.host && config.smtp.user && config.smtp.pass),
     },
     llm: {
-      ...config.llm,
-      hfToken: config.llm.hfToken && config.llm.hfToken !== '••••••••' ? '••••••••' : config.llm.hfToken,
-      ollabridgeApiKey: config.llm.ollabridgeApiKey && config.llm.ollabridgeApiKey !== '••••••••' ? '••••••••' : config.llm.ollabridgeApiKey,
-      ollabridgeConfigured: !!(config.llm.ollabridgeUrl),
-      hfConfigured: !!(config.llm.hfToken || process.env.HF_TOKEN),
+      defaultPreset: config.llm.defaultPreset,
+      ollamaUrl: config.llm.ollamaUrl,
+      hfDefaultModel: config.llm.hfDefaultModel,
+      hfToken: mask(config.llm.hfToken),
+      ollabridgeUrl: config.llm.ollabridgeUrl,
+      ollabridgeApiKey: mask(config.llm.ollabridgeApiKey),
+      openaiApiKey: mask(config.llm.openaiApiKey),
+      anthropicApiKey: mask(config.llm.anthropicApiKey),
+      groqApiKey: mask(config.llm.groqApiKey),
+      watsonxApiKey: mask(config.llm.watsonxApiKey),
+      watsonxProjectId: config.llm.watsonxProjectId,
+      watsonxUrl: config.llm.watsonxUrl,
+      // Computed status flags — derived server-side so UI can show chips.
+      ollabridgeConfigured: !!config.llm.ollabridgeUrl,
+      hfConfigured: hasSecret(config.llm.hfToken),
+      openaiConfigured: hasSecret(config.llm.openaiApiKey),
+      anthropicConfigured: hasSecret(config.llm.anthropicApiKey),
+      groqConfigured: hasSecret(config.llm.groqApiKey),
+      watsonxConfigured: hasSecret(config.llm.watsonxApiKey) && !!config.llm.watsonxProjectId,
     },
     app: config.app,
   };
@@ -145,16 +84,26 @@ export async function PUT(req: Request) {
     }
 
     if (body.llm) {
+      // Non-secret fields — assign directly.
       if (body.llm.defaultPreset !== undefined) current.llm.defaultPreset = body.llm.defaultPreset;
       if (body.llm.ollamaUrl !== undefined) current.llm.ollamaUrl = body.llm.ollamaUrl;
       if (body.llm.hfDefaultModel !== undefined) current.llm.hfDefaultModel = body.llm.hfDefaultModel;
-      if (body.llm.hfToken !== undefined && body.llm.hfToken !== '••••••••') {
-        current.llm.hfToken = body.llm.hfToken;
-      }
       if (body.llm.ollabridgeUrl !== undefined) current.llm.ollabridgeUrl = body.llm.ollabridgeUrl;
-      if (body.llm.ollabridgeApiKey !== undefined && body.llm.ollabridgeApiKey !== '••••••••') {
-        current.llm.ollabridgeApiKey = body.llm.ollabridgeApiKey;
-      }
+      if (body.llm.watsonxProjectId !== undefined) current.llm.watsonxProjectId = body.llm.watsonxProjectId;
+      if (body.llm.watsonxUrl !== undefined) current.llm.watsonxUrl = body.llm.watsonxUrl;
+
+      // Secret fields — skip if value is the redacted placeholder.
+      const setSecret = (field: keyof ServerConfig['llm'], value: any) => {
+        if (value !== undefined && value !== '••••••••') {
+          (current.llm as any)[field] = value;
+        }
+      };
+      setSecret('hfToken', body.llm.hfToken);
+      setSecret('ollabridgeApiKey', body.llm.ollabridgeApiKey);
+      setSecret('openaiApiKey', body.llm.openaiApiKey);
+      setSecret('anthropicApiKey', body.llm.anthropicApiKey);
+      setSecret('groqApiKey', body.llm.groqApiKey);
+      setSecret('watsonxApiKey', body.llm.watsonxApiKey);
     }
 
     if (body.app) {
