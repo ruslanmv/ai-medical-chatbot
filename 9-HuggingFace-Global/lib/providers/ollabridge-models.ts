@@ -2,7 +2,11 @@
  * Fetch available models from OllaBridge-Cloud.
  * These include model aliases (free-best, free-fast, etc.)
  * and any connected local/remote models.
+ *
+ * Prefers admin-configured credentials (via Admin UI) over env vars.
  */
+
+import { loadConfig } from '@/lib/server-config';
 
 export interface OllaBridgeModel {
   id: string;
@@ -39,10 +43,20 @@ const DEFAULT_MODELS: OllaBridgeModel[] = [
 ];
 
 export async function fetchAvailableModels(): Promise<OllaBridgeModel[]> {
+  let configUrl = '';
+  let configKey = '';
+  try {
+    const cfg = loadConfig();
+    configUrl = cfg.llm.ollabridgeUrl;
+    configKey = cfg.llm.ollabridgeApiKey;
+  } catch {
+    // ignore
+  }
   const baseURL =
+    configUrl ||
     process.env.OLLABRIDGE_URL ||
     'https://ruslanmv-ollabridge.hf.space';
-  const apiKey = process.env.OLLABRIDGE_API_KEY || '';
+  const apiKey = configKey || process.env.OLLABRIDGE_API_KEY || '';
 
   try {
     const response = await fetch(`${baseURL}/v1/models`, {

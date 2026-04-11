@@ -1,4 +1,5 @@
 import type { ChatMessage, ProviderResponse } from './index';
+import { loadConfig } from '@/lib/server-config';
 
 /**
  * HuggingFace Inference Providers router — OpenAI-compatible endpoint.
@@ -6,8 +7,22 @@ import type { ChatMessage, ProviderResponse } from './index';
  * Uses router.huggingface.co with a deep fallback chain of verified
  * working models (tested 2026-04-07). Provider pinning via :suffix
  * syntax routes to specific backends (sambanova, together, etc.).
+ *
+ * Token resolution: admin-configured token (via Admin → Server → HuggingFace)
+ * takes precedence over the HF_TOKEN env var, so admins can fix bad tokens
+ * without redeploying the Space.
  */
 const HF_BASE_URL = 'https://router.huggingface.co/v1';
+
+function getHfToken(): string {
+  try {
+    const cfg = loadConfig();
+    if (cfg.llm.hfToken) return cfg.llm.hfToken;
+  } catch {
+    // config file unreadable; fall through to env
+  }
+  return process.env.HF_TOKEN || '';
+}
 
 /** Ordered fallback chain — all verified working on free tier. */
 const MODEL_CHAIN = [
@@ -27,7 +42,7 @@ async function callHF(
   model: string,
   stream: boolean,
 ): Promise<Response> {
-  const token = process.env.HF_TOKEN || '';
+  const token = getHfToken();
   return fetch(`${HF_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {

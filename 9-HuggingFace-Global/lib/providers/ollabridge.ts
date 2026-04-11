@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { ChatMessage, ProviderResponse } from './index';
+import { loadConfig } from '@/lib/server-config';
 
 const MEDICAL_SYSTEM_PROMPT = `You are MedOS, a knowledgeable and empathetic AI medical assistant. Your role is to provide helpful, accurate general health information while being clear about your limitations.
 
@@ -16,11 +17,27 @@ IMPORTANT GUIDELINES:
 - Be culturally sensitive in your responses`;
 
 function getClient(): OpenAI {
-  const baseURL = process.env.OLLABRIDGE_URL || 'https://ruslanmv-ollabridge.hf.space';
-  const apiKey = process.env.OLLABRIDGE_API_KEY || 'not-required';
+  // Prefer admin-configured values (from /api/admin/config PUT) so updates
+  // in the Admin UI take effect without a redeploy. Fall back to env vars.
+  let configUrl = '';
+  let configKey = '';
+  try {
+    const cfg = loadConfig();
+    configUrl = cfg.llm.ollabridgeUrl;
+    configKey = cfg.llm.ollabridgeApiKey;
+  } catch {
+    // If the config file can't be read (e.g. cold start before /data mount),
+    // silently fall through to env vars.
+  }
+
+  const baseURL =
+    configUrl ||
+    process.env.OLLABRIDGE_URL ||
+    'https://ruslanmv-ollabridge.hf.space';
+  const apiKey = configKey || process.env.OLLABRIDGE_API_KEY || 'not-required';
 
   return new OpenAI({
-    baseURL: `${baseURL}/v1`,
+    baseURL: `${baseURL.replace(/\/+$/, '')}/v1`,
     apiKey,
     timeout: 30000,
     maxRetries: 2,

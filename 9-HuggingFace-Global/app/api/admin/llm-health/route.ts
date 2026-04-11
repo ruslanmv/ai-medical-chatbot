@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-middleware';
+import { loadConfig } from '@/lib/server-config';
 
 /**
  * GET /api/admin/llm-health — Test all LLM providers and models.
@@ -7,6 +8,11 @@ import { requireAdmin } from '@/lib/auth-middleware';
  * Sends a minimal "Say OK" prompt to each model in the fallback chain
  * and reports which ones are alive, their latency, and any errors.
  * Admin-only endpoint.
+ *
+ * Token resolution order:
+ *   1. admin config file (set via /api/admin/config PUT)
+ *   2. HF_TOKEN environment variable
+ * This way an admin can fix a misconfigured Space without redeploying.
  */
 
 const HF_BASE_URL = 'https://router.huggingface.co/v1';
@@ -78,16 +84,31 @@ export async function GET(req: Request) {
   const admin = requireAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
 
-  const token = process.env.HF_TOKEN || '';
+  // Prefer admin-configured token, fall back to env var.
+  const config = loadConfig();
+  const token = config.llm.hfToken || process.env.HF_TOKEN || '';
+
   if (!token) {
+    // Still return a well-formed response so the UI can render an empty-state
+    // Provider Status panel with a helpful error banner.
     return NextResponse.json({
-      error: 'HF_TOKEN not configured',
-      models: [],
-      summary: { total: 0, ok: 0, error: 0 },
+      error: 'HF_TOKEN not configured — set it in Admin → Server → HuggingFace.',
+      models: MODELS_TO_TEST.map((model) => ({
+        model,
+        status: 'error' as const,
+        latencyMs: 0,
+        error: 'No HF token configured',
+      })),
+      summary: {
+        total: MODELS_TO_TEST.length,
+        ok: 0,
+        error: MODELS_TO_TEST.length,
+        testedAt: new Date().toISOString(),
+      },
     });
   }
 
-  // Test all models in parallel for speed
+  // Test all models in parallel for speed.
   const results = await Promise.all(
     MODELS_TO_TEST.map((model) => testModel(model, token))
   );
