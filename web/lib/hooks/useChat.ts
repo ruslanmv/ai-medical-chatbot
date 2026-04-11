@@ -120,25 +120,62 @@ export function useChat() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let aiContent = "";
+        let buffer = "";
         const aiMessageId = Date.now() + 1;
+        let firstByteAt: number | null = null;
+        const requestStartedAt = Date.now();
+
+        // The assistant bubble is created LAZILY — only after the first real
+        // token arrives. While the stream is still flowing nothing is shown
+        // but the typing indicator (handled by the caller via isTyping). This
+        // keeps the Ask view clean: no empty MedOS card sitting above the
+        // typing dots during streaming.
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
+          // SSE frames can be split across chunks — buffer until we see a
+          // double-newline separator before parsing.
+          buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split("\n\n");
+          buffer = frames.pop() || "";
 
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
+          for (const frame of frames) {
+            for (const line of frame.split("\n")) {
+              if (!line.startsWith("data: ")) continue;
+              const data = line.slice(6).trim();
+              if (!data) continue;
               if (data === "[DONE]") break;
+
               try {
                 const parsed = JSON.parse(data);
                 if (parsed.error) throw new Error(parsed.error);
-                if (parsed.content) {
-                  aiContent += parsed.content;
+
+                // Backend providers emit the OpenAI-compatible shape:
+                //   { choices: [{ delta: { content: "..." } }], provider, model }
+                // We also accept a legacy top-level `content` field so old
+                // responses still render.
+                const chunkContent =
+                  parsed?.choices?.[0]?.delta?.content ??
+                  parsed?.content ??
+                  "";
+
+                if (chunkContent) {
+                  if (firstByteAt === null) {
+                    firstByteAt = Date.now();
+                    if (typeof console !== "undefined") {
+                      console.info(
+                        `[Chat] First token received in ${firstByteAt - requestStartedAt}ms` +
+                          (parsed?.provider ? ` via ${parsed.provider}` : "") +
+                          (parsed?.model ? ` (${parsed.model})` : ""),
+                      );
+                    }
+                  }
+                  aiContent += chunkContent;
                   setMessages((prev) => {
+                    // First token: create the bubble. Subsequent tokens:
+                    // update its content in place.
                     const existing = prev.find((m) => m.id === aiMessageId);
                     if (existing) {
                       return prev.map((m) =>
@@ -159,11 +196,23 @@ export function useChat() {
                     ];
                   });
                 }
-              } catch {
-                // ignore parse errors on keep-alive / partial frames
+              } catch (parseErr) {
+                // Malformed frame — log once at info level so dev console
+                // can trace SSE issues without spamming for keep-alives.
+                if (typeof console !== "undefined") {
+                  console.debug("[Chat] Skipped SSE frame:", data.slice(0, 120));
+                }
               }
             }
           }
+        }
+
+        // If the stream closed with zero content, surface it as an error
+        // so the user isn't left staring at an empty bubble.
+        if (!aiContent) {
+          throw new Error(
+            "The AI returned an empty response. Check Admin → LLM for provider health.",
+          );
         }
       } catch (err: any) {
         const errorMessage =
@@ -171,6 +220,9 @@ export function useChat() {
             ? "Response took too long. The AI service may be starting up — please try again in a moment."
             : err?.message || "Failed to send message";
         setError(errorMessage);
+        if (typeof console !== "undefined") {
+          console.error("[Chat] Stream failed:", errorMessage, err);
+        }
 
         setMessages((prev) => [
           ...prev,
