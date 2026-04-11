@@ -30,7 +30,7 @@ import {
   EyeOff,
   Lock,
 } from "lucide-react";
-import type { SupportedLanguage } from "@/lib/i18n";
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface AdminViewProps {
   language: SupportedLanguage;
@@ -344,9 +344,9 @@ export function AdminView({ language, token }: AdminViewProps) {
           <div>
             <h2 className="text-2xl font-bold text-ink-base tracking-tight flex items-center gap-2">
               <Shield size={22} className="text-brand-500" />
-              Admin Dashboard
+              {t("admin_title", language)}
             </h2>
-            <p className="text-sm text-ink-muted mt-1">Platform management and analytics</p>
+            <p className="text-sm text-ink-muted mt-1">{t("admin_subtitle", language)}</p>
           </div>
           <button
             onClick={() => {
@@ -363,11 +363,11 @@ export function AdminView({ language, token }: AdminViewProps) {
 
         {/* Tab bar */}
         <div className="flex gap-1 p-1 bg-surface-2/50 border border-line/40 rounded-xl mb-6 overflow-x-auto">
-          <TabButton active={tab === "overview"} onClick={() => setTab("overview")} icon={BarChart3} label="Overview" />
-          <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={Users} label="Users" />
-          <TabButton active={tab === "llm"} onClick={() => setTab("llm")} icon={Cpu} label="LLM" />
-          <TabButton active={tab === "email"} onClick={() => setTab("email")} icon={Mail} label="Email" />
-          <TabButton active={tab === "server"} onClick={() => setTab("server")} icon={Server} label="Server" />
+          <TabButton active={tab === "overview"} onClick={() => setTab("overview")} icon={BarChart3} label={t("admin_tab_overview", language)} />
+          <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={Users} label={t("admin_tab_users", language)} />
+          <TabButton active={tab === "llm"} onClick={() => setTab("llm")} icon={Cpu} label={t("admin_tab_llm", language)} />
+          <TabButton active={tab === "email"} onClick={() => setTab("email")} icon={Mail} label={t("admin_tab_email", language)} />
+          <TabButton active={tab === "server"} onClick={() => setTab("server")} icon={Server} label={t("admin_tab_server", language)} />
         </div>
 
         {/* Status messages */}
@@ -608,9 +608,9 @@ export function AdminView({ language, token }: AdminViewProps) {
             {/* Header with action buttons */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-bold text-ink-base text-sm">LLM Provider Health</h3>
+                <h3 className="font-bold text-ink-base text-sm">{t("admin_llm_health", language)}</h3>
                 <p className="text-xs text-ink-muted mt-0.5">
-                  Tests all models in the fallback chain and discovers enterprise models
+                  {t("admin_llm_health_subtitle", language)}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -620,7 +620,7 @@ export function AdminView({ language, token }: AdminViewProps) {
                   className="flex items-center gap-2 px-3 py-2.5 bg-surface-1 border border-line/60 text-ink-base rounded-xl font-bold text-xs hover:bg-surface-2 transition-all disabled:opacity-50"
                 >
                   {fetchingModels ? <Loader2 size={13} className="animate-spin" /> : <Database size={13} />}
-                  {fetchingModels ? "Fetching..." : "Fetch Models"}
+                  {fetchingModels ? t("admin_fetching", language) : t("admin_fetch_models", language)}
                 </button>
                 <button
                   onClick={fetchLlmHealth}
@@ -628,7 +628,7 @@ export function AdminView({ language, token }: AdminViewProps) {
                   className="flex items-center gap-2 px-3 py-2.5 bg-brand-500 text-white rounded-xl font-bold text-xs hover:brightness-110 transition-all disabled:opacity-50"
                 >
                   {llmTesting ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
-                  {llmTesting ? "Testing..." : "Test All Providers"}
+                  {llmTesting ? t("admin_testing", language) : t("admin_test_all_providers", language)}
                 </button>
               </div>
             </div>
@@ -652,15 +652,15 @@ export function AdminView({ language, token }: AdminViewProps) {
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-surface-1 rounded-2xl shadow-soft border border-line/40 p-4 text-center">
                   <div className="text-2xl font-black text-ink-base">{llmHealth.summary.total}</div>
-                  <div className="text-[11px] text-ink-muted font-semibold">Total Models</div>
+                  <div className="text-[11px] text-ink-muted font-semibold">{t("admin_total_models", language)}</div>
                 </div>
                 <div className="bg-surface-1 rounded-2xl shadow-soft border border-success-500/20 p-4 text-center">
                   <div className="text-2xl font-black text-success-500">{llmHealth.summary.ok}</div>
-                  <div className="text-[11px] text-success-600 font-semibold">Online</div>
+                  <div className="text-[11px] text-success-600 font-semibold">{t("admin_online", language)}</div>
                 </div>
                 <div className="bg-surface-1 rounded-2xl shadow-soft border border-danger-500/20 p-4 text-center">
                   <div className="text-2xl font-black text-danger-500">{llmHealth.summary.error}</div>
-                  <div className="text-[11px] text-danger-600 font-semibold">Offline</div>
+                  <div className="text-[11px] text-danger-600 font-semibold">{t("admin_offline", language)}</div>
                 </div>
               </div>
             )}
@@ -681,7 +681,7 @@ export function AdminView({ language, token }: AdminViewProps) {
             {llmHealth && (
               <AdminCard
                 icon={Cpu}
-                title={`Provider Status${
+                title={`${t("admin_provider_status", language)}${
                   llmHealth.summary.testedAt
                     ? ` — ${new Date(llmHealth.summary.testedAt).toLocaleTimeString()}`
                     : ""
@@ -690,9 +690,9 @@ export function AdminView({ language, token }: AdminViewProps) {
                 {llmHealth.models.length === 0 ? (
                   <div className="py-6 text-center">
                     <WifiOff size={24} className="text-ink-subtle mx-auto mb-2" />
-                    <p className="text-sm text-ink-muted font-medium">No models tested</p>
+                    <p className="text-sm text-ink-muted font-medium">{t("admin_no_models_tested", language)}</p>
                     <p className="text-[11px] text-ink-subtle mt-1">
-                      Click &quot;Test All Providers&quot; to run a health check
+                      {t("admin_click_test", language)}
                     </p>
                   </div>
                 ) : (
@@ -753,7 +753,7 @@ export function AdminView({ language, token }: AdminViewProps) {
             )}
 
             {/* Routing explanation */}
-            <AdminCard icon={Activity} title="How Routing Works">
+            <AdminCard icon={Activity} title={t("admin_how_routing_works", language)}>
               <div className="space-y-2 text-xs text-ink-muted leading-relaxed">
                 <p>When a user sends a message, the system tries models in order:</p>
                 <ol className="list-decimal list-inside space-y-1 pl-1">
@@ -833,7 +833,7 @@ export function AdminView({ language, token }: AdminViewProps) {
                 <button onClick={saveConfig} disabled={loading}
                   className="w-full py-3 bg-brand-500 text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                   <Save size={16} />
-                  {loading ? "Saving..." : "Save Configuration"}
+                  {loading ? t("admin_saving", language) : t("admin_save_config", language)}
                 </button>
               </div>
             )}
@@ -846,7 +846,7 @@ export function AdminView({ language, token }: AdminViewProps) {
         {tab === "server" && config && (
           <div className="space-y-4">
             {/* --- OllaBridge Cloud Gateway --- */}
-            <AdminCard icon={Server} title="OllaBridge Cloud Gateway">
+            <AdminCard icon={Server} title={t("admin_ollabridge_title", language)}>
               <div className="space-y-4">
                 <ProviderStatusBadge
                   configured={!!config.llm.ollabridgeConfigured}
@@ -896,6 +896,7 @@ export function AdminView({ language, token }: AdminViewProps) {
                     onClick={() => testProviderConnection("ollabridge")}
                     disabled={!config.llm.ollabridgeUrl || configDirty}
                     pending={connectionTests["ollabridge"] === "pending"}
+                    language={language}
                   />
                 </div>
                 {configDirty && (
@@ -907,7 +908,7 @@ export function AdminView({ language, token }: AdminViewProps) {
             </AdminCard>
 
             {/* --- HuggingFace Inference --- */}
-            <AdminCard icon={Cpu} title="HuggingFace Inference Providers">
+            <AdminCard icon={Cpu} title={t("admin_hf_title", language)}>
               <div className="space-y-4">
                 <ProviderStatusBadge
                   configured={!!config.llm.hfConfigured}
@@ -943,13 +944,14 @@ export function AdminView({ language, token }: AdminViewProps) {
                     onClick={() => testProviderConnection("huggingface")}
                     disabled={!config.llm.hfConfigured || configDirty}
                     pending={connectionTests["huggingface"] === "pending"}
+                    language={language}
                   />
                 </div>
               </div>
             </AdminCard>
 
             {/* --- Groq (Free) --- */}
-            <AdminCard icon={Zap} title="Groq — Free Fast Inference">
+            <AdminCard icon={Zap} title={t("admin_groq_title", language)}>
               <div className="space-y-4">
                 <ProviderStatusBadge
                   configured={!!config.llm.groqConfigured}
@@ -971,13 +973,14 @@ export function AdminView({ language, token }: AdminViewProps) {
                     onClick={() => testProviderConnection("groq")}
                     disabled={!config.llm.groqConfigured || configDirty}
                     pending={connectionTests["groq"] === "pending"}
+                    language={language}
                   />
                 </div>
               </div>
             </AdminCard>
 
             {/* --- OpenAI (Paid) --- */}
-            <AdminCard icon={Cpu} title="OpenAI — Enterprise (Paid)">
+            <AdminCard icon={Cpu} title={t("admin_openai_title", language)}>
               <div className="space-y-4">
                 <ProviderStatusBadge
                   configured={!!config.llm.openaiConfigured}
@@ -999,13 +1002,14 @@ export function AdminView({ language, token }: AdminViewProps) {
                     onClick={() => testProviderConnection("openai")}
                     disabled={!config.llm.openaiConfigured || configDirty}
                     pending={connectionTests["openai"] === "pending"}
+                    language={language}
                   />
                 </div>
               </div>
             </AdminCard>
 
             {/* --- Anthropic Claude (Paid) --- */}
-            <AdminCard icon={Cpu} title="Anthropic Claude — Enterprise (Paid)">
+            <AdminCard icon={Cpu} title={t("admin_anthropic_title", language)}>
               <div className="space-y-4">
                 <ProviderStatusBadge
                   configured={!!config.llm.anthropicConfigured}
@@ -1027,13 +1031,14 @@ export function AdminView({ language, token }: AdminViewProps) {
                     onClick={() => testProviderConnection("anthropic")}
                     disabled={!config.llm.anthropicConfigured || configDirty}
                     pending={connectionTests["anthropic"] === "pending"}
+                    language={language}
                   />
                 </div>
               </div>
             </AdminCard>
 
             {/* --- IBM WatsonX (Paid) --- */}
-            <AdminCard icon={Cpu} title="IBM WatsonX — Enterprise (Paid)">
+            <AdminCard icon={Cpu} title={t("admin_watsonx_title", language)}>
               <div className="space-y-4">
                 <ProviderStatusBadge
                   configured={!!config.llm.watsonxConfigured}
@@ -1069,13 +1074,14 @@ export function AdminView({ language, token }: AdminViewProps) {
                     onClick={() => testProviderConnection("watsonx")}
                     disabled={!config.llm.watsonxConfigured || configDirty}
                     pending={connectionTests["watsonx"] === "pending"}
+                    language={language}
                   />
                 </div>
               </div>
             </AdminCard>
 
             {/* --- Local Ollama --- */}
-            <AdminCard icon={Server} title="Local Ollama (Optional)">
+            <AdminCard icon={Server} title={t("admin_local_ollama", language)}>
               <div className="space-y-4">
                 <ConfigInput
                   label="Ollama Base URL"
@@ -1088,7 +1094,7 @@ export function AdminView({ language, token }: AdminViewProps) {
             </AdminCard>
 
             {/* --- Application Settings --- */}
-            <AdminCard icon={Shield} title="Application Settings">
+            <AdminCard icon={Shield} title={t("admin_application_settings", language)}>
               <div className="space-y-4">
                 <ConfigInput
                   label="Application URL"
@@ -1107,7 +1113,7 @@ export function AdminView({ language, token }: AdminViewProps) {
               </div>
             </AdminCard>
 
-            <AdminCard icon={Database} title="System Info">
+            <AdminCard icon={Database} title={t("admin_system_info", language)}>
               <div className="space-y-1">
                 <InfoRow label="Backend" value={process.env.NEXT_PUBLIC_BACKEND_URL || "HuggingFace Space"} />
                 <InfoRow label="Database" value="SQLite (WAL mode)" />
@@ -1122,7 +1128,7 @@ export function AdminView({ language, token }: AdminViewProps) {
                 <button onClick={saveConfig} disabled={loading}
                   className="w-full py-3 bg-brand-500 text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                   <Save size={16} />
-                  {loading ? "Saving..." : "Save Configuration"}
+                  {loading ? t("admin_saving", language) : t("admin_save_config", language)}
                 </button>
               </div>
             )}
@@ -1409,10 +1415,12 @@ function TestConnectionButton({
   onClick,
   disabled,
   pending,
+  language,
 }: {
   onClick: () => void;
   disabled: boolean;
   pending: boolean;
+  language: SupportedLanguage;
 }) {
   return (
     <button
@@ -1422,7 +1430,7 @@ function TestConnectionButton({
       className="flex items-center gap-1.5 px-3 py-2 bg-surface-1 border border-line/60 text-ink-base rounded-lg text-xs font-bold hover:bg-surface-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {pending ? <Loader2 size={12} className="animate-spin" /> : <Activity size={12} />}
-      {pending ? "Testing..." : "Test Connection"}
+      {pending ? t("admin_testing", language) : t("admin_test_connection", language)}
     </button>
   );
 }

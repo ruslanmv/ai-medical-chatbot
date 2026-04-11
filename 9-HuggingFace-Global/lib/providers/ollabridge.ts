@@ -36,12 +36,25 @@ function getClient(): OpenAI {
     'https://ruslanmv-ollabridge.hf.space';
   const apiKey = configKey || process.env.OLLABRIDGE_API_KEY || 'not-required';
 
+  // Tight limits: if OllaBridge is cold/unreachable we want HF to take
+  // over fast, not burn the full 45s frontend budget on retries.
   return new OpenAI({
     baseURL: `${baseURL.replace(/\/+$/, '')}/v1`,
     apiKey,
-    timeout: 30000,
-    maxRetries: 2,
+    timeout: 8000,
+    maxRetries: 0,
   });
+}
+
+/** True when admin hasn't configured an OllaBridge URL — we skip the try. */
+export function isOllaBridgeConfigured(): boolean {
+  try {
+    const cfg = loadConfig();
+    if (cfg.llm.ollabridgeUrl) return true;
+  } catch {
+    // ignore
+  }
+  return !!process.env.OLLABRIDGE_URL;
 }
 
 export async function streamWithOllaBridge(
@@ -49,6 +62,13 @@ export async function streamWithOllaBridge(
   model: string = 'qwen2.5:1.5b'
 ): Promise<ReadableStream> {
   const client = getClient();
+  console.log(
+    `[Chat] provider.ollabridge.dispatch ${JSON.stringify({
+      baseURL: client.baseURL,
+      model,
+      turns: messages.length,
+    })}`,
+  );
 
   const allMessages: ChatMessage[] = [
     { role: 'system', content: MEDICAL_SYSTEM_PROMPT },

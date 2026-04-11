@@ -19,14 +19,33 @@ const RequestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const routeStartedAt = Date.now();
   try {
     const body = await request.json();
     const { messages, model, language, countryCode } = RequestSchema.parse(body);
+
+    // Single-line JSON payload so the HF Space logs API (SSE) can be grepped
+    // with a simple prefix match. Every stage below tags itself `[Chat]`.
+    console.log(
+      `[Chat] route.enter ${JSON.stringify({
+        turns: messages.length,
+        model,
+        language,
+        countryCode,
+        userAgent: request.headers.get('user-agent')?.slice(0, 80) || null,
+      })}`,
+    );
 
     // Step 1: Emergency triage on the latest user message
     const lastUserMessage = messages.filter((m) => m.role === 'user').pop();
     if (lastUserMessage) {
       const triage = triageMessage(lastUserMessage.content);
+      console.log(
+        `[Chat] route.triage ${JSON.stringify({
+          isEmergency: triage.isEmergency,
+          userChars: lastUserMessage.content.length,
+        })}`,
+      );
 
       if (triage.isEmergency) {
         const emergencyInfo = getEmergencyInfo(countryCode);
@@ -68,9 +87,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 2: Build RAG context from the medical knowledge base.
+    const ragStart = Date.now();
     const ragContext = lastUserMessage
       ? buildRAGContext(lastUserMessage.content)
       : '';
+    console.log(
+      `[Chat] route.rag ${JSON.stringify({
+        chars: ragContext.length,
+        latencyMs: Date.now() - ragStart,
+      })}`,
+    );
 
     // Step 3: Build a structured, locale-aware system prompt that grounds
     // the model in WHO/CDC/NHS guidance and pins the response language,
@@ -101,8 +127,20 @@ export async function POST(request: NextRequest) {
       { role: 'user' as const, content: finalUserContent },
     ];
 
-    // Step 4: Stream response from OllaBridge-Cloud (with fallback chain)
+    // Step 4: Stream response via the provider fallback chain.
+    console.log(
+      `[Chat] route.provider.dispatch ${JSON.stringify({
+        systemPromptChars: systemPrompt.length,
+        totalMessages: augmentedMessages.length,
+        preparedInMs: Date.now() - routeStartedAt,
+      })}`,
+    );
     const stream = await streamWithFallback(augmentedMessages, model);
+    console.log(
+      `[Chat] route.stream.opened ${JSON.stringify({
+        totalMs: Date.now() - routeStartedAt,
+      })}`,
+    );
 
     return new Response(stream, {
       headers: {
@@ -112,7 +150,13 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Chat API Error]:', error);
+    console.error(
+      `[Chat] route.error ${JSON.stringify({
+        totalMs: Date.now() - routeStartedAt,
+        name: (error as any)?.name,
+        message: String((error as any)?.message || error).slice(0, 200),
+      })}`,
+    );
 
     if (error instanceof z.ZodError) {
       return new Response(

@@ -24,8 +24,18 @@ function getHfToken(): string {
   return process.env.HF_TOKEN || '';
 }
 
+function getAdminDefaultModel(): string {
+  try {
+    const cfg = loadConfig();
+    if (cfg.llm.hfDefaultModel) return cfg.llm.hfDefaultModel;
+  } catch {
+    // ignore
+  }
+  return '';
+}
+
 /** Ordered fallback chain — all verified working on free tier. */
-const MODEL_CHAIN = [
+const BASE_MODEL_CHAIN = [
   'meta-llama/Llama-3.3-70B-Instruct:sambanova',
   'meta-llama/Llama-3.3-70B-Instruct:together',
   'meta-llama/Llama-3.3-70B-Instruct',       // auto-route
@@ -36,6 +46,17 @@ const MODEL_CHAIN = [
   'Qwen/Qwen3-32B',
   'deepseek-ai/DeepSeek-V3-0324',
 ];
+
+/**
+ * Resolve the model chain at request time so admin-configured default
+ * models take effect without a redeploy. The admin value is inserted at
+ * the TOP of the chain (duplicates removed) so it's tried first.
+ */
+function getModelChain(): string[] {
+  const adminDefault = getAdminDefaultModel();
+  if (!adminDefault) return BASE_MODEL_CHAIN;
+  return [adminDefault, ...BASE_MODEL_CHAIN.filter((m) => m !== adminDefault)];
+}
 
 async function callHF(
   messages: ChatMessage[],
@@ -64,17 +85,47 @@ export async function streamWithHuggingFace(
 ): Promise<ReadableStream> {
   const encoder = new TextEncoder();
 
-  // Try each model in the chain until one succeeds.
+  const token = getHfToken();
+  if (!token) {
+    console.error('[Chat] provider.huggingface.no-token — admin must set HF token');
+    throw new Error(
+      'HF token not configured — set it in Admin → Server → HuggingFace',
+    );
+  }
+
+  // Try each model in the chain until one succeeds. Every attempt is
+  // logged with latency + status so a developer can reconstruct the
+  // cascade from the HF Space run logs. The chain starts with the
+  // admin-configured default model (if any), so UI changes take effect
+  // without a redeploy.
+  const chain = getModelChain();
   let response: Response | null = null;
-  let activeModel = MODEL_CHAIN[0];
-  for (const model of MODEL_CHAIN) {
+  let activeModel = chain[0];
+  for (const model of chain) {
+    const start = Date.now();
     const res = await callHF(messages, model, true);
+    const latencyMs = Date.now() - start;
     if (res.ok) {
+      console.log(
+        `[Chat] provider.huggingface.attempt ${JSON.stringify({
+          model,
+          status: res.status,
+          latencyMs,
+          result: 'ok',
+        })}`,
+      );
       response = res;
       activeModel = model;
       break;
     }
-    console.log(`[HF] ${model} returned ${res.status}, trying next...`);
+    console.warn(
+      `[Chat] provider.huggingface.attempt ${JSON.stringify({
+        model,
+        status: res.status,
+        latencyMs,
+        result: 'fallback',
+      })}`,
+    );
   }
   if (!response || !response.ok) {
     throw new Error('All HF Inference models unavailable');
@@ -125,16 +176,38 @@ export async function streamWithHuggingFace(
 export async function chatWithHuggingFace(
   messages: ChatMessage[],
 ): Promise<ProviderResponse> {
+  if (!getHfToken()) {
+    console.error('[Chat] provider.huggingface.no-token.nonstream');
+    throw new Error('HF token not configured');
+  }
+  const chain = getModelChain();
   let response: Response | null = null;
-  let activeModel = MODEL_CHAIN[0];
-  for (const model of MODEL_CHAIN) {
+  let activeModel = chain[0];
+  for (const model of chain) {
+    const start = Date.now();
     const res = await callHF(messages, model, false);
+    const latencyMs = Date.now() - start;
     if (res.ok) {
+      console.log(
+        `[Chat] provider.huggingface.attempt.nonstream ${JSON.stringify({
+          model,
+          status: res.status,
+          latencyMs,
+          result: 'ok',
+        })}`,
+      );
       response = res;
       activeModel = model;
       break;
     }
-    console.log(`[HF] ${model} returned ${res.status}, trying next...`);
+    console.warn(
+      `[Chat] provider.huggingface.attempt.nonstream ${JSON.stringify({
+        model,
+        status: res.status,
+        latencyMs,
+        result: 'fallback',
+      })}`,
+    );
   }
   if (!response || !response.ok) {
     throw new Error('All HF Inference models unavailable');
