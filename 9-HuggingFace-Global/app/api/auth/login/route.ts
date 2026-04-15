@@ -28,11 +28,29 @@ export async function POST(req: Request) {
     pruneExpiredSessions();
 
     const user = db
-      .prepare('SELECT id, email, password, display_name, email_verified, is_admin FROM users WHERE email = ?')
+      .prepare(
+        `SELECT id, email, password, display_name, email_verified, is_admin,
+                COALESCE(is_active, 1) AS is_active, disabled_reason
+         FROM users WHERE email = ?`,
+      )
       .get(email.toLowerCase()) as any;
 
     if (!user || !bcrypt.compareSync(password, user.password)) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    }
+
+    // Reject deactivated accounts with a distinct 403 so the UI can
+    // surface the `disabled_reason` instead of a generic "wrong password".
+    if (!user.is_active) {
+      return NextResponse.json(
+        {
+          error:
+            user.disabled_reason ||
+            'This account has been disabled. Please contact an administrator.',
+          code: 'account_disabled',
+        },
+        { status: 403 },
+      );
     }
 
     const token = genToken();
@@ -41,6 +59,14 @@ export async function POST(req: Request) {
       user.id,
       sessionExpiry(),
     );
+    // Best-effort login timestamp. Never fail the login if this write
+    // errors — the column exists from v3 onwards, but older DBs that
+    // haven't hit getDb() yet may not have it for a transient moment.
+    try {
+      db.prepare("UPDATE users SET last_login_at = datetime('now') WHERE id = ?").run(user.id);
+    } catch {
+      /* non-fatal */
+    }
 
     return NextResponse.json({
       user: {

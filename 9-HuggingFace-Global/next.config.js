@@ -52,6 +52,18 @@ const nextConfig = {
           // { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // HSTS — only in production. Using includeSubDomains without
+          // `preload` so operators can opt into the HSTS preload list
+          // explicitly once they've confirmed every subdomain serves HTTPS.
+          // Gated on NODE_ENV so local `next dev` over http still works.
+          ...(process.env.NODE_ENV === 'production'
+            ? [
+                {
+                  key: 'Strict-Transport-Security',
+                  value: 'max-age=63072000; includeSubDomains',
+                },
+              ]
+            : []),
           {
             key: 'Content-Security-Policy',
             value: [

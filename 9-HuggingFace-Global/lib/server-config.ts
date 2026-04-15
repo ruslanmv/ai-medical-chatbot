@@ -32,6 +32,12 @@ export interface ServerConfig {
     ollamaUrl: string;
     hfDefaultModel: string;
     hfToken: string;
+    /**
+     * Hugging Face token with "Make calls to Inference Providers" permission.
+     * Used SERVER-SIDE ONLY by the medicine-scanner proxy at /api/scan.
+     * Never leaves the backend, never appears in any HTTP response body.
+     */
+    hfTokenInference: string;
     ollabridgeUrl: string;
     ollabridgeApiKey: string;
     openaiApiKey: string;
@@ -40,6 +46,17 @@ export interface ServerConfig {
     watsonxApiKey: string;
     watsonxProjectId: string;
     watsonxUrl: string;
+    // Additional providers (v3). Purely additive — routes that don't know
+    // about these fields continue to work unchanged because loadConfig()
+    // merges defaults for any missing key.
+    geminiApiKey: string;
+    openrouterApiKey: string;
+    togetherApiKey: string;
+    mistralApiKey: string;
+    /** Public URL of the Medicine-Scanner HF Space. */
+    scannerUrl: string;
+    /** Public URL of the MetaEngine-Nearby HF Space. */
+    nearbyUrl: string;
   };
   app: {
     appUrl: string;
@@ -65,6 +82,7 @@ export function getDefaultConfig(): ServerConfig {
       // Secrets hold the REAL env value — routes using this loader get the
       // actual token. Admin GET responses pass through a redact() filter.
       hfToken: process.env.HF_TOKEN || '',
+      hfTokenInference: process.env.HF_TOKEN_INFERENCE || '',
       ollabridgeUrl: process.env.OLLABRIDGE_URL || '',
       ollabridgeApiKey: process.env.OLLABRIDGE_API_KEY || '',
       openaiApiKey: process.env.OPENAI_API_KEY || '',
@@ -73,6 +91,14 @@ export function getDefaultConfig(): ServerConfig {
       watsonxApiKey: process.env.WATSONX_API_KEY || '',
       watsonxProjectId: process.env.WATSONX_PROJECT_ID || '',
       watsonxUrl: process.env.WATSONX_URL || 'https://us-south.ml.cloud.ibm.com',
+      geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
+      openrouterApiKey: process.env.OPENROUTER_API_KEY || '',
+      togetherApiKey: process.env.TOGETHER_API_KEY || '',
+      mistralApiKey: process.env.MISTRAL_API_KEY || '',
+      scannerUrl:
+        process.env.SCANNER_URL || 'https://ruslanmv-medicine-scanner.hf.space',
+      nearbyUrl:
+        process.env.NEARBY_URL || 'https://ruslanmv-metaengine-nearby.hf.space',
     },
     app: {
       appUrl: process.env.APP_URL || 'https://ruslanmv-medibot.hf.space',

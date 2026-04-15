@@ -15,10 +15,12 @@ import { loadConfig, saveConfig, type ServerConfig } from '@/lib/server-config';
  * (like /api/admin/fetch-models) can read the same source of truth.
  */
 
+const REDACTED = '••••••••';
+
 /** Redact sensitive fields for GET responses. */
 function redact(config: ServerConfig) {
   const hasSecret = (v: string) => !!(v && v.length > 0);
-  const mask = (v: string) => (hasSecret(v) ? '••••••••' : '');
+  const mask = (v: string) => (hasSecret(v) ? REDACTED : '');
   return {
     smtp: {
       host: config.smtp.host,
@@ -34,6 +36,7 @@ function redact(config: ServerConfig) {
       ollamaUrl: config.llm.ollamaUrl,
       hfDefaultModel: config.llm.hfDefaultModel,
       hfToken: mask(config.llm.hfToken),
+      hfTokenInference: mask(config.llm.hfTokenInference),
       ollabridgeUrl: config.llm.ollabridgeUrl,
       ollabridgeApiKey: mask(config.llm.ollabridgeApiKey),
       openaiApiKey: mask(config.llm.openaiApiKey),
@@ -42,13 +45,24 @@ function redact(config: ServerConfig) {
       watsonxApiKey: mask(config.llm.watsonxApiKey),
       watsonxProjectId: config.llm.watsonxProjectId,
       watsonxUrl: config.llm.watsonxUrl,
+      scannerUrl: config.llm.scannerUrl,
+      nearbyUrl: config.llm.nearbyUrl,
+      geminiApiKey: mask(config.llm.geminiApiKey),
+      openrouterApiKey: mask(config.llm.openrouterApiKey),
+      togetherApiKey: mask(config.llm.togetherApiKey),
+      mistralApiKey: mask(config.llm.mistralApiKey),
       // Computed status flags — derived server-side so UI can show chips.
       ollabridgeConfigured: !!config.llm.ollabridgeUrl,
       hfConfigured: hasSecret(config.llm.hfToken),
+      hfInferenceConfigured: hasSecret(config.llm.hfTokenInference),
       openaiConfigured: hasSecret(config.llm.openaiApiKey),
       anthropicConfigured: hasSecret(config.llm.anthropicApiKey),
       groqConfigured: hasSecret(config.llm.groqApiKey),
       watsonxConfigured: hasSecret(config.llm.watsonxApiKey) && !!config.llm.watsonxProjectId,
+      geminiConfigured: hasSecret(config.llm.geminiApiKey),
+      openrouterConfigured: hasSecret(config.llm.openrouterApiKey),
+      togetherConfigured: hasSecret(config.llm.togetherApiKey),
+      mistralConfigured: hasSecret(config.llm.mistralApiKey),
     },
     app: config.app,
   };
@@ -76,7 +90,7 @@ export async function PUT(req: Request) {
       if (body.smtp.port !== undefined) current.smtp.port = parseInt(body.smtp.port, 10);
       if (body.smtp.user !== undefined) current.smtp.user = body.smtp.user;
       // Only update password if it's not the redacted placeholder.
-      if (body.smtp.pass !== undefined && body.smtp.pass !== '••••••••') {
+      if (body.smtp.pass !== undefined && body.smtp.pass !== REDACTED) {
         current.smtp.pass = body.smtp.pass;
       }
       if (body.smtp.fromEmail !== undefined) current.smtp.fromEmail = body.smtp.fromEmail;
@@ -91,19 +105,26 @@ export async function PUT(req: Request) {
       if (body.llm.ollabridgeUrl !== undefined) current.llm.ollabridgeUrl = body.llm.ollabridgeUrl;
       if (body.llm.watsonxProjectId !== undefined) current.llm.watsonxProjectId = body.llm.watsonxProjectId;
       if (body.llm.watsonxUrl !== undefined) current.llm.watsonxUrl = body.llm.watsonxUrl;
+      if (body.llm.scannerUrl !== undefined) current.llm.scannerUrl = body.llm.scannerUrl;
+      if (body.llm.nearbyUrl !== undefined) current.llm.nearbyUrl = body.llm.nearbyUrl;
 
       // Secret fields — skip if value is the redacted placeholder.
       const setSecret = (field: keyof ServerConfig['llm'], value: any) => {
-        if (value !== undefined && value !== '••••••••') {
+        if (value !== undefined && value !== REDACTED) {
           (current.llm as any)[field] = value;
         }
       };
       setSecret('hfToken', body.llm.hfToken);
+      setSecret('hfTokenInference', body.llm.hfTokenInference);
       setSecret('ollabridgeApiKey', body.llm.ollabridgeApiKey);
       setSecret('openaiApiKey', body.llm.openaiApiKey);
       setSecret('anthropicApiKey', body.llm.anthropicApiKey);
       setSecret('groqApiKey', body.llm.groqApiKey);
       setSecret('watsonxApiKey', body.llm.watsonxApiKey);
+      setSecret('geminiApiKey', body.llm.geminiApiKey);
+      setSecret('openrouterApiKey', body.llm.openrouterApiKey);
+      setSecret('togetherApiKey', body.llm.togetherApiKey);
+      setSecret('mistralApiKey', body.llm.mistralApiKey);
     }
 
     if (body.app) {

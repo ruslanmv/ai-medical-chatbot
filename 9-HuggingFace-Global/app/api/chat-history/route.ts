@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb, genId } from '@/lib/db';
 import { authenticateRequest } from '@/lib/auth-middleware';
+import { encodeHealthPayload } from '@/lib/health-data-repo';
 
 /**
  * GET  /api/chat-history           → list conversations (newest first, max 100)
@@ -56,9 +57,12 @@ export async function POST(req: Request) {
     const db = getDb();
     const id = genId();
 
+    // Messages may contain PHI — encrypt at rest. The preview is intentionally
+    // left in plaintext because it's displayed in the sidebar listing and is
+    // already capped at 200 chars by the input schema.
     db.prepare(
       'INSERT INTO chat_history (id, user_id, preview, messages, topic) VALUES (?, ?, ?, ?, ?)',
-    ).run(id, user.id, preview, JSON.stringify(messages), topic || null);
+    ).run(id, user.id, preview, encodeHealthPayload(messages), topic || null);
 
     return NextResponse.json({ id }, { status: 201 });
   } catch (error: any) {
