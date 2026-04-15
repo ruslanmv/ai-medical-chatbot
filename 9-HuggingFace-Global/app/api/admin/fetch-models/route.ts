@@ -387,6 +387,177 @@ const CURATED_WATSONX_MODELS: ModelInfo[] = [
   { id: 'mistralai/mistral-large', name: 'Mistral Large', ownedBy: 'mistralai', pricing: 'paid' },
 ];
 
+// ---- Additional provider fetchers (v3) -----------------------------------
+
+/**
+ * Google Gemini. Uses the Generative Language API, which requires the key
+ * as a query parameter rather than a bearer header.
+ */
+async function fetchGemini(apiKey: string): Promise<ProviderBlock> {
+  const block: ProviderBlock = {
+    provider: 'gemini',
+    label: 'Google Gemini',
+    configured: !!apiKey,
+    ok: false,
+    pricing: 'paid',
+    models: [],
+  };
+  if (!apiKey) {
+    block.error = 'API key not configured';
+    return block;
+  }
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
+      { signal: withTimeout() },
+    );
+    if (!res.ok) {
+      block.error = `HTTP ${res.status}`;
+      return block;
+    }
+    const data = await res.json().catch(() => ({}));
+    const arr = Array.isArray(data?.models) ? data.models : [];
+    block.ok = true;
+    block.models = arr
+      .filter((m: any) => typeof m?.name === 'string')
+      // Gemini returns "models/gemini-1.5-flash" — strip the prefix so the
+      // UI shows the bare model id like every other provider.
+      .map((m: any) => ({
+        id: String(m.name).replace(/^models\//, ''),
+        name: m.displayName || String(m.name).replace(/^models\//, ''),
+        ownedBy: 'google',
+        context: typeof m.inputTokenLimit === 'number' ? m.inputTokenLimit : undefined,
+        pricing: 'paid' as const,
+      }));
+  } catch (e: any) {
+    block.error = e?.name === 'TimeoutError' ? 'Timeout (10s)' : e?.message || 'Request failed';
+  }
+  return block;
+}
+
+/** OpenRouter — OpenAI-compatible /v1/models aggregator across providers. */
+async function fetchOpenRouter(apiKey: string): Promise<ProviderBlock> {
+  const block: ProviderBlock = {
+    provider: 'openrouter',
+    label: 'OpenRouter',
+    configured: !!apiKey,
+    ok: false,
+    pricing: 'paid',
+    models: [],
+  };
+  if (!apiKey) {
+    block.error = 'API key not configured';
+    return block;
+  }
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: withTimeout(),
+    });
+    if (!res.ok) {
+      block.error = `HTTP ${res.status}`;
+      return block;
+    }
+    const data = await res.json().catch(() => ({}));
+    const arr = Array.isArray(data?.data) ? data.data : [];
+    block.ok = true;
+    block.models = arr.slice(0, 200).map((m: any) => ({
+      id: String(m.id),
+      name: m.name || String(m.id),
+      ownedBy: (String(m.id).split('/')[0] as string) || undefined,
+      context: typeof m.context_length === 'number' ? m.context_length : undefined,
+      pricing: m?.pricing?.prompt === '0' ? 'free' : 'paid',
+    }));
+  } catch (e: any) {
+    block.error = e?.name === 'TimeoutError' ? 'Timeout (10s)' : e?.message || 'Request failed';
+  }
+  return block;
+}
+
+/** Together AI — OpenAI-compatible /v1/models. */
+async function fetchTogether(apiKey: string): Promise<ProviderBlock> {
+  const block: ProviderBlock = {
+    provider: 'together',
+    label: 'Together AI',
+    configured: !!apiKey,
+    ok: false,
+    pricing: 'paid',
+    models: [],
+  };
+  if (!apiKey) {
+    block.error = 'API key not configured';
+    return block;
+  }
+  try {
+    const res = await fetch('https://api.together.xyz/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: withTimeout(),
+    });
+    if (!res.ok) {
+      block.error = `HTTP ${res.status}`;
+      return block;
+    }
+    const data = await res.json().catch(() => []);
+    // Together returns a bare array.
+    const arr = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+    block.ok = true;
+    block.models = arr.slice(0, 200).map((m: any) => ({
+      id: String(m.id || m.name),
+      name: m.display_name || m.id || m.name,
+      ownedBy: m.organization || undefined,
+      context: typeof m.context_length === 'number' ? m.context_length : undefined,
+      pricing: 'paid' as const,
+    }));
+  } catch (e: any) {
+    block.error = e?.name === 'TimeoutError' ? 'Timeout (10s)' : e?.message || 'Request failed';
+  }
+  return block;
+}
+
+/** Mistral AI — OpenAI-compatible /v1/models. */
+async function fetchMistral(apiKey: string): Promise<ProviderBlock> {
+  const block: ProviderBlock = {
+    provider: 'mistral',
+    label: 'Mistral AI',
+    configured: !!apiKey,
+    ok: false,
+    pricing: 'paid',
+    models: [],
+  };
+  if (!apiKey) {
+    block.error = 'API key not configured';
+    return block;
+  }
+  try {
+    const res = await fetch('https://api.mistral.ai/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: withTimeout(),
+    });
+    if (!res.ok) {
+      block.error = `HTTP ${res.status}`;
+      return block;
+    }
+    const data = await res.json().catch(() => ({}));
+    const arr = Array.isArray(data?.data) ? data.data : [];
+    block.ok = true;
+    block.models = arr.map((m: any) => ({
+      id: String(m.id),
+      name: m.name || m.id,
+      ownedBy: m.owned_by || 'mistralai',
+      context:
+        typeof m.max_context_length === 'number'
+          ? m.max_context_length
+          : typeof m.context_length === 'number'
+            ? m.context_length
+            : undefined,
+      pricing: 'paid' as const,
+    }));
+  } catch (e: any) {
+    block.error = e?.name === 'TimeoutError' ? 'Timeout (10s)' : e?.message || 'Request failed';
+  }
+  return block;
+}
+
 // ---- Route handler -------------------------------------------------------
 
 export async function GET(req: Request) {
@@ -398,16 +569,42 @@ export async function GET(req: Request) {
 
   // Run every discovery call in parallel so the slowest provider sets the
   // total latency floor, not the sum of all calls.
-  const [ollabridge, huggingface, groq, openai, anthropic, watsonx] = await Promise.all([
+  const [
+    ollabridge,
+    huggingface,
+    groq,
+    openai,
+    anthropic,
+    watsonx,
+    gemini,
+    openrouter,
+    together,
+    mistral,
+  ] = await Promise.all([
     fetchOllaBridge(llm.ollabridgeUrl, llm.ollabridgeApiKey),
     fetchHuggingFace(llm.hfToken),
     fetchGroq(llm.groqApiKey),
     fetchOpenAI(llm.openaiApiKey),
     fetchAnthropic(llm.anthropicApiKey),
     fetchWatsonx(llm.watsonxApiKey, llm.watsonxProjectId, llm.watsonxUrl),
+    fetchGemini(llm.geminiApiKey),
+    fetchOpenRouter(llm.openrouterApiKey),
+    fetchTogether(llm.togetherApiKey),
+    fetchMistral(llm.mistralApiKey),
   ]);
 
-  const providers = [ollabridge, huggingface, groq, openai, anthropic, watsonx];
+  const providers = [
+    ollabridge,
+    huggingface,
+    groq,
+    openai,
+    anthropic,
+    watsonx,
+    gemini,
+    openrouter,
+    together,
+    mistral,
+  ];
   const totalModels = providers.reduce((sum, p) => sum + p.models.length, 0);
   const okCount = providers.filter((p) => p.ok).length;
 

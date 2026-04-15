@@ -14,11 +14,17 @@ export function authenticateRequest(req: Request): AuthUser | null {
   const db = getDb();
   pruneExpiredSessions();
 
+  // Deactivated accounts (is_active = 0) must not authenticate even if
+  // they still have a valid session token. The WHERE clause uses
+  // `COALESCE(..., 1)` so that on DBs where the v3 column has not yet
+  // been added the session still resolves — belt + braces for upgrades.
   const row = db
     .prepare(
       `SELECT u.id, u.email, u.is_admin
        FROM sessions s JOIN users u ON u.id = s.user_id
-       WHERE s.token = ? AND s.expires_at > datetime('now')`,
+       WHERE s.token = ?
+         AND s.expires_at > datetime('now')
+         AND COALESCE(u.is_active, 1) = 1`,
     )
     .get(token) as any;
 

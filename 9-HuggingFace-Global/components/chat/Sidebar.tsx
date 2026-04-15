@@ -17,6 +17,7 @@ import {
   Clock,
   User2,
   LogIn,
+  UserPlus,
   PanelLeftClose,
   PanelLeftOpen,
   Globe,
@@ -45,6 +46,7 @@ export type NavView =
   | "history"
   | "settings"
   | "login"
+  | "register"
   | "profile"
   | "ehr-wizard"
   | "my-medicines"
@@ -170,86 +172,172 @@ export function Sidebar({
         </nav>
 
         {/* ============================================================
-         * Bottom settings drawer — like ChatGPT/Claude/HF Space.
-         * Shows user profile + settings menu that pops UP from the bottom.
+         * Bottom section.
+         *
+         * Two very different layouts:
+         *   - GUEST:  No hidden menus. Explicit Account + Preferences
+         *             groups with a single primary "Create free account"
+         *             CTA. Follows the pattern used by Notion / Slack /
+         *             MyFitnessPal on their signed-out shell.
+         *   - AUTH'd: Classic avatar button that pops an upward settings
+         *             drawer — same affordance users already know from
+         *             ChatGPT / Claude.
          * ============================================================ */}
         <div className="mt-auto pt-3 border-t border-line/50 relative" ref={menuRef}>
-          {/* Pop-up menu (opens upward) */}
-          {bottomMenuOpen && !collapsed && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-surface-1 border border-line/60 rounded-2xl shadow-card overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200 z-50">
-              <div className="p-2 space-y-0.5">
-                <MenuItem icon={Settings} label={t("nav_settings", language)} shortcut="Ctrl+," onClick={() => navTo("settings")} />
-                <MenuItem icon={Globe} label={`${t("settings_language", language)}`} detail={language.toUpperCase()} onClick={() => navTo("settings")} />
-                <MenuItem icon={HelpCircle} label="Get help" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot/issues", "_blank")} />
+          {isAuthenticated ? (
+            <>
+              {/* Pop-up menu (opens upward) — authenticated only. */}
+              {bottomMenuOpen && !collapsed && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-surface-1 border border-line/60 rounded-2xl shadow-card overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200 z-50">
+                  <div className="p-2 space-y-0.5">
+                    <MenuItem icon={Settings} label={t("nav_settings", language)} shortcut="Ctrl+," onClick={() => navTo("settings")} />
+                    <MenuItem icon={Globe} label={`${t("settings_language", language)}`} detail={language.toUpperCase()} onClick={() => navTo("settings")} />
+                    <MenuItem icon={HelpCircle} label="Get help" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot/issues", "_blank")} />
 
-                <div className="my-1.5 border-t border-line/40" />
+                    <div className="my-1.5 border-t border-line/40" />
 
-                <MenuItem icon={Smartphone} label="Install as App" onClick={() => {}} />
-                <MenuItem icon={Share2} label="Share MedOS" onClick={() => { if (navigator.share) navigator.share({ title: "MedOS", url: window.location.origin }); }} />
-                <MenuItem icon={Info} label="About MedOS" detail="v1.0" onClick={() => navTo("settings")} />
+                    <MenuItem icon={Smartphone} label="Install as App" onClick={() => {}} />
+                    <MenuItem icon={Share2} label="Share MedOS" onClick={() => { if (navigator.share) navigator.share({ title: "MedOS", url: window.location.origin }); }} />
+                    <MenuItem icon={Info} label="About MedOS" detail="v1.0" onClick={() => navTo("settings")} />
 
-                <div className="my-1.5 border-t border-line/40" />
+                    <div className="my-1.5 border-t border-line/40" />
 
-                <MenuItem icon={ExternalLink} label="Source Code" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot", "_blank")} external />
-                <MenuItem icon={ExternalLink} label="HuggingFace Space" onClick={() => window.open("https://huggingface.co/spaces/ruslanmv/MediBot", "_blank")} external />
+                    <MenuItem icon={ExternalLink} label="Source Code" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot", "_blank")} external />
+                    <MenuItem icon={ExternalLink} label="HuggingFace Space" onClick={() => window.open("https://huggingface.co/spaces/ruslanmv/MediBot", "_blank")} external />
 
-                <div className="my-1.5 border-t border-line/40" />
+                    <div className="my-1.5 border-t border-line/40" />
 
-                <div className="px-3 py-2">
-                  <p className="text-[10px] text-ink-subtle leading-snug">
-                    MedOS v1.0 · Free & Open Source
-                    <br />
-                    Zero data retention · {t("badge_private", language)}
-                  </p>
+                    <div className="px-3 py-2">
+                      <p className="text-[10px] text-ink-subtle leading-snug">
+                        MedOS v1.0 · Free & Open Source
+                        <br />
+                        Zero data retention · {t("badge_private", language)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Profile button — triggers the drawer when expanded,
+                  navigates straight to Profile when the sidebar is collapsed. */}
+              <button
+                onClick={() => {
+                  if (collapsed) {
+                    setActiveNav("profile");
+                  } else {
+                    setBottomMenuOpen(!bottomMenuOpen);
+                  }
+                }}
+                className={`w-full flex items-center rounded-xl transition-all hover:bg-surface-2 ${
+                  collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
+                }`}
+              >
+                <div
+                  className={`flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs bg-brand-gradient text-white ${
+                    collapsed ? "w-9 h-9" : "w-8 h-8"
+                  }`}
+                >
+                  {(username || "U")[0].toUpperCase()}
+                </div>
+
+                {!collapsed && (
+                  <>
+                    <div className="flex-1 min-w-0 text-left">
+                      <span className="text-sm font-semibold text-ink-base block truncate">
+                        {username || t("nav_profile", language)}
+                      </span>
+                      <span className="text-[10px] text-ink-subtle block">
+                        Account
+                      </span>
+                    </div>
+                    {bottomMenuOpen ? (
+                      <ChevronDown size={14} className="text-ink-subtle flex-shrink-0" />
+                    ) : (
+                      <ChevronUp size={14} className="text-ink-subtle flex-shrink-0" />
+                    )}
+                  </>
+                )}
+              </button>
+            </>
+          ) : (
+            /* --------------------------------------------------------
+             * GUEST layout — explicit, flat, no hidden menus.
+             * -------------------------------------------------------- */
+            <div className={collapsed ? "space-y-1" : "space-y-3"}>
+              {collapsed ? (
+                /* Collapsed: single "Sign in" icon button. */
+                <button
+                  onClick={() => setActiveNav("login")}
+                  className="w-full flex items-center justify-center p-2.5 rounded-xl text-ink-base hover:bg-surface-2 transition-all"
+                  title="Log in"
+                  aria-label="Log in"
+                >
+                  <div className="w-9 h-9 rounded-full bg-surface-2 border border-line/60 flex items-center justify-center text-ink-muted">
+                    <LogIn size={16} />
+                  </div>
+                </button>
+              ) : (
+                <>
+                  {/* Account group — Log in + Create account. */}
+                  <div>
+                    <SectionLabel>Account</SectionLabel>
+                    <div className="space-y-0.5">
+                      <MenuItem icon={LogIn} label="Log in" onClick={() => navTo("login")} />
+                      <MenuItem icon={UserPlus} label="Create account" onClick={() => navTo("register")} />
+                    </div>
+                  </div>
+
+                  {/* Preferences — visible, not hidden behind an ellipsis. */}
+                  <div>
+                    <SectionLabel>Preferences</SectionLabel>
+                    <div className="space-y-0.5">
+                      <MenuItem
+                        icon={Settings}
+                        label={t("nav_settings", language)}
+                        onClick={() => navTo("settings")}
+                      />
+                      <MenuItem
+                        icon={Globe}
+                        label={t("settings_language", language)}
+                        detail={language.toUpperCase()}
+                        onClick={() => navTo("settings")}
+                      />
+                      <MenuItem
+                        icon={HelpCircle}
+                        label="Help"
+                        onClick={() =>
+                          window.open(
+                            "https://github.com/ruslanmv/ai-medical-chatbot/issues",
+                            "_blank",
+                          )
+                        }
+                      />
+                      <MenuItem
+                        icon={Info}
+                        label="About"
+                        detail="v1.0"
+                        onClick={() => navTo("settings")}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Primary CTA — single strongest action on the page. */}
+                  <button
+                    onClick={() => navTo("register")}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-brand-gradient text-white text-sm font-semibold shadow-glow hover:opacity-95 active:scale-[0.99] transition-all"
+                  >
+                    <UserPlus size={16} strokeWidth={2.5} />
+                    Sign up free
+                  </button>
+                  <p className="text-center text-[10px] text-ink-subtle leading-snug px-2">
+                    Sync your health data across devices.
+                    <br />
+                    You’re browsing as a guest.
+                  </p>
+                </>
+              )}
             </div>
           )}
-
-          {/* User profile button — triggers the bottom menu */}
-          <button
-            onClick={() => {
-              if (collapsed) {
-                setActiveNav(isAuthenticated ? "profile" : "login");
-              } else {
-                setBottomMenuOpen(!bottomMenuOpen);
-              }
-            }}
-            className={`w-full flex items-center rounded-xl transition-all hover:bg-surface-2 ${
-              collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
-            }`}
-          >
-            {/* Avatar */}
-            <div
-              className={`flex-shrink-0 rounded-full flex items-center justify-center font-bold text-xs ${
-                isAuthenticated
-                  ? "bg-brand-gradient text-white"
-                  : "bg-surface-2 text-ink-muted border border-line/60"
-              } ${collapsed ? "w-9 h-9" : "w-8 h-8"}`}
-            >
-              {isAuthenticated
-                ? (username || "U")[0].toUpperCase()
-                : "G"}
-            </div>
-
-            {!collapsed && (
-              <>
-                <div className="flex-1 min-w-0 text-left">
-                  <span className="text-sm font-semibold text-ink-base block truncate">
-                    {isAuthenticated ? (username || t("nav_profile", language)) : "Guest User"}
-                  </span>
-                  <span className="text-[10px] text-ink-subtle block">
-                    {isAuthenticated ? "Account" : "Free plan"}
-                  </span>
-                </div>
-                {bottomMenuOpen ? (
-                  <ChevronDown size={14} className="text-ink-subtle flex-shrink-0" />
-                ) : (
-                  <ChevronUp size={14} className="text-ink-subtle flex-shrink-0" />
-                )}
-              </>
-            )}
-          </button>
         </div>
       </aside>
 

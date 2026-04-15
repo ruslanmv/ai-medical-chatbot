@@ -300,8 +300,10 @@ function MedOSAppInner() {
           />
         );
       case "login":
+      case "register":
         return (
           <LoginView
+            initialFlow={activeNav === "register" ? "register" : "login"}
             onLogin={async (e, p) => {
               const res = await auth.login(e, p);
               if (res.ok) setActiveNav("home");

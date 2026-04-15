@@ -1,13 +1,18 @@
 /**
  * MedOS Health Store — client-side health data persistence.
  *
- * All data is stored in localStorage as JSON. Zero server calls, zero
- * accounts, fully private. The patient owns their data and can export
- * it at any time as a JSON file (for backup or to share with a doctor).
+ * All data is stored in localStorage as JSON, keyed per-user via
+ * `scopedKey()` from ./storage-namespace (see that file for why). An
+ * authenticated user reads/writes `medos:u:<userId>:<suffix>`; an
+ * anonymous visitor reads/writes `medos:anon:<uuid>:<suffix>` in
+ * sessionStorage only. Switching accounts on a shared browser wipes the
+ * previous user's scoped keys, so one patient can never see another's EHR.
  *
- * Each entity type gets its own localStorage key so reads and writes are
- * scoped and independent (one corrupt key doesn't nuke everything).
+ * Each entity type gets its own scoped key so reads and writes are
+ * independent (one corrupt key doesn't nuke everything).
  */
+
+import { scopedKey } from './storage-namespace';
 
 // ============================================================
 // Types
@@ -197,12 +202,12 @@ export const ALLERGY_COMMON = [
 // EHR storage (single record per user, keyed as "ehr_profile")
 // ============================================================
 
-const EHR_KEY = 'medos_ehr_profile';
+const EHR_KEY_SUFFIX = 'ehr_profile';
 
 export function loadEHRProfile(): EHRProfile {
   if (typeof localStorage === 'undefined') return {};
   try {
-    const raw = localStorage.getItem(EHR_KEY);
+    const raw = localStorage.getItem(scopedKey(EHR_KEY_SUFFIX));
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -212,7 +217,7 @@ export function loadEHRProfile(): EHRProfile {
 export function saveEHRProfile(profile: EHRProfile): void {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.setItem(EHR_KEY, JSON.stringify(profile));
+    localStorage.setItem(scopedKey(EHR_KEY_SUFFIX), JSON.stringify(profile));
   } catch {}
 }
 
@@ -337,34 +342,40 @@ export const FREQUENCY_LABELS: Record<Medication['frequency'], string> = {
 // Storage keys
 // ============================================================
 
+/**
+ * Storage-key SUFFIXES (not full keys). The actual localStorage key is
+ * resolved at every read/write via `scopedKey()`, so it is always
+ * user-scoped. Do NOT build a full key from these suffixes yourself.
+ */
 const KEYS = {
-  medications: 'medos_medications',
-  medicationLogs: 'medos_medication_logs',
-  appointments: 'medos_appointments',
-  vitals: 'medos_vitals',
-  records: 'medos_records',
-  history: 'medos_history',
-  medicines: 'medos_medicines',
+  medications: 'medications',
+  medicationLogs: 'medication_logs',
+  appointments: 'appointments',
+  vitals: 'vitals',
+  records: 'records',
+  history: 'history',
+  medicines: 'medicines',
 } as const;
 
 // ============================================================
-// Generic CRUD helpers
+// Generic CRUD helpers — always resolve the suffix through scopedKey()
+// so every read/write lands in the current user's namespace.
 // ============================================================
 
-function load<T>(key: string): T[] {
+function load<T>(suffix: string): T[] {
   if (typeof localStorage === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(scopedKey(suffix));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function save<T>(key: string, data: T[]): void {
+function save<T>(suffix: string, data: T[]): void {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    localStorage.setItem(scopedKey(suffix), JSON.stringify(data));
   } catch {
     // Storage full or unavailable — silently fail.
   }

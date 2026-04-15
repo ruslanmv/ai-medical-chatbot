@@ -6,6 +6,13 @@
  *   - WAL mode for concurrent reads during SSE streaming.
  *   - Auto-migration via PRAGMA user_version.
  *   - All queries use parameterized statements (no SQL injection).
+ *
+ * Migration history:
+ *   v1  initial schema (users, sessions, health_data, chat_history)
+ *   v2  per-user isolation: user_settings, audit_log, scan_log
+ *   v3  admin user-management flags: is_active, last_login_at,
+ *       disabled_reason  (ADDITIVE — new columns default to a value that
+ *       leaves every v2 user indistinguishable from the pre-v3 state)
  */
 
 import Database from 'better-sqlite3';
@@ -81,6 +88,91 @@ function runMigrations(db: Database.Database): void {
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
       PRAGMA user_version = 1;
+    `);
+  }
+
+  if (version < 2) {
+    // v2: per-user isolation tables.
+    //
+    // user_settings   one row per user; holds preferences (language,
+    //                 country, units, theme, default model) plus the
+    //                 EHR profile JSON and an OPTIONAL BYO Hugging
+    //                 Face token stored encrypted at rest.
+    //
+    // audit_log       append-only security/forensic log. See lib/audit.ts.
+    //
+    // scan_log        per-call accounting for /api/scan so admins can
+    //                 see usage by user and detect runaway costs on the
+    //                 shared HF_TOKEN_INFERENCE quota.
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_settings (
+        user_id            TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        language           TEXT,
+        country            TEXT,
+        units              TEXT,
+        default_model      TEXT,
+        theme              TEXT,
+        ehr                TEXT NOT NULL DEFAULT '{}',
+        hf_token_encrypted TEXT,
+        updated_at         TEXT DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS audit_log (
+        id          TEXT PRIMARY KEY,
+        user_id     TEXT,
+        action      TEXT NOT NULL,
+        ip          TEXT,
+        meta        TEXT NOT NULL DEFAULT '{}',
+        created_at  TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_audit_user_time ON audit_log(user_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_audit_action_time ON audit_log(action, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS scan_log (
+        id          TEXT PRIMARY KEY,
+        user_id     TEXT,
+        ip          TEXT,
+        status      INTEGER NOT NULL,
+        bytes       INTEGER NOT NULL DEFAULT 0,
+        latency_ms  INTEGER NOT NULL DEFAULT 0,
+        model       TEXT,
+        created_at  TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_scan_user_time ON scan_log(user_id, created_at DESC);
+
+      PRAGMA user_version = 2;
+    `);
+  }
+
+  if (version < 3) {
+    // v3 — admin user-management flags.
+    //
+    // Every column is added with a DEFAULT so existing rows are fully
+    // populated without a backfill step. We use column-presence probes
+    // (PRAGMA table_info) because ALTER TABLE ADD COLUMN is not
+    // idempotent on SQLite and we want the migration to survive
+    // partial-failure re-runs.
+    //
+    // NOTE: `is_active` defaults to 1, so all pre-v3 users remain
+    // enabled on upgrade. Admins can deactivate later via the
+    // user-management endpoint added in the same release.
+    const cols = db
+      .prepare(`PRAGMA table_info(users)`)
+      .all() as Array<{ name: string }>;
+    const has = (name: string) => cols.some((c) => c.name === name);
+
+    if (!has('is_active')) {
+      db.exec(`ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;`);
+    }
+    if (!has('last_login_at')) {
+      db.exec(`ALTER TABLE users ADD COLUMN last_login_at TEXT;`);
+    }
+    if (!has('disabled_reason')) {
+      db.exec(`ALTER TABLE users ADD COLUMN disabled_reason TEXT;`);
+    }
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+      PRAGMA user_version = 3;
     `);
   }
 }

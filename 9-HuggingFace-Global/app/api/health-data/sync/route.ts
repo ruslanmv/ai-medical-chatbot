@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb, genId } from '@/lib/db';
 import { authenticateRequest } from '@/lib/auth-middleware';
+import { encodeHealthPayload } from '@/lib/health-data-repo';
 
 /**
  * POST /api/health-data/sync — bulk sync from client localStorage.
@@ -51,9 +52,10 @@ export async function POST(req: Request) {
     );
 
     // Run as a single transaction for speed (1000+ items in <50ms).
+    // Each payload is AES-256-GCM encrypted by encodeHealthPayload().
     const tx = db.transaction(() => {
       for (const item of items) {
-        upsert.run(item.id, user.id, item.type, JSON.stringify(item.data));
+        upsert.run(item.id, user.id, item.type, encodeHealthPayload(item.data));
       }
     });
     tx();

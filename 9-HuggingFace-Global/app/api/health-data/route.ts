@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb, genId } from '@/lib/db';
 import { authenticateRequest } from '@/lib/auth-middleware';
+import { encodeHealthPayload, decodeHealthPayload } from '@/lib/health-data-repo';
 
 /**
  * GET  /api/health-data          → fetch all health data for the user
@@ -26,11 +27,11 @@ export async function GET(req: Request) {
         .prepare('SELECT * FROM health_data WHERE user_id = ? ORDER BY updated_at DESC')
         .all(user.id);
 
-  // Parse the JSON `data` field back into objects.
+  // Decrypt (or pass through legacy plaintext) the `data` field for each row.
   const items = (rows as any[]).map((r) => ({
     id: r.id,
     type: r.type,
-    data: JSON.parse(r.data),
+    data: decodeHealthPayload(r.data),
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }));
@@ -66,14 +67,14 @@ export async function POST(req: Request) {
 
     const db = getDb();
     const itemId = id || genId();
-    const json = JSON.stringify(data);
+    const payload = encodeHealthPayload(data);
 
     // Upsert: insert or replace. SQLite's ON CONFLICT handles this cleanly.
     db.prepare(
       `INSERT INTO health_data (id, user_id, type, data, updated_at)
        VALUES (?, ?, ?, ?, datetime('now'))
        ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = datetime('now')`,
-    ).run(itemId, user.id, type, json);
+    ).run(itemId, user.id, type, payload);
 
     return NextResponse.json({ id: itemId, type }, { status: 201 });
   } catch (error: any) {

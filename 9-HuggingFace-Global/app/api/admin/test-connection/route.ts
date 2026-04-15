@@ -21,7 +21,17 @@ import { loadConfig } from '@/lib/server-config';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type Provider = 'ollabridge' | 'huggingface' | 'openai' | 'anthropic' | 'groq' | 'watsonx';
+type Provider =
+  | 'ollabridge'
+  | 'huggingface'
+  | 'openai'
+  | 'anthropic'
+  | 'groq'
+  | 'watsonx'
+  | 'gemini'
+  | 'openrouter'
+  | 'together'
+  | 'mistral';
 
 interface TestResult {
   ok: boolean;
@@ -196,6 +206,101 @@ async function testWatsonx(
   }
 }
 
+// ---- Additional provider testers (v3) ------------------------------------
+
+async function testGemini(apiKey: string): Promise<Omit<TestResult, 'provider'>> {
+  const start = Date.now();
+  if (!apiKey) return { ok: false, latencyMs: 0, error: 'Gemini API key not configured' };
+  try {
+    // Gemini uses the key as a query param, not a bearer header.
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
+      { signal: AbortSignal.timeout(10000) },
+    );
+    const latencyMs = Date.now() - start;
+    if (!res.ok) return { ok: false, latencyMs, status: res.status, error: `HTTP ${res.status}` };
+    const data = await res.json().catch(() => null);
+    const count = Array.isArray(data?.models) ? data.models.length : 0;
+    return { ok: true, latencyMs, status: res.status, details: `${count} models visible` };
+  } catch (e: any) {
+    return {
+      ok: false,
+      latencyMs: Date.now() - start,
+      error: e?.name === 'TimeoutError' ? 'Timeout (10s)' : e?.message?.slice(0, 100) || 'Request failed',
+    };
+  }
+}
+
+async function testOpenRouter(apiKey: string): Promise<Omit<TestResult, 'provider'>> {
+  const start = Date.now();
+  if (!apiKey) return { ok: false, latencyMs: 0, error: 'OpenRouter API key not configured' };
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    const latencyMs = Date.now() - start;
+    if (!res.ok) return { ok: false, latencyMs, status: res.status, error: `HTTP ${res.status}` };
+    const data = await res.json().catch(() => null);
+    const count = Array.isArray(data?.data) ? data.data.length : 0;
+    return { ok: true, latencyMs, status: res.status, details: `${count} models visible` };
+  } catch (e: any) {
+    return {
+      ok: false,
+      latencyMs: Date.now() - start,
+      error: e?.name === 'TimeoutError' ? 'Timeout (10s)' : e?.message?.slice(0, 100) || 'Request failed',
+    };
+  }
+}
+
+async function testTogether(apiKey: string): Promise<Omit<TestResult, 'provider'>> {
+  const start = Date.now();
+  if (!apiKey) return { ok: false, latencyMs: 0, error: 'Together API key not configured' };
+  try {
+    const res = await fetch('https://api.together.xyz/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    const latencyMs = Date.now() - start;
+    if (!res.ok) return { ok: false, latencyMs, status: res.status, error: `HTTP ${res.status}` };
+    const data = await res.json().catch(() => null);
+    const count = Array.isArray(data)
+      ? data.length
+      : Array.isArray(data?.data)
+        ? data.data.length
+        : 0;
+    return { ok: true, latencyMs, status: res.status, details: `${count} models visible` };
+  } catch (e: any) {
+    return {
+      ok: false,
+      latencyMs: Date.now() - start,
+      error: e?.name === 'TimeoutError' ? 'Timeout (10s)' : e?.message?.slice(0, 100) || 'Request failed',
+    };
+  }
+}
+
+async function testMistral(apiKey: string): Promise<Omit<TestResult, 'provider'>> {
+  const start = Date.now();
+  if (!apiKey) return { ok: false, latencyMs: 0, error: 'Mistral API key not configured' };
+  try {
+    const res = await fetch('https://api.mistral.ai/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    const latencyMs = Date.now() - start;
+    if (!res.ok) return { ok: false, latencyMs, status: res.status, error: `HTTP ${res.status}` };
+    const data = await res.json().catch(() => null);
+    const count = Array.isArray(data?.data) ? data.data.length : 0;
+    return { ok: true, latencyMs, status: res.status, details: `${count} models visible` };
+  } catch (e: any) {
+    return {
+      ok: false,
+      latencyMs: Date.now() - start,
+      error: e?.name === 'TimeoutError' ? 'Timeout (10s)' : e?.message?.slice(0, 100) || 'Request failed',
+    };
+  }
+}
+
 export async function POST(req: Request) {
   const admin = requireAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
@@ -234,6 +339,18 @@ export async function POST(req: Request) {
       break;
     case 'watsonx':
       result = await testWatsonx(llm.watsonxApiKey, llm.watsonxProjectId, llm.watsonxUrl);
+      break;
+    case 'gemini':
+      result = await testGemini(llm.geminiApiKey);
+      break;
+    case 'openrouter':
+      result = await testOpenRouter(llm.openrouterApiKey);
+      break;
+    case 'together':
+      result = await testTogether(llm.togetherApiKey);
+      break;
+    case 'mistral':
+      result = await testMistral(llm.mistralApiKey);
       break;
     default:
       return NextResponse.json({ error: `Unknown provider: ${provider}` }, { status: 400 });
