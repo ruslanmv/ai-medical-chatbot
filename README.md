@@ -216,6 +216,14 @@ web/                           Frontend (Next.js 14, Tailwind, PWA)
 11-Medicine-Scanner/           Medicine Label AI (Gradio + Qwen2.5-VL)
   Camera scan -> structured JSON
   REST API for mobile integration
+
+12-MetaEngine-Nearby/           Nearby care finder metaengine
+  Pharmacies/doctors near current location
+  OSM provider, ranking, route metadata
+
+13-Family-Health-Tree-App/      MyFamilyHealth family layer
+  Family tree, MedOS client linking, adult/child/admin modes
+  Monthly health timelines and family admin dashboard
 ```
 
 | | Vercel | HuggingFace Space |
