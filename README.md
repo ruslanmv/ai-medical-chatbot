@@ -221,7 +221,7 @@ web/                           Frontend (Next.js 14, Tailwind, PWA)
   Pharmacies/doctors near current location
   OSM provider, ranking, route metadata
 
-13-Family-Health-Tree-App/      MyFamilyHealth family layer
+13-MedOS-Family/      MedOS Family family layer
   Family tree, MedOS client linking, adult/child/admin modes
   Monthly health timelines and family admin dashboard
 ```

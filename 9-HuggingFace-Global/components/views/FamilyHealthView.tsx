@@ -46,9 +46,9 @@ interface FamilyHealthViewProps {
 
 const MODE_META: Record<MedOSMode, { label: string; description: string; icon: any }> = {
   standard: { label: "Standard", description: "Simple personal MedOS", icon: UserRound },
-  adult: { label: "Adult", description: "Own profile + consent sharing", icon: ShieldCheck },
-  child: { label: "Child", description: "Guardian-managed simple mode", icon: Baby },
-  "family-admin": { label: "Family Admin", description: "Manage MyFamilyHealth", icon: Crown },
+  adult: { label: "Adult Mode", description: "Consent-based sharing for adults", icon: ShieldCheck },
+  child: { label: "Child Mode", description: "Guardian-managed child profile", icon: Baby },
+  "family-admin": { label: "Family Admin", description: "Manage Family Health Tree", icon: Crown },
 };
 
 const STATUS_META: Record<MonthlyStatus, { label: string; className: string }> = {
@@ -96,7 +96,7 @@ export function FamilyHealthView({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `myfamilyhealth-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `medos-family-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -107,11 +107,11 @@ export function FamilyHealthView({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 text-xs font-bold mb-3">
-              <Users size={14} /> Universal Health Family
+              <Users size={14} /> MedOS Family
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-ink-base">MyFamilyHealth</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-ink-base">MedOS Family</h2>
             <p className="text-sm text-ink-muted mt-1 max-w-2xl">
-              Link each family member&apos;s MedOS client to one private family tree and monitor monthly health timelines.
+              Create your Family Health Tree, invite family members, manage child profiles, and coordinate medicines, appointments, vitals, records, and monthly health notes.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -119,7 +119,7 @@ export function FamilyHealthView({
               onClick={onSeedDefaultFamily}
               className="px-3 py-2 rounded-xl bg-surface-2 border border-line/60 text-sm font-semibold text-ink-base hover:bg-surface-1 transition-colors"
             >
-              Create father/wife/2 children
+              Create sample family
             </button>
             <button
               onClick={exportJson}
@@ -153,10 +153,17 @@ export function FamilyHealthView({
           })}
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        <section className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
           <MetricCard label="Family members" value={String(members.length)} icon={Users} />
-          <MetricCard label={`Checked in ${month}`} value={`${stats.checked}/${members.length || 0}`} icon={CalendarDays} />
+          <MetricCard label="Medicines due today" value="0" icon={HeartPulse} />
+          <MetricCard label="Appointments today" value="0" icon={CalendarDays} />
+          <MetricCard label="Missed doses" value="0" icon={AlertTriangle} />
           <MetricCard label="Follow-ups" value={String(stats.followUps)} icon={AlertTriangle} />
+        </section>
+
+        <section className="rounded-2xl bg-surface-1 border border-line/60 p-4 mb-6">
+          <h3 className="font-bold text-ink-base mb-1">Medicine Reminders</h3>
+          <p className="text-sm text-ink-muted">Track active medicines, next dose times, missed doses, and dose actions (Taken, Skipped, Snooze) for each family member.</p>
         </section>
 
         {members.length === 0 ? (
@@ -166,7 +173,7 @@ export function FamilyHealthView({
             <div className="space-y-4">
               <div className="rounded-3xl bg-surface-1 border border-line/60 p-4 shadow-soft">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-ink-base">Family tree</h3>
+                  <h3 className="font-bold text-ink-base">Family Health Tree</h3>
                   <button
                     onClick={() => setShowAdd(true)}
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-bold"
@@ -258,9 +265,9 @@ function EmptyFamily({ onSeed, onAdd }: { onSeed: () => void; onAdd: () => void 
   return (
     <div className="text-center rounded-3xl bg-surface-1 border border-line/60 p-10 shadow-soft">
       <Users size={42} className="mx-auto text-brand-500 mb-4" />
-      <h3 className="text-xl font-bold text-ink-base mb-2">Create your Universal Health Family</h3>
+      <h3 className="text-xl font-bold text-ink-base mb-2">Create your MedOS Family</h3>
       <p className="text-sm text-ink-muted max-w-xl mx-auto mb-5">
-        Start with the default father, wife, and two children structure or add members manually.
+        Welcome to MedOS Family. Create your Family Health Tree, invite family members, and coordinate medicines, appointments, vitals, records, and monthly health notes in one private dashboard.
       </p>
       <div className="flex justify-center gap-2">
         <button onClick={onSeed} className="px-4 py-2 rounded-xl bg-brand-gradient text-white font-bold text-sm shadow-glow">
@@ -456,7 +463,7 @@ function MemberPanel({
           <div className="rounded-2xl bg-surface-0 border border-line/60 p-4">
             <h4 className="font-bold text-ink-base flex items-center gap-2 mb-2"><Link2 size={16} /> Link own MedOS</h4>
             <p className="text-xs text-ink-muted mb-3">
-              Create a temporary code so this member can install MedOS and link to MyFamilyHealth.
+              Create a temporary code so this member can install MedOS and link to MedOS Family.
             </p>
             <button onClick={onCreateInvite} className="w-full px-3 py-2 rounded-xl bg-surface-2 border border-line/60 text-sm font-bold text-ink-base">
               Generate invite code
@@ -472,7 +479,7 @@ function MemberPanel({
           <div className="rounded-2xl bg-warning-500/10 border border-warning-500/30 p-4">
             <h4 className="font-bold text-warning-700 dark:text-warning-400 flex items-center gap-2"><HeartPulse size={16} /> Safety</h4>
             <p className="text-xs text-ink-muted mt-2">
-              MyFamilyHealth tracks and summarizes. It does not diagnose. For urgent symptoms, use emergency care.
+              MedOS Family helps you remember medicines based on the schedule you enter. It does not prescribe, change doses, or replace medical advice.
             </p>
           </div>
         </aside>

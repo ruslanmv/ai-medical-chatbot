@@ -56,3 +56,41 @@ Shows:
 - alerts
 - export summaries
 - invite codes
+
+## Medication reminders entities (proposed)
+
+```ts
+type MedicationReminder = {
+  id: string;
+  familyId: string;
+  memberId: string;
+  medicineName: string;
+  dose?: string;
+  form?: "tablet" | "syrup" | "drops" | "injection" | "cream" | "other";
+  startDateTime: string;
+  frequencyType: "every_x_hours" | "daily" | "weekly" | "custom";
+  frequencyValue?: number;
+  frequencyUnit?: "hours" | "days" | "weeks";
+  durationType: "until_date" | "number_of_days" | "number_of_doses" | "ongoing";
+  endDateTime?: string;
+  totalDoses?: number;
+  instructions?: string;
+  prescribedBy?: string;
+  notificationRecipients: string[];
+  status: "active" | "paused" | "completed" | "cancelled";
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type MedicationDoseLog = {
+  id: string;
+  reminderId: string;
+  memberId: string;
+  scheduledFor: string;
+  action: "taken" | "skipped" | "snoozed" | "missed";
+  actionAt?: string;
+  notes?: string;
+  recordedByUserId?: string;
+};
+```

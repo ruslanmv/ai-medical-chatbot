@@ -1,4 +1,4 @@
-# Analysis — Adding MyFamilyHealth after 12-MetaEngine-Nearby
+# Analysis — Adding MedOS Family after 12-MetaEngine-Nearby
 
 ## Current repository situation
 
@@ -11,7 +11,7 @@ The repository already has:
 The right place for the new family product is therefore:
 
 ```text
-13-Family-Health-Tree-App
+13-MedOS-Family
 ```
 
 ## Recommended interpretation of the new feature
@@ -19,9 +19,9 @@ The right place for the new family product is therefore:
 The family product should not replace MedOS. It should become a layer above individual MedOS clients:
 
 ```text
-Individual MedOS client  --->  MyFamilyHealth family space
-Father MedOS            --->  Family Admin
-Wife MedOS              --->  Adult linked member
+Individual MedOS client  --->  MedOS Family family space
+Family Admin client     --->  Family Admin
+Adult member client     --->  Adult Mode member
 Child 1 MedOS/Profile   --->  Child/guardian-managed member
 Child 2 MedOS/Profile   --->  Child/guardian-managed member
 ```
@@ -42,7 +42,7 @@ The current MedOS app has many features. For family usage, this should be simpli
 Added:
 
 ```text
-13-Family-Health-Tree-App/
+13-MedOS-Family/
 ```
 
 With product, contract, domain, integration, and privacy documentation.
@@ -67,12 +67,12 @@ README.md
 
 ## Prototype behavior
 
-The prototype adds a new **MyFamilyHealth** sidebar item. It supports:
+The prototype adds a new **MedOS Family** sidebar item. It supports:
 
 - mode selection
-- default family creation: Father, Wife, Child 1, Child 2
+- default family creation: Family Admin, Adult member, Child 1, Child 2
 - family tree member cards
-- adult/child/admin mode labels
+- Adult Mode / Child Mode / Family Admin labels
 - consent status switching
 - monthly health check-in per member
 - invite-code generation for linking a member's own MedOS client
@@ -80,8 +80,8 @@ The prototype adds a new **MyFamilyHealth** sidebar item. It supports:
 
 ## Backend recommendation
 
-Keep the current local-first version for MVP validation. Next step is adding authenticated API routes based on `13-Family-Health-Tree-App/02-contracts/family_contracts.md`.
+Keep the current local-first version for MVP validation. Next step is adding authenticated API routes based on `13-MedOS-Family/02-contracts/family_contracts.md`.
 
 ## Safety recommendation
 
-MyFamilyHealth should only track, remind, summarize, and export. It should not diagnose, change medication, or replace medical care.
+MedOS Family should only track, remind, summarize, and export. It should not diagnose, change medication, or replace medical care.

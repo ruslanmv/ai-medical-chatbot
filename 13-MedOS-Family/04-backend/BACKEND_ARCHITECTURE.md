@@ -1,4 +1,4 @@
-# Family Health Tree App — Backend Architecture (MVP → v2)
+# MedOS Family — Backend Architecture (MVP → v2)
 
 ## 1) Goal and scope
 
@@ -6,9 +6,9 @@ Design a secure backend for a **private family health-tree** product where a fam
 
 This backend is designed to integrate with the existing MedOS app stack in this repository and follows the contracts and safety boundaries already documented in:
 
-- `13-Family-Health-Tree-App/01-product/PRODUCT_SPEC.md`
-- `13-Family-Health-Tree-App/02-contracts/family_contracts.md`
-- `13-Family-Health-Tree-App/08-security/PRIVACY_AND_SAFETY.md`
+- `13-MedOS-Family/01-product/PRODUCT_SPEC.md`
+- `13-MedOS-Family/02-contracts/family_contracts.md`
+- `13-MedOS-Family/08-security/PRIVACY_AND_SAFETY.md`
 
 ---
 

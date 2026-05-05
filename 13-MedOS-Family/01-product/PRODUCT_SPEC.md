@@ -1,4 +1,4 @@
-# MyFamilyHealth Product Spec
+# MedOS Family Product Spec
 
 ## Problem
 

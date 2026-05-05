@@ -477,7 +477,7 @@ function MedOSAppInner() {
               : activeNav === "settings"
               ? t("nav_settings", settings.language)
               : activeNav === "family-health"
-              ? "MyFamilyHealth"
+              ? "MedOS Family"
               : activeNav}
           </h2>
 

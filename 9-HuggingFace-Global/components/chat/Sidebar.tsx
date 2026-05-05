@@ -163,7 +163,7 @@ export function Sidebar({
           <NavItem icon={Activity} label={t("nav_vitals", language)} active={activeNav === "vitals"} onClick={() => setActiveNav("vitals")} collapsed={collapsed} />
           <NavItem icon={FileText} label={t("nav_records", language)} active={activeNav === "records"} onClick={() => setActiveNav("records")} collapsed={collapsed} />
           <NavItem icon={Package} label="My Medicines" active={activeNav === "my-medicines"} onClick={() => setActiveNav("my-medicines")} collapsed={collapsed} />
-          <NavItem icon={UsersRound} label="MyFamilyHealth" active={activeNav === "family-health"} onClick={() => setActiveNav("family-health")} collapsed={collapsed} />
+          <NavItem icon={UsersRound} label="MedOS Family" active={activeNav === "family-health"} onClick={() => setActiveNav("family-health")} collapsed={collapsed} />
 
           {!collapsed && <SectionLabel>{t("nav_tools", language)}</SectionLabel>}
           {collapsed && <div className="my-2 border-t border-line/50" />}
