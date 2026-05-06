@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 540" role="img" aria-label="MedOS Ecosystem diagram" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <filter id="card-shadow" x="-2%" y="-4%" width="104%" height="112%">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#0F172A" flood-opacity="0.06"/>
+    </filter>
+    <filter id="tile-shadow" x="-2%" y="-4%" width="104%" height="112%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#0F172A" flood-opacity="0.05"/>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="540" fill="#FFFFFF"/>
+
+  <!-- Layer 1: Users -->
+  <g>
+    <rect x="24" y="24" width="952" height="64" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" filter="url(#card-shadow)"/>
+    <text x="500" y="52" text-anchor="middle" font-size="13" font-weight="600" letter-spacing="2" fill="#475569">PATIENTS · FAMILIES · CLINICIANS</text>
+    <text x="500" y="72" text-anchor="middle" font-size="11" fill="#94A3B8">free, multilingual, on any device</text>
+  </g>
+
+  <!-- Connector 1 -->
+  <line x1="500" y1="88" x2="500" y2="120" stroke="#CBD5E1" stroke-width="1.5"/>
+  <circle cx="500" cy="120" r="3" fill="#CBD5E1"/>
+
+  <!-- Layer 2: MedOS Core -->
+  <g>
+    <rect x="24" y="120" width="952" height="160" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" filter="url(#card-shadow)"/>
+    <text x="48" y="146" font-size="13" font-weight="600" letter-spacing="2" fill="#475569">MEDOS CORE</text>
+    <text x="48" y="164" font-size="11" fill="#94A3B8">today, in production</text>
+
+    <!-- Tile: Web App -->
+    <g filter="url(#tile-shadow)">
+      <rect x="48" y="180" width="168" height="84" rx="10" fill="#DBEAFE" stroke="#60A5FA" stroke-width="1.5"/>
+      <text x="64" y="206" font-size="14" font-weight="600" fill="#1E3A8A">Web App</text>
+      <text x="64" y="226" font-size="11" fill="#1E40AF">Next.js · PWA</text>
+      <text x="64" y="244" font-size="11" fill="#1E40AF">13 languages</text>
+    </g>
+
+    <!-- Tile: Backend API -->
+    <g filter="url(#tile-shadow)">
+      <rect x="232" y="180" width="168" height="84" rx="10" fill="#DBEAFE" stroke="#60A5FA" stroke-width="1.5"/>
+      <text x="248" y="206" font-size="14" font-weight="600" fill="#1E3A8A">Backend API</text>
+      <text x="248" y="226" font-size="11" fill="#1E40AF">Auth · LLM routing</text>
+      <text x="248" y="244" font-size="11" fill="#1E40AF">RAG · SQLite</text>
+    </g>
+
+    <!-- Tile: Health Tracker -->
+    <g filter="url(#tile-shadow)">
+      <rect x="416" y="180" width="168" height="84" rx="10" fill="#DBEAFE" stroke="#60A5FA" stroke-width="1.5"/>
+      <text x="432" y="206" font-size="14" font-weight="600" fill="#1E3A8A">Health Tracker</text>
+      <text x="432" y="226" font-size="11" fill="#1E40AF">Vitals · Meds</text>
+      <text x="432" y="244" font-size="11" fill="#1E40AF">Records · EHR</text>
+    </g>
+
+    <!-- Tile: Medicine Scanner -->
+    <g filter="url(#tile-shadow)">
+      <rect x="600" y="180" width="168" height="84" rx="10" fill="#DBEAFE" stroke="#60A5FA" stroke-width="1.5"/>
+      <text x="616" y="206" font-size="14" font-weight="600" fill="#1E3A8A">Medicine Scanner</text>
+      <text x="616" y="226" font-size="11" fill="#1E40AF">Camera → JSON</text>
+      <text x="616" y="244" font-size="11" fill="#1E40AF">Qwen2.5-VL</text>
+    </g>
+
+    <!-- Tile: Nearby Care -->
+    <g filter="url(#tile-shadow)">
+      <rect x="784" y="180" width="168" height="84" rx="10" fill="#DBEAFE" stroke="#60A5FA" stroke-width="1.5"/>
+      <text x="800" y="206" font-size="14" font-weight="600" fill="#1E3A8A">Nearby Care</text>
+      <text x="800" y="226" font-size="11" fill="#1E40AF">Pharmacies · Doctors</text>
+      <text x="800" y="244" font-size="11" fill="#1E40AF">OpenStreetMap</text>
+    </g>
+  </g>
+
+  <!-- Connector 2 -->
+  <line x1="500" y1="280" x2="500" y2="312" stroke="#CBD5E1" stroke-width="1.5"/>
+  <circle cx="500" cy="312" r="3" fill="#CBD5E1"/>
+
+  <!-- Layer 3: MedOS Ecosystem (additive design layers) -->
+  <g>
+    <rect x="24" y="312" width="952" height="200" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5" filter="url(#card-shadow)"/>
+    <text x="48" y="338" font-size="13" font-weight="600" letter-spacing="2" fill="#475569">MEDOS ECOSYSTEM</text>
+    <text x="48" y="356" font-size="11" fill="#94A3B8">additive design layers · feature-flagged · reversible · no PHI auto-flow</text>
+
+    <!-- 13 Family -->
+    <g filter="url(#tile-shadow)">
+      <rect x="48" y="370" width="168" height="120" rx="10" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1.5"/>
+      <rect x="60" y="382" width="32" height="20" rx="6" fill="#EF4444"/>
+      <text x="76" y="397" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">13</text>
+      <text x="100" y="397" font-size="14" font-weight="600" fill="#7F1D1D">Family</text>
+      <text x="60" y="425" font-size="11" fill="#991B1B">Family health tree</text>
+      <text x="60" y="443" font-size="11" fill="#991B1B">Adult consent</text>
+      <text x="60" y="461" font-size="11" fill="#991B1B">Child mode</text>
+      <text x="60" y="479" font-size="11" fill="#991B1B">Family admin</text>
+    </g>
+
+    <!-- 14 Connect -->
+    <g filter="url(#tile-shadow)">
+      <rect x="232" y="370" width="168" height="120" rx="10" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.5"/>
+      <rect x="244" y="382" width="32" height="20" rx="6" fill="#10B981"/>
+      <text x="260" y="397" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">14</text>
+      <text x="284" y="397" font-size="14" font-weight="600" fill="#064E3B">Connect</text>
+      <text x="244" y="425" font-size="11" fill="#065F46">Device + vitals sync</text>
+      <text x="244" y="443" font-size="11" fill="#065F46">Withings · Apple</text>
+      <text x="244" y="461" font-size="11" fill="#065F46">Reminders</text>
+      <text x="244" y="479" font-size="11" fill="#065F46">Notifications</text>
+    </g>
+
+    <!-- 15 Classify -->
+    <g filter="url(#tile-shadow)">
+      <rect x="416" y="370" width="168" height="120" rx="10" fill="#FFFBEB" stroke="#FCD34D" stroke-width="1.5"/>
+      <rect x="428" y="382" width="32" height="20" rx="6" fill="#F59E0B"/>
+      <text x="444" y="397" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">15</text>
+      <text x="468" y="397" font-size="14" font-weight="600" fill="#78350F">Classify</text>
+      <text x="428" y="425" font-size="11" fill="#92400E">MCP triage tools</text>
+      <text x="428" y="443" font-size="11" fill="#92400E">Multi-head, calibrated</text>
+      <text x="428" y="461" font-size="11" fill="#92400E">Red-flag floor</text>
+      <text x="428" y="479" font-size="11" fill="#92400E">HF models</text>
+    </g>
+
+    <!-- 16 Pathogen -->
+    <g filter="url(#tile-shadow)">
+      <rect x="600" y="370" width="168" height="120" rx="10" fill="#F5F3FF" stroke="#A78BFA" stroke-width="1.5"/>
+      <rect x="612" y="382" width="32" height="20" rx="6" fill="#7C3AED"/>
+      <text x="628" y="397" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">16</text>
+      <text x="652" y="397" font-size="14" font-weight="600" fill="#3C1361">Pathogen</text>
+      <text x="612" y="425" font-size="11" fill="#5B21B6">Microscopy · X-ray</text>
+      <text x="612" y="443" font-size="11" fill="#5B21B6">Sequence ID</text>
+      <text x="612" y="461" font-size="11" fill="#5B21B6">CNN · ViT · k-mer</text>
+      <text x="612" y="479" font-size="11" fill="#5B21B6">Grad-CAM evidence</text>
+    </g>
+
+    <!-- 17 Research -->
+    <g filter="url(#tile-shadow)">
+      <rect x="784" y="370" width="168" height="120" rx="10" fill="#FDF2F8" stroke="#F9A8D4" stroke-width="1.5"/>
+      <rect x="796" y="382" width="32" height="20" rx="6" fill="#DB2777"/>
+      <text x="812" y="397" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">17</text>
+      <text x="836" y="397" font-size="14" font-weight="600" fill="#831843">Research</text>
+      <text x="796" y="425" font-size="11" fill="#9D174D">Literature → brief</text>
+      <text x="796" y="443" font-size="11" fill="#9D174D">Hypotheses · in-silico</text>
+      <text x="796" y="461" font-size="11" fill="#9D174D">Publication studio</text>
+      <text x="796" y="479" font-size="11" fill="#9D174D">Safety reviewer</text>
+    </g>
+  </g>
+</svg>

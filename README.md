@@ -187,7 +187,13 @@ Point your camera at a medicine box — AI reads the label for you
 |---|---|---|---|
 | | **[MedOS Web App](./web/)** | Full medical platform — chat, health tracker, medicine inventory, 13 languages | [![Live](https://img.shields.io/badge/Live-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot) |
 | | **[MedOS Backend](./9-HuggingFace-Global/)** | API server — auth, SQLite DB, LLM routing, emergency triage, RAG | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./9-HuggingFace-Global/) |
-| | **[Medicine Scanner](./11-Medicine-Scanner/)** | Camera scan of medicine labels via Qwen2.5-VL multimodal AI | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./11-Medicine-Scanner/) |
+| 11 | **[Medicine Scanner](./11-Medicine-Scanner/)** | Camera scan of medicine labels via Qwen2.5-VL multimodal AI | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./11-Medicine-Scanner/) |
+| 12 | **[MetaEngine Nearby](./12-MetaEngine-Nearby/)** | Find nearby pharmacies and doctors via OpenStreetMap | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./12-MetaEngine-Nearby/) |
+| 13 | **[MedOS Family](./13-MedOS-Family/)** | Family health tree, adult consent, child mode, medicine reminders, family admin | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./13-MedOS-Family/) |
+| 14 | **[MedOS Connect](./14-MedOS-Connect/)** | Additive backend for device + vitals sync (Withings, Apple Health, Health Connect), reminders, notifications | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./14-MedOS-Connect/) |
+| 15 | **[MedOS Classify](./15-MedOS-Classify/)** | MCP clinical-classification + triage engine — multi-head, calibrated, red-flag floor, Hugging Face models | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./15-MedOS-Classify/) |
+| 16 | **[MedOS Pathogen](./16-MedOS-Pathogen/)** | MCP pathogen-ID layer — microscopy / chest X-ray / genomic sequence with calibrated probabilities and visible evidence | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./16-MedOS-Pathogen/) |
+| 17 | **[MedOS Research](./17-MedOS-Research/)** | R&D module — literature briefs, hypotheses, in-silico simulation plans, publication studio, safety reviewer | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./17-MedOS-Research/) |
 | | **[Medical Llama3 8B](https://huggingface.co/ruslanmv/Medical-Llama3-8B)** | Fine-tuned Llama3 on 250K medical Q&A pairs | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Llama3-8B) |
 | | **[Medical Llama3 v2](https://huggingface.co/ruslanmv/Medical-Llama3-v2)** | Improved medical Llama3 with enhanced chatbot interface | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Llama3-v2) |
 | | **[Medical Mixtral 7B](https://huggingface.co/ruslanmv/Medical-Mixtral-7B-v2k)** | Fine-tuned Mixtral for medical assistance | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Mixtral-7B-v2k) |
@@ -200,31 +206,32 @@ Point your camera at a medicine box — AI reads the label for you
 
 ---
 
-## Architecture
+## MedOS Ecosystem
 
-```
-web/                           Frontend (Next.js 14, Tailwind, PWA)
-  20 views, dark/light mode, 13 languages
-  Health tracker, EHR wizard, medicine scanner
-  Voice input, notifications, offline support
+<div align="center">
+<img src="assets/medos-ecosystem.svg" alt="MedOS Ecosystem — Patients · Core · Additive design layers (Family, Connect, Classify, Pathogen, Research)" width="100%" />
+</div>
 
-9-HuggingFace-Global/         Backend (Next.js API + SQLite)
-  Llama 3.3 70B via free providers (Groq, HF, Gemini)
-  23-topic medical RAG, 19 emergency triage patterns
-  Email auth, admin dashboard, health data sync
+<br/>
 
-11-Medicine-Scanner/           Medicine Label AI (Gradio + Qwen2.5-VL)
-  Camera scan -> structured JSON
-  REST API for mobile integration
+The MedOS ecosystem is layered. The **Core** is what runs in production today — the web app, the backend API, the health tracker, the medicine scanner, and the nearby-care finder. The **Ecosystem** layer adds new modules on top, **purely additively**: each one ships as its own folder, behind a feature flag, with no destructive changes to existing files, tables, or APIs.
 
-12-MetaEngine-Nearby/           Nearby care finder metaengine
-  Pharmacies/doctors near current location
-  OSM provider, ranking, route metadata
+| Layer | Module | What it adds |
+|---|---|---|
+| Core | **MedOS Web App** | The medical platform users see today — chat, vitals, medicines, records, 13 languages. |
+| Core | **MedOS Backend** | Next.js API + SQLite + LLM routing + medical RAG + emergency triage. |
+| Core | **Health Tracker** | Vitals, medicines, appointments, records, EHR wizard, JSON / print export. |
+| Core | **Medicine Scanner** | Camera → structured JSON via Qwen2.5-VL. |
+| Core | **Nearby Care** | Pharmacies and doctors via OpenStreetMap with ranking and route metadata. |
+| Ecosystem · 13 | **[MedOS Family](./13-MedOS-Family/)** | Family health tree, adult consent, child mode, medicine reminders, family admin. |
+| Ecosystem · 14 | **[MedOS Connect](./14-MedOS-Connect/)** | Device + vitals sync (Withings, Apple Health, Health Connect), reminders, notifications. |
+| Ecosystem · 15 | **[MedOS Classify](./15-MedOS-Classify/)** | MCP triage tools — multi-head, calibrated, red-flag-gated; ships through Hugging Face. |
+| Ecosystem · 16 | **[MedOS Pathogen](./16-MedOS-Pathogen/)** | MCP pathogen ID — microscopy, chest X-ray, genomic sequence; visible evidence. |
+| Ecosystem · 17 | **[MedOS Research](./17-MedOS-Research/)** | R&D module — literature briefs, hypotheses, in-silico simulation plans, safety-reviewed publication studio. |
 
-13-MedOS-Family/      MedOS Family family layer
-  Family tree, MedOS client linking, adult/child/admin modes
-  Monthly health timelines and family admin dashboard
-```
+Every Ecosystem module follows the same contract: **additive only, namespaced, feature-flagged, reversible, never auto-flowing patient PHI across boundaries.**
+
+### Deployment
 
 | | Vercel | HuggingFace Space |
 |---|---|---|
