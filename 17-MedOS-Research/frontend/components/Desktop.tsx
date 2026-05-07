@@ -8,6 +8,9 @@ import { DashboardPage } from './pages/DashboardPage';
 import { LiteraturePage } from './pages/LiteraturePage';
 import { DiseasePage } from './pages/DiseasePage';
 import { CandidatesPage } from './pages/CandidatesPage';
+import { SimulationPage } from './pages/SimulationPage';
+import { ExperimentPage } from './pages/ExperimentPage';
+import { EvidenceMatrixPage } from './pages/EvidenceMatrixPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 
 export function Desktop() {
@@ -20,6 +23,9 @@ export function Desktop() {
       case 'lit':     return <LiteraturePage/>;
       case 'disease': return <DiseasePage/>;
       case 'cand':    return <CandidatesPage/>;
+      case 'sim':     return <SimulationPage/>;
+      case 'exp':     return <ExperimentPage/>;
+      case 'evid':    return <EvidenceMatrixPage/>;
       default:
         return (
           <PlaceholderPage
