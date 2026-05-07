@@ -1,0 +1,23 @@
+/* MedOS Family — global reset.
+   The design uses inline styles; this file only resets defaults and sets the page background. */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #f5f8ff;
+  font-family: var(--font-inter), Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #0f172a;
+}
+
+* { box-sizing: border-box; }
+
+button { font-family: inherit; }
+
+a { text-decoration: none; color: inherit; }
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+/* Show the per-widget close button only on hover (used by DashboardCustomizer/WidgetWrapper). */
+.widget-wrap:hover .widget-x { opacity: 1 !important; }
