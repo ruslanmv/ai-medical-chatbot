@@ -7,6 +7,7 @@ import { TODAY_DOSES, type DoseStatus } from '../lib/data';
 import { useWidgets } from '../lib/useWidgets';
 import { Sidebar } from './shell/Sidebar';
 import { Topbar } from './shell/Topbar';
+
 import { HomePage } from './pages/HomePage';
 import { FamilyPage } from './pages/FamilyPage';
 import { ChildrenPage } from './pages/ChildrenPage';
@@ -14,18 +15,24 @@ import { VaccinesPage } from './pages/VaccinesPage';
 import { MedicinesPage } from './pages/MedicinesPage';
 import { RemindersPage } from './pages/RemindersPage';
 import { HealthMonitorPage } from './pages/HealthMonitorPage';
-import { PlaceholderPage } from './pages/PlaceholderPage';
+import { LocalAlertsPage } from './pages/LocalAlertsPage';
+import { NewsPage } from './pages/NewsPage';
+import { SeasonalPage } from './pages/SeasonalPage';
+import { RecordsPage } from './pages/RecordsPage';
+import { SettingsPage } from './pages/SettingsPage';
+
+import { DashboardCustomizer } from './widgets/DashboardCustomizer';
 import { Toast } from './Toast';
 
 export function Desktop() {
   const [active, setActive] = useState<NavId>('home');
-  const [, setSettingsSection] = useState<SettingsSection>('general');
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>('general');
   const [userOpen, setUserOpen] = useState(false);
 
   const [doses, setDoses] = useState(TODAY_DOSES);
   const [toast, setToast] = useState<string | null>(null);
   const [widgets, setWidgets] = useWidgets();
-  const [, setCustomizing] = useState(false);
+  const [customizing, setCustomizing] = useState(false);
 
   const mark = (id: string, status: DoseStatus) => {
     setDoses((prev) => prev.map((x) => x.id === id ? { ...x, status } : x));
@@ -60,26 +67,25 @@ export function Desktop() {
             onCustomize={() => setCustomizing(true)}
           />
         );
-      case 'family':
-        return <FamilyPage/>;
-      case 'children':
-        return <ChildrenPage/>;
-      case 'vaccines':
-        return <VaccinesPage/>;
-      case 'medicines':
-        return <MedicinesPage doses={doses} mark={mark}/>;
-      case 'reminders':
-        return <RemindersPage/>;
-      case 'monitor':
-        return <HealthMonitorPage/>;
-      default:
+      case 'family':    return <FamilyPage/>;
+      case 'children':  return <ChildrenPage/>;
+      case 'vaccines':  return <VaccinesPage/>;
+      case 'medicines': return <MedicinesPage doses={doses} mark={mark}/>;
+      case 'reminders': return <RemindersPage/>;
+      case 'monitor':   return <HealthMonitorPage/>;
+      case 'alerts':    return <LocalAlertsPage/>;
+      case 'news':      return <NewsPage/>;
+      case 'seasonal':  return <SeasonalPage/>;
+      case 'records':   return <RecordsPage/>;
+      case 'settings':
         return (
-          <PlaceholderPage
-            eyebrow="MedOS Family"
-            title={active.charAt(0).toUpperCase() + active.slice(1)}
-            subtitle="Page content lands in upcoming batches."
+          <SettingsPage
+            widgets={widgets}
+            setCustomizing={setCustomizing}
+            initialSection={settingsSection}
           />
         );
+      default: return null;
     }
   };
 
@@ -105,6 +111,13 @@ export function Desktop() {
         </div>
       </main>
       {toast && <Toast message={toast}/>}
+      {customizing && (
+        <DashboardCustomizer
+          widgets={widgets}
+          setWidgets={setWidgets}
+          onClose={() => setCustomizing(false)}
+        />
+      )}
     </div>
   );
 }
