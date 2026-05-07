@@ -8,6 +8,8 @@ import { useWidgets } from '../lib/useWidgets';
 import { Sidebar } from './shell/Sidebar';
 import { Topbar } from './shell/Topbar';
 import { HomePage } from './pages/HomePage';
+import { FamilyPage } from './pages/FamilyPage';
+import { ChildrenPage } from './pages/ChildrenPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { Toast } from './Toast';
 
@@ -43,24 +45,30 @@ export function Desktop() {
   };
 
   const renderPage = () => {
-    if (active === 'home') {
-      return (
-        <HomePage
-          doses={doses}
-          mark={mark}
-          widgets={widgets}
-          setWidgets={setWidgets}
-          onCustomize={() => setCustomizing(true)}
-        />
-      );
+    switch (active) {
+      case 'home':
+        return (
+          <HomePage
+            doses={doses}
+            mark={mark}
+            widgets={widgets}
+            setWidgets={setWidgets}
+            onCustomize={() => setCustomizing(true)}
+          />
+        );
+      case 'family':
+        return <FamilyPage/>;
+      case 'children':
+        return <ChildrenPage/>;
+      default:
+        return (
+          <PlaceholderPage
+            eyebrow="MedOS Family"
+            title={active.charAt(0).toUpperCase() + active.slice(1)}
+            subtitle="Page content lands in upcoming batches."
+          />
+        );
     }
-    return (
-      <PlaceholderPage
-        eyebrow="MedOS Family"
-        title={active.charAt(0).toUpperCase() + active.slice(1)}
-        subtitle="Page content lands in upcoming batches."
-      />
-    );
   };
 
   return (
