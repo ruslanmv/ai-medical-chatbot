@@ -5,6 +5,9 @@ import { SCREEN_LABELS, type NavId } from '../lib/nav';
 import { Sidebar } from './shell/Sidebar';
 import { Topbar, type Role } from './shell/Topbar';
 import { DashboardPage } from './pages/DashboardPage';
+import { LiteraturePage } from './pages/LiteraturePage';
+import { DiseasePage } from './pages/DiseasePage';
+import { CandidatesPage } from './pages/CandidatesPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 
 export function Desktop() {
@@ -13,7 +16,10 @@ export function Desktop() {
 
   const renderPage = () => {
     switch (active) {
-      case 'dash': return <DashboardPage/>;
+      case 'dash':    return <DashboardPage/>;
+      case 'lit':     return <LiteraturePage/>;
+      case 'disease': return <DiseasePage/>;
+      case 'cand':    return <CandidatesPage/>;
       default:
         return (
           <PlaceholderPage
