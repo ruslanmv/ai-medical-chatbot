@@ -10,6 +10,10 @@ import { Topbar } from './shell/Topbar';
 import { HomePage } from './pages/HomePage';
 import { FamilyPage } from './pages/FamilyPage';
 import { ChildrenPage } from './pages/ChildrenPage';
+import { VaccinesPage } from './pages/VaccinesPage';
+import { MedicinesPage } from './pages/MedicinesPage';
+import { RemindersPage } from './pages/RemindersPage';
+import { HealthMonitorPage } from './pages/HealthMonitorPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { Toast } from './Toast';
 
@@ -60,6 +64,14 @@ export function Desktop() {
         return <FamilyPage/>;
       case 'children':
         return <ChildrenPage/>;
+      case 'vaccines':
+        return <VaccinesPage/>;
+      case 'medicines':
+        return <MedicinesPage doses={doses} mark={mark}/>;
+      case 'reminders':
+        return <RemindersPage/>;
+      case 'monitor':
+        return <HealthMonitorPage/>;
       default:
         return (
           <PlaceholderPage
