@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { SCREEN_LABELS, type NavId } from '../lib/nav';
 import { Sidebar } from './shell/Sidebar';
 import { Topbar, type Role } from './shell/Topbar';
+
 import { DashboardPage } from './pages/DashboardPage';
 import { LiteraturePage } from './pages/LiteraturePage';
 import { DiseasePage } from './pages/DiseasePage';
@@ -11,7 +12,9 @@ import { CandidatesPage } from './pages/CandidatesPage';
 import { SimulationPage } from './pages/SimulationPage';
 import { ExperimentPage } from './pages/ExperimentPage';
 import { EvidenceMatrixPage } from './pages/EvidenceMatrixPage';
-import { PlaceholderPage } from './pages/PlaceholderPage';
+import { SafetyPage } from './pages/SafetyPage';
+import { PublicationPage } from './pages/PublicationPage';
+import { AuditPage } from './pages/AuditPage';
 
 export function Desktop() {
   const [active, setActive] = useState<NavId>('dash');
@@ -26,13 +29,10 @@ export function Desktop() {
       case 'sim':     return <SimulationPage/>;
       case 'exp':     return <ExperimentPage/>;
       case 'evid':    return <EvidenceMatrixPage/>;
-      default:
-        return (
-          <PlaceholderPage
-            title={SCREEN_LABELS[active].replace(/^\d+ /, '')}
-            subtitle="Layout shell active. Page content lands in the next batches."
-          />
-        );
+      case 'safety':  return <SafetyPage/>;
+      case 'pub':     return <PublicationPage/>;
+      case 'audit':   return <AuditPage/>;
+      default:        return null;
     }
   };
 
