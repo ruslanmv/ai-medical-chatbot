@@ -3,14 +3,34 @@
 import { useState } from 'react';
 import { TOKENS } from '../lib/tokens';
 import type { NavId, SettingsSection } from '../lib/nav';
+import { TODAY_DOSES, type DoseStatus } from '../lib/data';
+import { useWidgets } from '../lib/useWidgets';
 import { Sidebar } from './shell/Sidebar';
 import { Topbar } from './shell/Topbar';
+import { HomePage } from './pages/HomePage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { Toast } from './Toast';
 
 export function Desktop() {
   const [active, setActive] = useState<NavId>('home');
   const [, setSettingsSection] = useState<SettingsSection>('general');
   const [userOpen, setUserOpen] = useState(false);
+
+  const [doses, setDoses] = useState(TODAY_DOSES);
+  const [toast, setToast] = useState<string | null>(null);
+  const [widgets, setWidgets] = useWidgets();
+  const [, setCustomizing] = useState(false);
+
+  const mark = (id: string, status: DoseStatus) => {
+    setDoses((prev) => prev.map((x) => x.id === id ? { ...x, status } : x));
+    const labels: Partial<Record<DoseStatus, string>> = {
+      taken: 'Marked taken', snoozed: 'Snoozed 30 min', skipped: 'Skipped',
+    };
+    if (labels[status]) {
+      setToast(labels[status]!);
+      setTimeout(() => setToast(null), 1800);
+    }
+  };
 
   const handleNav = (target: NavId | `settings:${SettingsSection}`) => {
     if (target.startsWith('settings:')) {
@@ -20,6 +40,27 @@ export function Desktop() {
       setActive(target as NavId);
     }
     setUserOpen(false);
+  };
+
+  const renderPage = () => {
+    if (active === 'home') {
+      return (
+        <HomePage
+          doses={doses}
+          mark={mark}
+          widgets={widgets}
+          setWidgets={setWidgets}
+          onCustomize={() => setCustomizing(true)}
+        />
+      );
+    }
+    return (
+      <PlaceholderPage
+        eyebrow="MedOS Family"
+        title={active.charAt(0).toUpperCase() + active.slice(1)}
+        subtitle="Page content lands in upcoming batches."
+      />
+    );
   };
 
   return (
@@ -40,14 +81,10 @@ export function Desktop() {
           style={{ padding: '28px 32px', flex: 1, overflow: 'auto' }}
           data-screen-label={`Desktop · ${active}`}
         >
-          {/* Pages are wired up across batches 2–5. Batch 1 ships the shell. */}
-          <PlaceholderPage
-            eyebrow="MedOS Family"
-            title={`${active.charAt(0).toUpperCase()}${active.slice(1)}`}
-            subtitle="Layout shell active. Page content lands in the next batches."
-          />
+          {renderPage()}
         </div>
       </main>
+      {toast && <Toast message={toast}/>}
     </div>
   );
 }
