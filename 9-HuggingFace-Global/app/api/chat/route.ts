@@ -3,6 +3,11 @@ import { z } from 'zod';
 import { chatWithFallback, type ChatMessage } from '@/lib/providers';
 import { getEmergencyInfo } from '@/lib/safety/emergency-numbers';
 import { preCheck, postCheck } from '@/lib/safety/safety-engine';
+import { snapshotFlags } from '@/lib/feature-flags';
+
+// Log feature-flag snapshot once per process load so deployments make their
+// configured behavior visible. Values are server-side only and PHI-free.
+console.log(`[Chat] route.flags ${JSON.stringify(snapshotFlags())}`);
 import { buildRAGContext } from '@/lib/rag/medical-kb';
 import { buildMedicalSystemPrompt } from '@/lib/medical-knowledge';
 import { authenticateRequest } from '@/lib/auth-middleware';
