@@ -1,0 +1,42 @@
+{
+  "locale": "it-IT",
+  "language": "it",
+  "country": "IT",
+  "units": { "temperature": "C", "weight": "kg", "length": "cm" },
+  "emergency": {
+    "general":   "112",
+    "ambulance": "118",
+    "police":    "112",
+    "fire":      "115",
+    "crisis":    "800 86 00 22",
+    "poison":    "06 49978000"
+  },
+  "urgent_care_phrasing": "rivolgersi al pronto soccorso o alla guardia medica più vicina",
+  "clinician_phrasing": {
+    "gp":           "medico di famiglia",
+    "pediatrician": "pediatra",
+    "pharmacist":   "farmacista"
+  },
+  "pediatric": {
+    "infant_fever_threshold_c":      38.0,
+    "pediatric_emergency_age_years": 18,
+    "infant_age_months_max":         3
+  },
+  "pregnancy": {
+    "phrase_for_emergency_evaluation": "recarsi immediatamente in ospedale o al reparto di ostetricia per una valutazione urgente"
+  },
+  "medications": {
+    "acetaminophen": ["Tachipirina", "Efferalgan", "Paracetamolo"],
+    "ibuprofen":     ["Brufen", "Moment", "Nurofen"],
+    "epinephrine":   ["Adrenalina", "Fastjekt", "Jext"]
+  },
+  "disclaimer": {
+    "general": "MedOS offre informazioni sanitarie generali e non sostituisce il parere, la diagnosi o il trattamento medico professionale. Per decisioni sulla salute, consultare un professionista sanitario abilitato.",
+    "mental_health_crisis_addendum": "Se sei in crisi o pensi di farti del male, chiama subito il 112 o la linea Telefono Amico (02 2327 2327). Non sei solo."
+  },
+  "crisis_resources": [
+    { "name": "Telefono Amico",          "number": "02 2327 2327", "scope": "supporto emotivo (10:00–24:00)" },
+    { "name": "Telefono Azzurro",        "number": "19696",        "scope": "bambini e adolescenti" },
+    { "name": "Samaritans Onlus Italia", "number": "06 77208977",  "scope": "supporto in caso di disperazione" }
+  ]
+}
