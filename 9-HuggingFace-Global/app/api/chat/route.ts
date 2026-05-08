@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { streamWithFallback, type ChatMessage } from '@/lib/providers';
-import { triageMessage } from '@/lib/safety/triage';
+import { chatWithFallback, type ChatMessage } from '@/lib/providers';
 import { getEmergencyInfo } from '@/lib/safety/emergency-numbers';
+import { preCheck, postCheck } from '@/lib/safety/safety-engine';
 import { buildRAGContext } from '@/lib/rag/medical-kb';
 import { buildMedicalSystemPrompt } from '@/lib/medical-knowledge';
 import { authenticateRequest } from '@/lib/auth-middleware';
@@ -79,38 +79,36 @@ export async function POST(request: NextRequest) {
     const rawUserContent = lastUserMessage?.content || '';
     const cleanUserContent = stripInjectedPatientContext(rawUserContent);
 
+    // Step 1: Run the deterministic safety pre-check. This is the FLOOR;
+    // the LLM cannot relax it. The engine returns either an emergency
+    // template (R5 — LLM not called) or a green-light decision with a
+    // risk class and a system-prompt augmentation that pins policy.
+    let safetyDecision: ReturnType<typeof preCheck> | null = null;
     if (lastUserMessage) {
-      const triage = triageMessage(cleanUserContent);
+      safetyDecision = preCheck({
+        text: cleanUserContent,
+        countryCode,
+      });
+
       console.log(
-        `[Chat] route.triage ${JSON.stringify({
+        `[Chat] route.safety.preCheck ${JSON.stringify({
           userId: user?.id || null,
-          isEmergency: triage.isEmergency,
+          riskClass: safetyDecision.audit.riskClass,
+          ruleFires: safetyDecision.audit.ruleFires,
           userChars: cleanUserContent.length,
         })}`,
       );
 
-      if (triage.isEmergency) {
-        const emergencyInfo = getEmergencyInfo(countryCode);
-        const emergencyResponse = [
-          `**EMERGENCY DETECTED**\n\n`,
-          `${triage.guidance}\n\n`,
-          `**Call emergency services NOW:**\n`,
-          `- Emergency: **${emergencyInfo.emergency}** (${emergencyInfo.country})\n`,
-          `- Ambulance: **${emergencyInfo.ambulance}**\n`,
-          emergencyInfo.crisisHotline
-            ? `- Crisis Hotline: **${emergencyInfo.crisisHotline}**\n`
-            : '',
-          `\nDo not delay. Every minute matters.`,
-        ].join('');
-
+      if (safetyDecision.kind === 'emergency_template') {
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
           start(controller) {
             const data = JSON.stringify({
-              choices: [{ delta: { content: emergencyResponse } }],
-              provider: 'triage',
-              model: 'emergency-detection',
+              choices: [{ delta: { content: safetyDecision!.template } }],
+              provider: 'safety-engine',
+              model: 'emergency-template',
               isEmergency: true,
+              riskClass: 'R5',
             });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
@@ -123,7 +121,12 @@ export async function POST(request: NextRequest) {
             userId: user.id,
             action: 'chat',
             ip,
-            meta: { triage: 'emergency', countryCode, model: 'emergency-detection' },
+            meta: {
+              riskClass: 'R5',
+              ruleFires: safetyDecision.audit.ruleFires,
+              countryCode,
+              model: 'emergency-template',
+            },
           });
         }
 
@@ -155,13 +158,19 @@ export async function POST(request: NextRequest) {
 
     // Step 4: Build a structured, locale-aware system prompt that grounds
     // the model in WHO/CDC/NHS guidance and pins the response language,
-    // country, emergency number, and measurement system.
+    // country, emergency number, and measurement system. Append the
+    // safety-engine policy block so the LLM is aware of the deterministic
+    // floor — the post-filter is the second line of defence.
     const emergencyInfo = getEmergencyInfo(countryCode);
-    const systemPrompt = buildMedicalSystemPrompt({
+    const baseSystemPrompt = buildMedicalSystemPrompt({
       country: countryCode,
       language,
       emergencyNumber: emergencyInfo.emergency,
     });
+    const systemPrompt =
+      safetyDecision && safetyDecision.kind === 'allow_llm'
+        ? `${baseSystemPrompt}\n\n${safetyDecision.systemInstructions}`
+        : baseSystemPrompt;
 
     // Step 5: Assemble the final message list. Prior turns are passed through
     // verbatim except for the LAST user turn, which is rebuilt with:
@@ -198,13 +207,55 @@ export async function POST(request: NextRequest) {
         preparedInMs: Date.now() - routeStartedAt,
       })}`,
     );
-    const stream = await streamWithFallback(augmentedMessages, model);
+    // Step 6: Buffer-then-filter-then-stream.
+    //
+    // The deterministic post-filter must run on the COMPLETE model response
+    // before any of it reaches the user. We therefore call the non-streaming
+    // provider, run postCheck(), and re-emit the filtered text as a single
+    // SSE chunk so the existing client SSE parser keeps working.
+    //
+    // This adds end-to-end latency relative to mid-stream display, but it is
+    // the only honest way to enforce the safety contract (SAFETY.md). UX
+    // optimisations (server-side chunking of the filtered output) can
+    // happen in a follow-up without changing the safety guarantee.
+    const providerResponse = await chatWithFallback(augmentedMessages, model);
+
+    const riskClass = safetyDecision?.kind === 'allow_llm'
+      ? safetyDecision.riskClass
+      : 'R0';
+
+    const post = postCheck({
+      response: providerResponse.content,
+      riskClass,
+      emergency: emergencyInfo,
+    });
+
     console.log(
-      `[Chat] route.stream.opened ${JSON.stringify({
+      `[Chat] route.safety.postCheck ${JSON.stringify({
         userId: user?.id || null,
+        riskClass,
+        filterFires: post.audit.filterFires,
+        modified: post.audit.modified,
+        blocked: post.audit.blocked,
         totalMs: Date.now() - routeStartedAt,
       })}`,
     );
+
+    const encoder = new TextEncoder();
+    const safeStream = new ReadableStream({
+      start(controller) {
+        const data = JSON.stringify({
+          choices: [{ delta: { content: post.filtered } }],
+          provider: providerResponse.provider,
+          model: providerResponse.model,
+          riskClass,
+          filtered: post.audit.modified,
+        });
+        controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      },
+    });
 
     if (user) {
       auditLog({
@@ -212,15 +263,21 @@ export async function POST(request: NextRequest) {
         action: 'chat',
         ip,
         meta: {
-          model,
+          model: providerResponse.model,
+          provider: providerResponse.provider,
           countryCode,
           turns: messages.length,
           patientContextChars: patientContext.length,
+          riskClass,
+          ruleFires: safetyDecision?.audit.ruleFires ?? [],
+          filterFires: post.audit.filterFires,
+          filterModified: post.audit.modified,
+          filterBlocked: post.audit.blocked,
         },
       });
     }
 
-    return new Response(stream, {
+    return new Response(safeStream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
