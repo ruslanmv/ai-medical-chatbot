@@ -38,3 +38,6 @@ export type {
   PreCheckRequest, PreCheckDecision, PreCheckAudit,
   PostCheckRequest, PostCheckResult, PostCheckAudit,
 } from './safety-engine';
+
+export { logPreCheck, logPostCheck } from './audit-events';
+export type { SafetyPreCheckEvent, SafetyPostCheckEvent } from './audit-events';
