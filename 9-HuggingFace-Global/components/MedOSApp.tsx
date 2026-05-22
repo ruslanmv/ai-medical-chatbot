@@ -506,19 +506,27 @@ function MedOSAppInner() {
         </main>
       </div>
 
-      {/* Right Panel — context-aware */}
-      <RightPanel
-        language={settings.language}
-        emergencyNumber={settings.emergencyNumber}
-        vitals={health.vitals}
-        medications={health.medications}
-        appointments={health.appointments}
-        isMedTaken={health.isMedTaken}
-        onNavigate={handleNavigate}
-        isAuthenticated={auth.isAuthenticated}
-        notificationCount={notif.count}
-        onOpenNotifications={() => {}}
-      />
+      {/* Right Panel — only rendered for authenticated users.
+       *
+       * The right rail is for personal health context (Vitals Today,
+       * Upcoming meds + appointments). For guests it offered no value
+       * and competed with the left sidebar's auth card. The whole
+       * component is now gated, eliminating the 'two sidebars feeling'
+       * and the duplicate sign-up prompts. */}
+      {auth.isAuthenticated && (
+        <RightPanel
+          language={settings.language}
+          emergencyNumber={settings.emergencyNumber}
+          vitals={health.vitals}
+          medications={health.medications}
+          appointments={health.appointments}
+          isMedTaken={health.isMedTaken}
+          onNavigate={handleNavigate}
+          isAuthenticated
+          notificationCount={notif.count}
+          onOpenNotifications={() => {}}
+        />
+      )}
       </div>
       <DisclaimerBanner language={settings.language} />
     </div>
