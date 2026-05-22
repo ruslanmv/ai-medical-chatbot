@@ -105,11 +105,17 @@ export async function POST(request: NextRequest) {
       );
 
       if (safetyDecision.kind === 'emergency_template') {
+        // Capture the narrowed values before entering the ReadableStream
+        // callback — discriminated-union narrowing on `safetyDecision`
+        // does not survive into the inner closure under strict TS.
+        const emergencyTemplate = safetyDecision.template;
+        const emergencyRuleFires = safetyDecision.audit.ruleFires;
+
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
           start(controller) {
             const data = JSON.stringify({
-              choices: [{ delta: { content: safetyDecision!.template } }],
+              choices: [{ delta: { content: emergencyTemplate } }],
               provider: 'safety-engine',
               model: 'emergency-template',
               isEmergency: true,
@@ -128,7 +134,7 @@ export async function POST(request: NextRequest) {
             ip,
             meta: {
               riskClass: 'R5',
-              ruleFires: safetyDecision.audit.ruleFires,
+              ruleFires: emergencyRuleFires,
               countryCode,
               model: 'emergency-template',
             },
