@@ -400,6 +400,15 @@ function MedOSAppInner() {
             }}
             onExport={health.downloadAll}
             onOpenEHR={() => setActiveNav("ehr-wizard")}
+            onDeleteAccount={async (password, confirmEmail) => {
+              const res = await auth.deleteMe(password, confirmEmail);
+              if (res.ok) {
+                // Server already invalidated the session; useAuth wiped
+                // local token + user. Send the user back to home.
+                setActiveNav("home");
+              }
+              return res;
+            }}
             medicationCount={health.medications.length}
             appointmentCount={health.appointments.length}
             vitalCount={health.vitals.length}
