@@ -98,6 +98,44 @@ async function handler(
       cache: 'no-store',
     });
 
+    // ---- Upstream 5xx handling ----
+    // When the HF Space is sleeping, building, errored, or OOM, it
+    // returns 5xx with a non-JSON body (typically text/plain like
+    // "Your space is in error, check its status on hf.co"). Forwarding
+    // that body verbatim makes the frontend's `await res.json()` throw
+    // and surface as a generic "Network error" with no actionable
+    // info. Translate it into a structured JSON envelope so the UI can
+    // show a clear "backend is down" state with a link for the operator.
+    if (res.status >= 500) {
+      const upstreamText = await res.text().catch(() => '');
+      const isSpaceErrored = /your space is in error/i.test(upstreamText);
+      const isSleeping = /sleeping|building|paused/i.test(upstreamText);
+      const code = isSpaceErrored
+        ? 'backend_errored'
+        : isSleeping
+          ? 'backend_cold_start'
+          : 'backend_unreachable';
+      const message = isSpaceErrored
+        ? 'The Hugging Face Space backing this app is in an error state. The operator needs to check the Space logs at https://huggingface.co/spaces and restart it.'
+        : isSleeping
+          ? 'Backend is waking up. Please try again in a few seconds.'
+          : `Backend returned ${res.status}. The Hugging Face Space may be down.`;
+
+      console.error(
+        `[Proxy] upstream ${res.status} on ${req.method} ${targetUrl}: ${upstreamText.slice(0, 200)}`,
+      );
+
+      return NextResponse.json(
+        {
+          error: message,
+          code,
+          upstreamStatus: res.status,
+          backend: BACKEND_URL,
+        },
+        { status: res.status, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
     // Pipe response headers through, dropping hop-by-hop ones.
     const responseHeaders = new Headers();
     res.headers.forEach((value, key) => {
