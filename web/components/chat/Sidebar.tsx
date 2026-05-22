@@ -158,22 +158,32 @@ export function Sidebar({
           )}
         </div>
 
-        {/* Main nav */}
+        {/* Main nav.
+         *
+         * Health-tracker items only render for authenticated users — they
+         * all require saved personal data and would otherwise surface
+         * empty or error states for guests. Logged-out users collapse to
+         * Home + Ask + the Tools group; the bottom auth card still
+         * offers Sign up / Log in. */}
         <nav className="flex-1 overflow-y-auto space-y-0.5">
           <NavItem icon={Home} label={t("nav_home", language)} active={activeNav === "home"} onClick={() => setActiveNav("home")} collapsed={collapsed} />
           <NavItem icon={MessageCircle} label={t("nav_ask", language)} active={activeNav === "chat"} onClick={() => setActiveNav("chat")} collapsed={collapsed} />
 
-          {!collapsed && <SectionLabel>{t("nav_health_tracker", language)}</SectionLabel>}
-          {collapsed && <div className="my-2 border-t border-line/50" />}
+          {isAuthenticated && (
+            <>
+              {!collapsed && <SectionLabel>{t("nav_health_tracker", language)}</SectionLabel>}
+              {collapsed && <div className="my-2 border-t border-line/50" />}
 
-          <NavItem icon={Heart} label={t("nav_dashboard", language)} active={activeNav === "health-dashboard"} onClick={() => setActiveNav("health-dashboard")} collapsed={collapsed} />
-          <NavItem icon={Calendar} label={t("nav_schedule", language)} active={activeNav === "schedule"} onClick={() => setActiveNav("schedule")} collapsed={collapsed} />
-          <NavItem icon={Pill} label={t("nav_medications", language)} active={activeNav === "medications"} onClick={() => setActiveNav("medications")} collapsed={collapsed} />
-          <NavItem icon={Package} label={t("medicines_title", language)} active={activeNav === "my-medicines"} onClick={() => setActiveNav("my-medicines")} collapsed={collapsed} />
-          <NavItem icon={Calendar} label={t("nav_appointments", language)} active={activeNav === "appointments"} onClick={() => setActiveNav("appointments")} collapsed={collapsed} />
-          <NavItem icon={Activity} label={t("nav_vitals", language)} active={activeNav === "vitals"} onClick={() => setActiveNav("vitals")} collapsed={collapsed} />
-          <NavItem icon={FileText} label={t("nav_records", language)} active={activeNav === "records"} onClick={() => setActiveNav("records")} collapsed={collapsed} />
-          <NavItem icon={Contact} label="Contacts" active={activeNav === "contacts"} onClick={() => setActiveNav("contacts")} collapsed={collapsed} />
+              <NavItem icon={Heart} label={t("nav_dashboard", language)} active={activeNav === "health-dashboard"} onClick={() => setActiveNav("health-dashboard")} collapsed={collapsed} />
+              <NavItem icon={Calendar} label={t("nav_schedule", language)} active={activeNav === "schedule"} onClick={() => setActiveNav("schedule")} collapsed={collapsed} />
+              <NavItem icon={Pill} label={t("nav_medications", language)} active={activeNav === "medications"} onClick={() => setActiveNav("medications")} collapsed={collapsed} />
+              <NavItem icon={Package} label={t("medicines_title", language)} active={activeNav === "my-medicines"} onClick={() => setActiveNav("my-medicines")} collapsed={collapsed} />
+              <NavItem icon={Calendar} label={t("nav_appointments", language)} active={activeNav === "appointments"} onClick={() => setActiveNav("appointments")} collapsed={collapsed} />
+              <NavItem icon={Activity} label={t("nav_vitals", language)} active={activeNav === "vitals"} onClick={() => setActiveNav("vitals")} collapsed={collapsed} />
+              <NavItem icon={FileText} label={t("nav_records", language)} active={activeNav === "records"} onClick={() => setActiveNav("records")} collapsed={collapsed} />
+              <NavItem icon={Contact} label="Contacts" active={activeNav === "contacts"} onClick={() => setActiveNav("contacts")} collapsed={collapsed} />
+            </>
+          )}
 
           {!collapsed && <SectionLabel>{t("nav_tools", language)}</SectionLabel>}
           {collapsed && <div className="my-2 border-t border-line/50" />}

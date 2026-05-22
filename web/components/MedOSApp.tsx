@@ -231,6 +231,7 @@ function MedOSAppInner() {
             getMedStreak={health.getMedStreak}
             onExport={health.downloadAll}
             language={settings.language}
+            isAuthenticated={auth.isAuthenticated}
           />
         );
       case "medications":
@@ -550,6 +551,7 @@ function MedOSAppInner() {
         appointments={health.appointments}
         isMedTaken={health.isMedTaken}
         onNavigate={handleNavigate}
+        isAuthenticated={auth.isAuthenticated}
         notificationCount={notif.count}
         onOpenNotifications={() => {}}
       />
