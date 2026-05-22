@@ -5,7 +5,6 @@ import { Heart } from "lucide-react";
 import { useGeoDetect } from "@/lib/hooks/useGeoDetect";
 import { ThemeProvider } from "./ThemeProvider";
 import { ThemeToggle } from "./ThemeToggle";
-import { EmergencyCTA } from "./chat/EmergencyCTA";
 import { Sidebar, NavView } from "./chat/Sidebar";
 import { RightPanel } from "./chat/RightPanel";
 import { NotificationBell } from "./chat/NotificationCenter";
@@ -489,11 +488,14 @@ function MedOSAppInner() {
               onDismissAll={notif.dismissAll}
             />
             <ThemeToggle />
-            <EmergencyCTA
-              number={settings.emergencyNumber}
-              label={t("emergency_quick_label", settings.language)}
-              urgent
-            />
+            {/* The header used to host a pulsing red EmergencyCTA on every
+             * page. It read as anxious noise on non-emergency screens and
+             * competed with the main actions. Emergency now lives in the
+             * sidebar's Tools group (NavItem with urgent flag) where it
+             * stays one click away without dominating the chrome. The
+             * deterministic safety engine still routes any R5 input to an
+             * emergency template at the chat-route level, regardless of
+             * what UI is visible. */}
           </div>
         </header>
 
