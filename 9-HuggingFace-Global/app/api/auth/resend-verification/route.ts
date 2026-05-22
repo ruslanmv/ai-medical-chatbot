@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb, genVerificationCode, codeExpiry } from '@/lib/db';
 import { authenticateRequest } from '@/lib/auth-middleware';
-import { sendVerificationEmail } from '@/lib/email';
+import { sendVerificationEmail, emailTransportName } from '@/lib/email';
 
 /**
  * POST /api/auth/resend-verification — resend the 6-digit verification code.
@@ -22,7 +22,9 @@ export async function POST(req: Request) {
      WHERE id = ?`,
   ).run(code, codeExpiry(), user.id);
 
-  await sendVerificationEmail(row.email, code);
+  console.log(`[ResendVerification] queued via transport=${emailTransportName()} to=${row.email}`);
+  const sent = await sendVerificationEmail(row.email, code);
+  if (!sent) console.error(`[ResendVerification] FAILED to=${row.email}`);
 
   return NextResponse.json({ message: 'Verification code sent' });
 }

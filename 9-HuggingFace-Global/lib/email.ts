@@ -1,27 +1,78 @@
 /**
- * MedOS email service — SMTP via nodemailer.
+ * MedOS email service.
  *
- * Works with any SMTP provider: Gmail, SendGrid, AWS SES, Mailgun,
- * Resend, etc. Configure via environment variables.
+ * Backend selection (first one that has its env set wins):
  *
- * When SMTP is not configured, emails are logged to the console (dev mode).
- * This means auth works in development without any email setup — the
- * verification codes and reset tokens are visible in the server logs.
+ *   1. Resend HTTP API   — when RESEND_API_KEY is set. Preferred on
+ *                          serverless because it's just HTTPS to
+ *                          api.resend.com (port 443 is never blocked)
+ *                          and errors come back as actionable JSON.
+ *   2. nodemailer SMTP   — when SMTP_HOST + SMTP_USER + SMTP_PASS are
+ *                          all set. Works with any provider.
+ *   3. Console fallback  — when nothing above is configured. Dumps the
+ *                          email body to stdout so dev work doesn't
+ *                          require any email setup at all. The
+ *                          verification code is visible in the server
+ *                          logs.
+ *
+ * Errors from the actual send (auth rejected, domain not verified,
+ * rate-limited, network) are logged to stderr with a clear prefix so
+ * they're greppable in container logs. The callers (register,
+ * forgot-password) treat email as best-effort and never block the
+ * user on it.
  */
 
 import nodemailer from 'nodemailer';
+
+const FROM_EMAIL = process.env.FROM_EMAIL || 'MedOS <onboarding@resend.dev>';
+const APP_NAME = 'MedOS';
+const APP_URL = process.env.APP_URL || 'https://ruslanmv-medibot.hf.space';
+
+// ---------- Resend HTTP transport ----------
+
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_URL = 'https://api.resend.com/emails';
+
+async function sendViaResend(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(RESEND_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+    });
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      console.error(
+        `[EMAIL Resend] ${res.status} ${res.statusText} → to=${to}: ${errBody.slice(0, 300)}`,
+      );
+      return false;
+    }
+    const data = (await res.json().catch(() => ({}))) as { id?: string };
+    console.log(`[EMAIL Resend] ok id=${data.id ?? '?'} to=${to} subject="${subject}"`);
+    return true;
+  } catch (err: any) {
+    console.error(`[EMAIL Resend] network error to=${to}: ${err?.message ?? err}`);
+    return false;
+  }
+}
+
+// ---------- SMTP transport (nodemailer) ----------
 
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'MedOS <noreply@medos.health>';
-const APP_NAME = 'MedOS';
-const APP_URL = process.env.APP_URL || 'https://ruslanmv-medibot.hf.space';
 
-const isConfigured = !!(SMTP_HOST && SMTP_USER && SMTP_PASS);
+const smtpConfigured = !!(SMTP_HOST && SMTP_USER && SMTP_PASS);
 
-const transporter = isConfigured
+const smtpTransporter = smtpConfigured
   ? nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
@@ -30,22 +81,51 @@ const transporter = isConfigured
     })
   : null;
 
-async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
-  if (!transporter) {
-    // Dev mode: log to console so developers can see verification codes.
-    console.log(`\n[EMAIL] To: ${to}`);
-    console.log(`[EMAIL] Subject: ${subject}`);
-    console.log(`[EMAIL] Body (text): ${html.replace(/<[^>]+>/g, '')}\n`);
-    return true;
-  }
-
+async function sendViaSmtp(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<boolean> {
+  if (!smtpTransporter) return false;
   try {
-    await transporter.sendMail({ from: FROM_EMAIL, to, subject, html });
+    const info = await smtpTransporter.sendMail({ from: FROM_EMAIL, to, subject, html });
+    console.log(`[EMAIL SMTP] ok messageId=${info.messageId} to=${to} subject="${subject}"`);
     return true;
-  } catch (error: any) {
-    console.error('[EMAIL ERROR]', error?.message);
+  } catch (err: any) {
+    console.error(`[EMAIL SMTP] failed to=${to}: ${err?.message ?? err}`);
     return false;
   }
+}
+
+// ---------- Console fallback (dev only) ----------
+
+function logToConsole(to: string, subject: string, html: string): boolean {
+  console.log(
+    `\n[EMAIL stdout-fallback] No RESEND_API_KEY or SMTP_* configured. Set one to actually send mail.`,
+  );
+  console.log(`[EMAIL] To: ${to}`);
+  console.log(`[EMAIL] Subject: ${subject}`);
+  console.log(`[EMAIL] Body (text): ${html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()}\n`);
+  return true;
+}
+
+// ---------- Dispatcher ----------
+
+async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+  if (RESEND_API_KEY) return sendViaResend(to, subject, html);
+  if (smtpConfigured) return sendViaSmtp(to, subject, html);
+  return logToConsole(to, subject, html);
+}
+
+/**
+ * Which transport is active. Logged at boot from app/api/auth/register
+ * so operators can confirm the wiring from a single container-log line
+ * instead of having to guess from absent email deliveries.
+ */
+export function emailTransportName(): 'resend' | 'smtp' | 'console' {
+  if (RESEND_API_KEY) return 'resend';
+  if (smtpConfigured) return 'smtp';
+  return 'console';
 }
 
 // ============================================================

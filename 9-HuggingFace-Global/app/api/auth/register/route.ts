@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { getDb, genId, genToken, genVerificationCode, codeExpiry, sessionExpiry } from '@/lib/db';
-import { sendVerificationEmail } from '@/lib/email';
+import { sendVerificationEmail, emailTransportName } from '@/lib/email';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const Schema = z.object({
@@ -47,8 +47,19 @@ export async function POST(req: Request) {
     const token = genToken();
     db.prepare('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(token, id, sessionExpiry());
 
-    // Send verification email (best-effort, don't block registration)
-    sendVerificationEmail(email, code).catch(() => {});
+    // Send verification email (best-effort, don't block registration).
+    // We DO want to know if it failed though — the old `.catch(() => {})`
+    // here masked a year of "no emails arriving" bug reports because
+    // the API still returned 201 and the UI still said "Check your
+    // email". Log the transport name on every register so operators
+    // can confirm the wiring from container logs in one grep.
+    console.log(`[Register] queued verification email via transport=${emailTransportName()} to=${email}`);
+    sendVerificationEmail(email, code).then(
+      (ok) => {
+        if (!ok) console.error(`[Register] verification email FAILED to=${email}`);
+      },
+      (err) => console.error(`[Register] verification email threw to=${email}: ${err?.message ?? err}`),
+    );
 
     return NextResponse.json(
       {
