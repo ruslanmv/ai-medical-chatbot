@@ -36,12 +36,16 @@ function getClient(): OpenAI {
     'https://ruslanmv-ollabridge.hf.space';
   const apiKey = configKey || process.env.OLLABRIDGE_API_KEY || 'not-required';
 
-  // Tight limits: if OllaBridge is cold/unreachable we want HF to take
-  // over fast, not burn the full 45s frontend budget on retries.
+  // Cold-start at OllaBridge can take 10-20s while HF Router warms a
+  // routed sub-provider. 8s was too tight — we'd time out before the
+  // first real token and force the request through the HF-direct
+  // fallback every time. 25s covers observed cold-start latencies
+  // while still leaving 20s of the Vercel-side 50s budget for the
+  // HF-direct fallback when OllaBridge genuinely fails.
   return new OpenAI({
     baseURL: `${baseURL.replace(/\/+$/, '')}/v1`,
     apiKey,
-    timeout: 8000,
+    timeout: 25000,
     maxRetries: 0,
   });
 }

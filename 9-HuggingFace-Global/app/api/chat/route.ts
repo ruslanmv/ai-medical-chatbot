@@ -104,52 +104,30 @@ export async function POST(request: NextRequest) {
         })}`,
       );
 
-      if (safetyDecision.kind === 'emergency_template') {
-        // Capture the narrowed values before entering the ReadableStream
-        // callback — discriminated-union narrowing on `safetyDecision`
-        // does not survive into the inner closure under strict TS.
-        const emergencyTemplate = safetyDecision.template;
-        const emergencyRuleFires = safetyDecision.audit.ruleFires;
-
-        const encoder = new TextEncoder();
-        const stream = new ReadableStream({
-          start(controller) {
-            const data = JSON.stringify({
-              choices: [{ delta: { content: emergencyTemplate } }],
-              provider: 'safety-engine',
-              model: 'emergency-template',
-              isEmergency: true,
-              riskClass: 'R5',
-            });
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-            controller.close();
-          },
-        });
-
-        if (user) {
-          auditLog({
-            userId: user.id,
-            action: 'chat',
-            ip,
-            meta: {
-              riskClass: 'R5',
-              ruleFires: emergencyRuleFires,
-              countryCode,
-              model: 'emergency-template',
-            },
-          });
-        }
-
-        return new Response(stream, {
-          headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            Connection: 'keep-alive',
-          },
-        });
-      }
+      // Emergency-template path — DO NOT short-circuit the LLM anymore.
+      //
+      // Old behaviour: when preCheck() returned `emergency_template` we
+      // returned a fixed string and never called the model. This is
+      // exactly the "hardcoded answer" complaint: users saw a canned
+      // "This may be a heart attack…" reply and never got real LLM
+      // reasoning, even for non-trivial follow-ups.
+      //
+      // New behaviour: we capture the deterministic emergency banner
+      // here and let the request flow into the normal LLM path. The
+      // banner is then prepended to the LLM response in the safeStream
+      // assembly below. If the LLM fails we still deliver the banner
+      // alone (the safety floor never disappears) — never a 503.
+      //
+      // The deterministic floor (banner text + emergency number) is
+      // still authored by the safety engine, not the model, so a
+      // hallucinating LLM cannot weaken it. The LLM can only ADD
+      // medical reasoning *after* the banner.
     }
+    const emergencyBanner =
+      safetyDecision?.kind === 'emergency_template' ? safetyDecision.template : '';
+    const emergencyRuleFires =
+      safetyDecision?.kind === 'emergency_template' ? safetyDecision.audit.ruleFires : [];
+    const isEmergency = !!emergencyBanner;
 
     // Step 2: Build RAG context from the medical knowledge base.
     const ragStart = Date.now();
@@ -178,10 +156,26 @@ export async function POST(request: NextRequest) {
       language,
       emergencyNumber: emergencyInfo.emergency,
     });
-    const systemPrompt =
-      safetyDecision && safetyDecision.kind === 'allow_llm'
-        ? `${baseSystemPrompt}\n\n${safetyDecision.systemInstructions}`
-        : baseSystemPrompt;
+    // Stack the system instructions: base + allow-llm hints + emergency
+    // augmentation. Emergency augmentation tells the LLM the deterministic
+    // banner has ALREADY been shown to the user, so the LLM should produce
+    // additive reasoning (what to do next, what to bring to the ER, when
+    // every minute matters, etc.) rather than re-issuing the call-911 text.
+    let systemPrompt = baseSystemPrompt;
+    if (safetyDecision && safetyDecision.kind === 'allow_llm') {
+      systemPrompt += `\n\n${safetyDecision.systemInstructions}`;
+    }
+    if (isEmergency) {
+      systemPrompt +=
+        `\n\n[EMERGENCY SAFETY FLOOR]\n` +
+        `The user has triggered red-flag rules: ${emergencyRuleFires.join(', ')}.\n` +
+        `A deterministic emergency banner has been shown to the user FIRST. It instructs them to call ${emergencyInfo.emergency} immediately.\n` +
+        `Your task is to ADD short, useful medical reasoning AFTER the banner:\n` +
+        `  • acknowledge the urgency\n` +
+        `  • give concrete next steps (what to do while waiting, what to bring, what to tell responders)\n` +
+        `  • do NOT contradict, soften, or repeat the banner\n` +
+        `  • keep it under 6 sentences\n`;
+    }
 
     // Step 5: Assemble the final message list. Prior turns are passed through
     // verbatim except for the LAST user turn, which is rebuilt with:
@@ -229,17 +223,47 @@ export async function POST(request: NextRequest) {
     // the only honest way to enforce the safety contract (SAFETY.md). UX
     // optimisations (server-side chunking of the filtered output) can
     // happen in a follow-up without changing the safety guarantee.
-    const providerResponse = await chatWithFallback(augmentedMessages, model);
+    // Call the provider chain. If we have an emergency banner the safety
+    // floor is already authored — a chain failure must not turn into a
+    // 503 for the user. Catch AllProvidersUnavailableError specifically
+    // and degrade to "banner only" instead.
+    let providerResponse: { content: string; provider: string; model: string };
+    try {
+      providerResponse = await chatWithFallback(augmentedMessages, model);
+    } catch (chainErr: any) {
+      if (chainErr instanceof AllProvidersUnavailableError && isEmergency) {
+        console.warn(
+          `[Chat] route.provider.degraded banner-only — chain unavailable: ${
+            String(chainErr.message).slice(0, 200)
+          }`,
+        );
+        providerResponse = {
+          content: '',                  // LLM didn't respond; banner is the answer
+          provider: 'safety-engine',
+          model: 'emergency-template',
+        };
+      } else {
+        throw chainErr;
+      }
+    }
 
     const riskClass = safetyDecision?.kind === 'allow_llm'
       ? safetyDecision.riskClass
-      : 'R0';
+      : (isEmergency ? 'R5' : 'R0');
 
     const post = postCheck({
       response: providerResponse.content,
       riskClass,
       emergency: emergencyInfo,
     });
+
+    // Prepend the emergency banner so the user always sees the safety
+    // floor first, then the LLM's medical reasoning underneath.
+    const finalContent = isEmergency
+      ? (post.filtered
+          ? `${emergencyBanner}\n\n${post.filtered}`
+          : emergencyBanner)
+      : post.filtered;
 
     console.log(
       `[Chat] route.safety.postCheck ${JSON.stringify({
@@ -256,11 +280,13 @@ export async function POST(request: NextRequest) {
     const safeStream = new ReadableStream({
       start(controller) {
         const data = JSON.stringify({
-          choices: [{ delta: { content: post.filtered } }],
+          choices: [{ delta: { content: finalContent } }],
           provider: providerResponse.provider,
           model: providerResponse.model,
           riskClass,
           filtered: post.audit.modified,
+          isEmergency,
+          ruleFires: emergencyRuleFires,
         });
         controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
