@@ -7,7 +7,6 @@ import {
   streamWithHuggingFace,
   chatWithHuggingFace,
 } from './huggingface-direct';
-import { getCachedFAQResponse } from './cached-faq';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -21,6 +20,21 @@ export interface ProviderResponse {
 }
 
 /**
+ * Thrown when every configured LLM provider fails for a request. The
+ * chat route translates this into a user-facing "service unavailable"
+ * SSE error event. We do NOT fall back to a canned response: a
+ * keyword-matched dictionary that speaks in the voice of a medical AI
+ * is worse than no answer at all — users assume it came from the
+ * model and act on it.
+ */
+export class AllProvidersUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AllProvidersUnavailableError';
+  }
+}
+
+/**
  * Structured logger that prefixes every line with `[Chat]` so the HF Space
  * logs API can be grepped for a single request end-to-end.
  */
@@ -31,12 +45,19 @@ function log(stage: string, details?: Record<string, unknown>) {
 
 /**
  * Stream chat completion with automatic fallback chain:
- * 1. OllaBridge-Cloud — only if admin has set OllaBridge URL
- * 2. Direct HuggingFace Inference API — 12-model cascade
- * 3. Cached FAQ response — always works, even offline
+ *   1. OllaBridge-Cloud — only if admin has set OllaBridge URL.
+ *   2. Direct HuggingFace Inference API — 12-model cascade.
+ *
+ * If both providers fail, throws AllProvidersUnavailableError so the
+ * chat route can surface a clean "service unavailable" message to the
+ * user. There is intentionally NO third "cached FAQ" fallback: a
+ * static keyword dictionary that pretends to be the AI is worse than
+ * an honest error (users acted on it as if it were a real answer, and
+ * its keyword scoring routinely matched unrelated topics, e.g.
+ * "my child has fever" surfacing a malaria preamble).
  *
  * Each step logs its decision so the workflow can be traced from the
- * HF Space run logs. On failure, the NEXT step is tried automatically.
+ * HF Space run logs.
  */
 export async function streamWithFallback(
   messages: ChatMessage[],
@@ -52,9 +73,9 @@ export async function streamWithFallback(
     userChars: userTurn?.content.length ?? 0,
   });
 
+  const failures: string[] = [];
+
   // Step 1 — OllaBridge (only when the admin has set OLLABRIDGE_URL).
-  // Skipping the try when unconfigured avoids burning latency on a
-  // default URL that may not correspond to the user's gateway.
   if (isOllaBridgeConfigured()) {
     const t0 = Date.now();
     try {
@@ -66,11 +87,13 @@ export async function streamWithFallback(
       });
       return stream;
     } catch (error: any) {
+      const msg = String(error?.message || error).slice(0, 200);
       log('provider.ollabridge.fail', {
         requestId,
         latencyMs: Date.now() - t0,
-        error: String(error?.message || error).slice(0, 200),
+        error: msg,
       });
+      failures.push(`ollabridge: ${msg}`);
     }
   } else {
     log('provider.ollabridge.skipped', { requestId, reason: 'not configured' });
@@ -87,42 +110,30 @@ export async function streamWithFallback(
     });
     return stream;
   } catch (error: any) {
+    const msg = String(error?.message || error).slice(0, 200);
     log('provider.huggingface.fail', {
       requestId,
       latencyMs: Date.now() - t1,
-      error: String(error?.message || error).slice(0, 200),
+      error: msg,
     });
+    failures.push(`huggingface: ${msg}`);
   }
 
-  // Step 3 — Cached FAQ (always succeeds).
-  const faqResponse = getCachedFAQResponse(userTurn?.content || '');
-  log('provider.cached-faq.used', {
+  // All providers failed. We do NOT pretend with a canned response.
+  log('provider.all_failed', {
     requestId,
     totalMs: Date.now() - startedAt,
-    faqChars: faqResponse.length,
+    failures,
   });
-
-  return new ReadableStream({
-    start(controller) {
-      const encoder = new TextEncoder();
-      controller.enqueue(
-        encoder.encode(
-          `data: ${JSON.stringify({
-            choices: [{ delta: { content: faqResponse } }],
-            provider: 'cached-faq',
-            model: 'offline',
-          })}\n\n`,
-        ),
-      );
-      controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-      controller.close();
-    },
-  });
+  throw new AllProvidersUnavailableError(
+    'All LLM providers are currently unavailable. Please try again in a moment.',
+  );
 }
 
 /**
  * Non-streaming chat completion with fallback chain.
- * Mirrors streamWithFallback — same decisions, same logs.
+ * Mirrors streamWithFallback — same decisions, same logs, same
+ * AllProvidersUnavailableError on total failure.
  */
 export async function chatWithFallback(
   messages: ChatMessage[],
@@ -131,16 +142,17 @@ export async function chatWithFallback(
   const requestId = Math.random().toString(36).slice(2, 10);
   log('request.start.nonstream', { requestId, model });
 
+  const failures: string[] = [];
+
   if (isOllaBridgeConfigured()) {
     try {
       const resp = await chatWithOllaBridge(messages, model);
       log('provider.ollabridge.ok.nonstream', { requestId });
       return resp;
     } catch (error: any) {
-      log('provider.ollabridge.fail.nonstream', {
-        requestId,
-        error: String(error?.message || error).slice(0, 200),
-      });
+      const msg = String(error?.message || error).slice(0, 200);
+      log('provider.ollabridge.fail.nonstream', { requestId, error: msg });
+      failures.push(`ollabridge: ${msg}`);
     }
   } else {
     log('provider.ollabridge.skipped.nonstream', { requestId });
@@ -151,17 +163,13 @@ export async function chatWithFallback(
     log('provider.huggingface.ok.nonstream', { requestId });
     return resp;
   } catch (error: any) {
-    log('provider.huggingface.fail.nonstream', {
-      requestId,
-      error: String(error?.message || error).slice(0, 200),
-    });
+    const msg = String(error?.message || error).slice(0, 200);
+    log('provider.huggingface.fail.nonstream', { requestId, error: msg });
+    failures.push(`huggingface: ${msg}`);
   }
 
-  const lastUserMessage = messages.filter((m) => m.role === 'user').pop();
-  log('provider.cached-faq.used.nonstream', { requestId });
-  return {
-    content: getCachedFAQResponse(lastUserMessage?.content || ''),
-    provider: 'cached-faq',
-    model: 'offline',
-  };
+  log('provider.all_failed.nonstream', { requestId, failures });
+  throw new AllProvidersUnavailableError(
+    'All LLM providers are currently unavailable. Please try again in a moment.',
+  );
 }

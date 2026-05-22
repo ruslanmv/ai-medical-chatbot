@@ -20,7 +20,12 @@ Always available offline:
   - Deterministic red-flag triage (R0..R5)
   - Regional emergency numbers, crisis lines, poison-control numbers
   - Locale disclaimers + clinician-referral phrasing
-  - Cached FAQ responses (already in lib/providers/cached-faq.ts)
+  - (Historically lib/providers/cached-faq.ts held canned FAQ entries
+    here; it was removed in b83db95 because its keyword matcher
+    surfaced unrelated answers — e.g. "my child has fever" returned
+    malaria info. Offline guidance in this tier is now limited to
+    the deterministic triage + emergency-number cards above, which
+    are always safe to show without an LLM.)
 
 Best-effort offline (optional, behind a flag):
   - Phi-3 mini / Gemma 2B / TinyLlama for non-clinical guidance only

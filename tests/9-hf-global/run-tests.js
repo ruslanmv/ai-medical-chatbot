@@ -21,41 +21,29 @@ function assert(condition, message) {
   }
 }
 
-// ===== Test 1: Cached FAQ =====
-console.log('\n\x1b[1mTest Suite: Cached FAQ Provider\x1b[0m');
+// ===== Test 1: No canned-response fallback (regression guard) =====
+//
+// Until commit b83db95, lib/providers/cached-faq.ts kept a keyword-scored
+// static dictionary of medical "answers" that ran as the third fallback
+// when both LLM providers failed. It produced confidently wrong canned
+// responses — e.g. "my child has fever" surfaced a malaria preamble
+// because the scorer overlapped unrelated entries. The file was removed
+// and providers now throw AllProvidersUnavailableError on total failure,
+// which the chat route maps to a clean 503. These assertions catch any
+// regression that re-introduces a canned-answer fallback.
+console.log('\n\x1b[1mTest Suite: No canned-response fallback\x1b[0m');
 
 const cachedFaqPath = path.join(APP_DIR, 'lib', 'providers', 'cached-faq.ts');
-const cachedFaqContent = fs.readFileSync(cachedFaqPath, 'utf8');
-
 assert(
-  cachedFaqContent.includes('getCachedFAQResponse'),
-  'cached-faq exports getCachedFAQResponse function'
+  !fs.existsSync(cachedFaqPath),
+  'cached-faq.ts is NOT present (removed in b83db95)'
 );
 
-assert(
-  cachedFaqContent.includes('headache') && cachedFaqContent.includes('fever'),
-  'cached-faq includes headache and fever entries'
-);
-
-assert(
-  cachedFaqContent.includes('diabetes') && cachedFaqContent.includes('blood sugar'),
-  'cached-faq includes diabetes entry'
-);
-
-assert(
-  cachedFaqContent.includes('malaria') && cachedFaqContent.includes('mosquito'),
-  'cached-faq includes malaria entry'
-);
-
-assert(
-  cachedFaqContent.includes('chest pain') || cachedFaqContent.includes('heart attack'),
-  'cached-faq includes cardiac emergency entry'
-);
-
-assert(
-  cachedFaqContent.includes('snakebite') || cachedFaqContent.includes('snake'),
-  'cached-faq includes snakebite entry'
-);
+// providerIndexPath / providerIndexContent are loaded in "Test 7: Provider
+// Fallback Chain" below — defer the rest of these regression assertions
+// to that block to avoid duplicating the readFileSync. Only the
+// file-presence assertion above needs to live up here, since it has to
+// fail loudly the moment someone re-adds cached-faq.ts.
 
 // ===== Test 2: Emergency Triage =====
 console.log('\n\x1b[1mTest Suite: Emergency Triage\x1b[0m');
@@ -239,8 +227,25 @@ assert(
 );
 
 assert(
-  providerIndexContent.includes('ollabridge') && providerIndexContent.includes('huggingface') && providerIndexContent.includes('cached'),
-  'provider index imports all three fallback providers'
+  providerIndexContent.includes('ollabridge') && providerIndexContent.includes('huggingface'),
+  'provider index imports both LLM providers'
+);
+
+// Regression guard for b83db95: the third "cached FAQ" fallback was
+// removed because it produced unrelated canned answers. providers/index.ts
+// must now throw AllProvidersUnavailableError on total failure rather
+// than fall back to a canned-response dictionary.
+assert(
+  providerIndexContent.includes('AllProvidersUnavailableError'),
+  'provider index exports AllProvidersUnavailableError'
+);
+assert(
+  providerIndexContent.includes('throw new AllProvidersUnavailableError'),
+  'provider index throws AllProvidersUnavailableError on total failure'
+);
+assert(
+  !providerIndexContent.includes('getCachedFAQResponse'),
+  'provider index no longer references the removed cached-faq module'
 );
 
 // ===== Test 8: API Routes =====
@@ -290,6 +295,14 @@ assert(
   chatRouteContent.includes('chatWithFallback') ||
   chatRouteContent.includes('streamWithFallback'),
   'chat route uses fallback provider chain'
+);
+
+// Regression guard for b83db95: when both LLM providers fail the route
+// must return a 503 with a clear message, not let the request silently
+// fall back to a canned answer.
+assert(
+  chatRouteContent.includes('AllProvidersUnavailableError'),
+  'chat route maps AllProvidersUnavailableError to a 503 response'
 );
 
 const healthRoutePath = path.join(APP_DIR, 'app', 'api', 'health', 'route.ts');
