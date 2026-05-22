@@ -1,0 +1,43 @@
+{
+  "locale": "pt-BR",
+  "language": "pt",
+  "country": "BR",
+  "units": { "temperature": "C", "weight": "kg", "length": "cm" },
+  "emergency": {
+    "general":   "190",
+    "ambulance": "192",
+    "police":    "190",
+    "fire":      "193",
+    "crisis":    "188",
+    "poison":    "0800-722-6001"
+  },
+  "urgent_care_phrasing": "procure uma UPA, pronto-socorro ou hospital mais próximo",
+  "clinician_phrasing": {
+    "gp":           "médico clínico geral",
+    "pediatrician": "pediatra",
+    "pharmacist":   "farmacêutico"
+  },
+  "pediatric": {
+    "infant_fever_threshold_c":      38.0,
+    "pediatric_emergency_age_years": 18,
+    "infant_age_months_max":         3
+  },
+  "pregnancy": {
+    "phrase_for_emergency_evaluation": "procure imediatamente uma maternidade ou pronto-socorro para avaliação urgente"
+  },
+  "medications": {
+    "acetaminophen": ["Tylenol", "Paracetamol", "Vick Pyrena"],
+    "ibuprofen":     ["Advil", "Alivium", "Buscofem"],
+    "dipyrone":      ["Novalgina", "Dipirona"],
+    "epinephrine":   ["Adrenalina"]
+  },
+  "disclaimer": {
+    "general": "O MedOS oferece informações gerais de saúde e não substitui o aconselhamento, diagnóstico ou tratamento médico profissional. Para decisões sobre sua saúde, consulte um profissional de saúde habilitado.",
+    "mental_health_crisis_addendum": "Se você está em crise ou pensando em se machucar, ligue agora para o CVV no 188 ou para o SAMU 192. Você não está sozinho."
+  },
+  "crisis_resources": [
+    { "name": "CVV (Centro de Valorização da Vida)", "number": "188",           "scope": "apoio emocional e prevenção do suicídio (24/7)" },
+    { "name": "SAMU",                                 "number": "192",           "scope": "emergências médicas" },
+    { "name": "Disque-Saúde",                          "number": "136",          "scope": "informação em saúde do SUS" }
+  ]
+}

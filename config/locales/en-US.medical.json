@@ -1,0 +1,42 @@
+{
+  "locale": "en-US",
+  "language": "en",
+  "country": "US",
+  "units": { "temperature": "F", "weight": "lb", "length": "in" },
+  "emergency": {
+    "general":   "911",
+    "ambulance": "911",
+    "police":    "911",
+    "fire":      "911",
+    "crisis":    "988",
+    "poison":    "1-800-222-1222"
+  },
+  "urgent_care_phrasing": "go to urgent care or your nearest emergency department",
+  "clinician_phrasing": {
+    "gp":           "primary care doctor",
+    "pediatrician": "pediatrician",
+    "pharmacist":   "pharmacist"
+  },
+  "pediatric": {
+    "infant_fever_threshold_c":      38.0,
+    "pediatric_emergency_age_years": 18,
+    "infant_age_months_max":         3
+  },
+  "pregnancy": {
+    "phrase_for_emergency_evaluation": "go to your maternity unit or emergency department for urgent evaluation"
+  },
+  "medications": {
+    "acetaminophen": ["Tylenol", "Panadol"],
+    "ibuprofen":     ["Advil", "Motrin"],
+    "epinephrine":   ["EpiPen", "Auvi-Q"]
+  },
+  "disclaimer": {
+    "general": "MedOS shares general health information and is not a substitute for professional medical advice, diagnosis, or treatment. For decisions about your care, please contact a licensed clinician.",
+    "mental_health_crisis_addendum": "If you are in crisis or thinking of hurting yourself, please call 911 or 988 (the 988 Suicide and Crisis Lifeline) right now. You are not alone."
+  },
+  "crisis_resources": [
+    { "name": "988 Suicide and Crisis Lifeline", "number": "988",          "scope": "general crisis, suicidal ideation, self-harm" },
+    { "name": "Crisis Text Line",                "number": "Text HOME to 741741", "scope": "text-based crisis support" },
+    { "name": "Veterans Crisis Line",            "number": "988, then 1",  "scope": "veterans" }
+  ]
+}

@@ -32,6 +32,14 @@ interface LoginViewProps {
     newPassword: string,
   ) => Promise<{ ok: boolean; error?: string }>;
   language: SupportedLanguage;
+  /**
+   * Optional pre-fill — used when the user lands here via a password-reset
+   * email link (?action=reset&email=…&code=…). MedOSApp parses the URL and
+   * passes these so the form drops straight into the "set new password" step.
+   */
+  initialFlow?: AuthFlow;
+  initialEmail?: string;
+  initialCode?: string;
 }
 
 export function LoginView({
@@ -41,12 +49,15 @@ export function LoginView({
   onResendVerification,
   onForgotPassword,
   onResetPassword,
+  initialFlow = "login",
+  initialEmail = "",
+  initialCode = "",
 }: LoginViewProps) {
-  const [flow, setFlow] = useState<AuthFlow>("login");
-  const [email, setEmail] = useState("");
+  const [flow, setFlow] = useState<AuthFlow>(initialFlow);
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");

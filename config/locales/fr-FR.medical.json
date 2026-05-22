@@ -1,0 +1,42 @@
+{
+  "locale": "fr-FR",
+  "language": "fr",
+  "country": "FR",
+  "units": { "temperature": "C", "weight": "kg", "length": "cm" },
+  "emergency": {
+    "general":   "112",
+    "ambulance": "15",
+    "police":    "17",
+    "fire":      "18",
+    "crisis":    "3114",
+    "poison":    "01 40 05 48 48"
+  },
+  "urgent_care_phrasing": "rendez-vous aux urgences ou contactez un service médical d'urgence",
+  "clinician_phrasing": {
+    "gp":           "médecin traitant",
+    "pediatrician": "pédiatre",
+    "pharmacist":   "pharmacien"
+  },
+  "pediatric": {
+    "infant_fever_threshold_c":      38.0,
+    "pediatric_emergency_age_years": 18,
+    "infant_age_months_max":         3
+  },
+  "pregnancy": {
+    "phrase_for_emergency_evaluation": "rendez-vous immédiatement à votre maternité ou aux urgences pour une évaluation urgente"
+  },
+  "medications": {
+    "acetaminophen": ["Doliprane", "Dafalgan", "Paracétamol"],
+    "ibuprofen":     ["Advil", "Nurofen", "Ibuprofène"],
+    "epinephrine":   ["Anapen", "Jext", "EpiPen"]
+  },
+  "disclaimer": {
+    "general": "MedOS fournit des informations générales sur la santé et ne remplace pas un avis, un diagnostic ou un traitement médical professionnel. Pour les décisions concernant votre santé, consultez un professionnel de santé habilité.",
+    "mental_health_crisis_addendum": "Si vous êtes en crise ou pensez à vous faire du mal, appelez immédiatement le 3114 (numéro national de prévention du suicide) ou le 15. Vous n'êtes pas seul."
+  },
+  "crisis_resources": [
+    { "name": "3114 - Numéro national de prévention du suicide", "number": "3114",           "scope": "crise suicidaire (24/7)" },
+    { "name": "SOS Amitié",                                       "number": "09 72 39 40 50", "scope": "écoute, détresse psychologique (24/7)" },
+    { "name": "Fil Santé Jeunes",                                 "number": "0 800 235 236",  "scope": "santé des jeunes (12–25 ans)" }
+  ]
+}

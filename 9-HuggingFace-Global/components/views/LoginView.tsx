@@ -36,8 +36,13 @@ interface LoginViewProps {
    * Which tab to open on mount. Defaults to "login". Pass "register" from
    * call-sites that represent a clear sign-up intent (e.g. the sidebar's
    * "Create account" entry) so the user lands directly on the right form.
+   * Pass "reset" from the password-reset email deep link so the user
+   * drops straight into the "set new password" step with email + code
+   * pre-filled.
    */
   initialFlow?: AuthFlow;
+  initialEmail?: string;
+  initialCode?: string;
 }
 
 export function LoginView({
@@ -48,12 +53,14 @@ export function LoginView({
   onForgotPassword,
   onResetPassword,
   initialFlow = "login",
+  initialEmail = "",
+  initialCode = "",
 }: LoginViewProps) {
   const [flow, setFlow] = useState<AuthFlow>(initialFlow);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");

@@ -7,7 +7,6 @@ import {
   Droplets,
   Wind,
   Scale,
-  Phone,
   Calendar,
   ChevronRight,
   Shield,
@@ -36,6 +35,13 @@ interface RightPanelProps {
   // Notification count
   notificationCount?: number;
   onOpenNotifications?: () => void;
+  /**
+   * When false, the empty state shows a sign-in card instead of the
+   * 'Get started' nudge that points at /health-dashboard (a route
+   * guests can't usefully use). Emergency access is NOT shown here —
+   * that lives in the sidebar Tools group on every screen.
+   */
+  isAuthenticated?: boolean;
 }
 
 const VITAL_ICONS: Record<VitalType, any> = {
@@ -100,14 +106,15 @@ function getStatus(type: VitalType, value: string): string {
 
 export function RightPanel({
   language = "en",
-  emergencyNumber = "911",
+  emergencyNumber: _emergencyNumber,
   vitals = [],
   medications = [],
   appointments = [],
   isMedTaken,
   onNavigate,
-  notificationCount = 0,
-  onOpenNotifications,
+  notificationCount: _notificationCount,
+  onOpenNotifications: _onOpenNotifications,
+  isAuthenticated = true,
 }: RightPanelProps) {
   const today = todayISO();
 
@@ -258,7 +265,13 @@ export function RightPanel({
           </section>
         )}
 
-        {/* Empty state — encourage setup */}
+        {/* Empty state.
+         *
+         * MedOSApp now only mounts RightPanel for authenticated users,
+         * so the right rail is always personal context — no duplicate
+         * sign-up card here (the left sidebar already carries the auth
+         * CTA). When the user is signed in but has no data yet, we keep
+         * the existing 'Track your health' setup nudge. */}
         {!hasHealthData && (
           <div className="text-center py-6">
             <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-brand-500/10 flex items-center justify-center">
@@ -280,20 +293,19 @@ export function RightPanel({
           </div>
         )}
 
-        {/* Emergency + Privacy — pinned at bottom */}
-        <div className="mt-auto space-y-3 pt-4">
+        {/* Privacy footer — pinned at bottom.
+         *
+         * The big red 'Call <emergency-number>' button that used to live
+         * here is gone. Emergency access stays in the sidebar Tools group
+         * (NavItem with urgent flag) where it's one click away without
+         * dominating every screen with anxious red chrome. The
+         * deterministic safety engine still routes any R5 input to an
+         * emergency template at the chat-route level. */}
+        <div className="mt-auto pt-4">
           <div className="flex items-center gap-2 text-xs text-ink-subtle px-1">
             <Shield size={12} className="text-accent-500 flex-shrink-0" />
             {t("badge_private", language)} · {t("badge_free", language)}
           </div>
-          <a
-            href={`tel:${emergencyNumber}`}
-            aria-label={`Call emergency ${emergencyNumber}`}
-            className="flex items-center justify-center gap-2 w-full py-2.5 bg-danger-500 text-white rounded-xl text-sm font-bold hover:bg-danger-600 transition-colors shadow-soft"
-          >
-            <Phone size={14} strokeWidth={2.5} />
-            {t("emergency_call", language)} {emergencyNumber}
-          </a>
         </div>
       </div>
     </div>

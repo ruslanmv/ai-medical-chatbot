@@ -5,7 +5,6 @@ import { Heart } from "lucide-react";
 import { useGeoDetect } from "@/lib/hooks/useGeoDetect";
 import { ThemeProvider } from "./ThemeProvider";
 import { ThemeToggle } from "./ThemeToggle";
-import { EmergencyCTA } from "./chat/EmergencyCTA";
 import { Sidebar, NavView } from "./chat/Sidebar";
 import { RightPanel } from "./chat/RightPanel";
 import { NotificationBell } from "./chat/NotificationCenter";
@@ -25,13 +24,16 @@ import { WelcomeScreen } from "./WelcomeScreen";
 import { useSettings } from "@/lib/hooks/useSettings";
 import { useChat } from "@/lib/hooks/useChat";
 import { useHealthStore } from "@/lib/hooks/useHealthStore";
+import { useFamilyHealth } from "@/lib/hooks/useFamilyHealth";
 import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { usePasswordResetLink } from "@/lib/hooks/usePasswordResetLink";
 import { LoginView } from "./views/LoginView";
 import { ProfileView } from "./views/ProfileView";
 import { EHRWizard } from "./views/EHRWizard";
 import { MyMedicinesView } from "./views/MyMedicinesView";
 import { ShareView } from "./views/ShareView";
+import { FamilyHealthView } from "./views/FamilyHealthView";
 import { DisclaimerBanner } from "./ui/DisclaimerBanner";
 import { OfflineBanner } from "./ui/OfflineBanner";
 import { InstallPrompt } from "./ui/InstallPrompt";
@@ -50,8 +52,17 @@ function MedOSAppInner() {
   const [activeNav, setActiveNav] = useState<NavView>("home");
   const settings = useSettings();
   const auth = useAuth();
+  const resetLink = usePasswordResetLink();
   const { messages, isTyping, error, sendMessage, clearMessages } = useChat();
+
+  // When the user lands here from a password-reset email, drop them on
+  // the login screen with the reset step pre-filled. Done once on mount;
+  // the hook itself clears the params from the URL so it won't re-fire.
+  useEffect(() => {
+    if (resetLink) setActiveNav("login");
+  }, [resetLink]);
   const health = useHealthStore(auth.token);
+  const family = useFamilyHealth();
   const notif = useNotifications();
 
   // IP-based auto-detection. Only applies if the user hasn't manually
@@ -220,6 +231,7 @@ function MedOSAppInner() {
             getMedStreak={health.getMedStreak}
             onExport={health.downloadAll}
             language={settings.language}
+            isAuthenticated={auth.isAuthenticated}
           />
         );
       case "medications":
@@ -287,6 +299,24 @@ function MedOSAppInner() {
             language={settings.language}
           />
         );
+      case "family-health":
+        return (
+          <FamilyHealthView
+            mode={family.mode}
+            members={family.members}
+            records={family.records}
+            currentMemberId={family.currentMemberId}
+            onSetMode={family.setMode}
+            onSetCurrentMember={family.setCurrentMemberId}
+            onSeedDefaultFamily={family.seedDefaultFamily}
+            onAddMember={family.addMember}
+            onUpdateMember={family.updateMember}
+            onUpsertMonthlyRecord={family.upsertMonthlyRecord}
+            onCreateInvite={family.createInvite}
+            onExport={family.exportData}
+            language={settings.language}
+          />
+        );
       case "share":
         return <ShareView language={settings.language} />;
       case "history":
@@ -303,7 +333,15 @@ function MedOSAppInner() {
       case "register":
         return (
           <LoginView
-            initialFlow={activeNav === "register" ? "register" : "login"}
+            initialFlow={
+              resetLink
+                ? "reset"
+                : activeNav === "register"
+                  ? "register"
+                  : "login"
+            }
+            initialEmail={resetLink?.email}
+            initialCode={resetLink?.code}
             onLogin={async (e, p) => {
               const res = await auth.login(e, p);
               if (res.ok) setActiveNav("home");
@@ -455,6 +493,8 @@ function MedOSAppInner() {
               ? t("nav_topics", settings.language)
               : activeNav === "settings"
               ? t("nav_settings", settings.language)
+              : activeNav === "family-health"
+              ? "MedOS Family"
               : activeNav}
           </h2>
 
@@ -466,11 +506,14 @@ function MedOSAppInner() {
               onDismissAll={notif.dismissAll}
             />
             <ThemeToggle />
-            <EmergencyCTA
-              number={settings.emergencyNumber}
-              label={t("emergency_quick_label", settings.language)}
-              urgent
-            />
+            {/* The header used to host a pulsing red EmergencyCTA on every
+             * page. It read as anxious noise on non-emergency screens and
+             * competed with the main actions. Emergency now lives in the
+             * sidebar's Tools group (NavItem with urgent flag) where it
+             * stays one click away without dominating the chrome. The
+             * deterministic safety engine still routes any R5 input to an
+             * emergency template at the chat-route level, regardless of
+             * what UI is visible. */}
           </div>
         </header>
 
@@ -480,18 +523,27 @@ function MedOSAppInner() {
         </main>
       </div>
 
-      {/* Right Panel — context-aware */}
-      <RightPanel
-        language={settings.language}
-        emergencyNumber={settings.emergencyNumber}
-        vitals={health.vitals}
-        medications={health.medications}
-        appointments={health.appointments}
-        isMedTaken={health.isMedTaken}
-        onNavigate={handleNavigate}
-        notificationCount={notif.count}
-        onOpenNotifications={() => {}}
-      />
+      {/* Right Panel — only rendered for authenticated users.
+       *
+       * The right rail is for personal health context (Vitals Today,
+       * Upcoming meds + appointments). For guests it offered no value
+       * and competed with the left sidebar's auth card. The whole
+       * component is now gated, eliminating the 'two sidebars feeling'
+       * and the duplicate sign-up prompts. */}
+      {auth.isAuthenticated && (
+        <RightPanel
+          language={settings.language}
+          emergencyNumber={settings.emergencyNumber}
+          vitals={health.vitals}
+          medications={health.medications}
+          appointments={health.appointments}
+          isMedTaken={health.isMedTaken}
+          onNavigate={handleNavigate}
+          isAuthenticated
+          notificationCount={notif.count}
+          onOpenNotifications={() => {}}
+        />
+      )}
       </div>
       <DisclaimerBanner language={settings.language} />
     </div>
