@@ -222,6 +222,7 @@ function MedOSAppInner() {
             getMedStreak={health.getMedStreak}
             onExport={health.downloadAll}
             language={settings.language}
+            isAuthenticated={auth.isAuthenticated}
           />
         );
       case "medications":
