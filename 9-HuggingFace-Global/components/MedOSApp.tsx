@@ -515,6 +515,7 @@ function MedOSAppInner() {
         appointments={health.appointments}
         isMedTaken={health.isMedTaken}
         onNavigate={handleNavigate}
+        isAuthenticated={auth.isAuthenticated}
         notificationCount={notif.count}
         onOpenNotifications={() => {}}
       />
