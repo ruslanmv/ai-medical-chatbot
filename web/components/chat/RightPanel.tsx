@@ -12,8 +12,6 @@ import {
   Shield,
   Check,
   Circle,
-  LogIn,
-  UserPlus,
 } from "lucide-react";
 import {
   VITAL_META,
@@ -269,34 +267,12 @@ export function RightPanel({
 
         {/* Empty state.
          *
-         * For logged-out users we show a single sign-in card (the 'Get
-         * started' CTA pointed at /health-dashboard which guests can't
-         * usefully use). For logged-in users with no data we keep the
-         * existing 'Track your health' setup nudge. */}
-        {!hasHealthData && !isAuthenticated && (
-          <div className="rounded-2xl p-4 border border-line/60 bg-surface-2">
-            <p className="text-xs text-ink-muted leading-relaxed">
-              Sign in to sync your medications, appointments, vitals, and
-              records across devices.
-            </p>
-            <div className="mt-3 flex flex-col gap-2">
-              <button
-                onClick={() => onNavigate?.("register")}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-gradient text-white px-3 py-2 text-xs font-semibold shadow-soft hover:opacity-95 transition"
-              >
-                <UserPlus size={13} strokeWidth={2.4} /> Sign up free
-              </button>
-              <button
-                onClick={() => onNavigate?.("login")}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line/60 bg-surface-1 text-ink-base px-3 py-2 text-xs font-semibold hover:border-brand-500/50 transition"
-              >
-                <LogIn size={13} strokeWidth={2.4} /> Log in
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!hasHealthData && isAuthenticated && (
+         * MedOSApp now only mounts RightPanel for authenticated users,
+         * so the right rail is always personal context — no duplicate
+         * sign-up card here (the left sidebar already carries the auth
+         * CTA). When the user is signed in but has no data yet, we keep
+         * the existing 'Track your health' setup nudge. */}
+        {!hasHealthData && (
           <div className="text-center py-6">
             <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-brand-500/10 flex items-center justify-center">
               <Activity size={24} className="text-brand-500" />
