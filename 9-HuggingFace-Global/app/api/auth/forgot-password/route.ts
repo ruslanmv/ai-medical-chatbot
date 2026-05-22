@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb, genVerificationCode, resetExpiry } from '@/lib/db';
-import { sendPasswordResetEmail } from '@/lib/email';
+import { sendPasswordResetEmail, emailTransportName } from '@/lib/email';
 
 const Schema = z.object({
   email: z.string().email(),
@@ -27,7 +27,9 @@ export async function POST(req: Request) {
          WHERE id = ?`,
       ).run(code, resetExpiry(), user.id);
 
-      await sendPasswordResetEmail(user.email, code);
+      console.log(`[ForgotPassword] queued reset email via transport=${emailTransportName()} to=${user.email}`);
+      const sent = await sendPasswordResetEmail(user.email, code);
+      if (!sent) console.error(`[ForgotPassword] reset email FAILED to=${user.email}`);
     }
 
     // Always return success to prevent email enumeration.
