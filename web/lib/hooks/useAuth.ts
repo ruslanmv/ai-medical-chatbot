@@ -70,13 +70,23 @@ export function useAuth() {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      try {
-        const res = await fetch("/api/proxy/auth/login", {
+      // One retry on cold-start: HF Spaces sleep, and the first request
+      // can timeout while the container wakes. The retry usually
+      // succeeds because the proxy's earlier timeout still nudged the
+      // Space into warming up.
+      const attempt = async () =>
+        fetch("/api/proxy/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
-        const data = await res.json();
+      try {
+        let res = await attempt();
+        let data = await res.json().catch(() => ({}));
+        if (!res.ok && data?.code === "backend_cold_start") {
+          res = await attempt();
+          data = await res.json().catch(() => ({}));
+        }
         if (!res.ok) return { ok: false as const, error: data.error || "Login failed" };
         persistToken(data.token);
         setUser(data.user);

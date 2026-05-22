@@ -1,0 +1,91 @@
+# MedOS-specific Semgrep rules.
+#
+# These rules enforce repo-wide policies that the public Semgrep packs do
+# not cover. Edits here are SECURITY-SENSITIVE under GOVERNANCE.md.
+
+rules:
+
+  # ───── No raw user input in logs ──────────────────────────────────
+  - id: medos-no-raw-chat-content-in-logs
+    message: >
+      Do not pass raw chat content to logs / console. The audit and log
+      surfaces must remain PHI-free per PRIVACY.md and SAFETY.md. Use the
+      structured audit-log helper with metadata only (risk class, rule
+      ids, latencies, request id).
+    severity: ERROR
+    languages: [ts, tsx, js, jsx]
+    paths:
+      include:
+        - '9-HuggingFace-Global/**'
+        - 'web/**'
+      exclude:
+        - '**/node_modules/**'
+        - '**/__tests__/**'
+        - '**/*.test.ts'
+        - '**/*.test.tsx'
+    pattern-either:
+      - pattern: console.log($... messages ...)
+      - pattern: console.log($... message ...)
+      - pattern: console.log($... userMessage ...)
+      - pattern: console.log($... rawUserContent ...)
+      - pattern: console.log($... cleanUserContent ...)
+      - pattern: console.error($... messages ...)
+      - pattern: console.error($... rawUserContent ...)
+      - pattern: console.error($... cleanUserContent ...)
+
+  # ───── No PHI in audit log meta ───────────────────────────────────
+  - id: medos-no-phi-in-audit-meta
+    message: >
+      auditLog meta must not contain raw chat content, symptoms, or other
+      PHI. Use stable identifiers, counts, latencies, and rule ids only.
+    severity: ERROR
+    languages: [ts, tsx]
+    pattern-either:
+      - pattern: |
+          auditLog({ ..., meta: { ..., $K: $V, ... }, ... })
+    pattern-not-regex: |
+      meta:\s*\{[^}]*(model|provider|countryCode|riskClass|ruleFires|filterFires|filterModified|filterBlocked|patientContextChars|turns|contentChars|triage|action)
+    paths:
+      include:
+        - '9-HuggingFace-Global/**'
+
+  # ───── Chat surfaces must not use dangerouslySetInnerHTML ─────────
+  - id: medos-chat-no-dangerously-set-inner-html
+    message: >
+      Chat / message surfaces must not use dangerouslySetInnerHTML.
+      Render via escaped React text or a sanitised markdown renderer.
+    severity: ERROR
+    languages: [tsx, jsx]
+    paths:
+      include:
+        - '**/chat/**'
+        - '**/Chat*.tsx'
+        - '**/Message*.tsx'
+    pattern: dangerouslySetInnerHTML={...}
+
+  # ───── No client-side provider keys ──────────────────────────────
+  - id: medos-no-public-provider-keys
+    message: >
+      Provider API keys must be server-only. Do NOT expose them on the
+      client via NEXT_PUBLIC_* or similar. See PRIVACY.md and SECURITY.md.
+    severity: ERROR
+    languages: [ts, tsx, js, jsx]
+    pattern-regex: |
+      NEXT_PUBLIC_(GROQ|HF|HUGGINGFACE|GEMINI|OPENAI|ANTHROPIC|GOOGLE)_(API_)?KEY
+
+  # ───── Safety engine must not be bypassed ────────────────────────
+  - id: medos-chat-route-must-call-safety-engine
+    message: >
+      The chat API route must call preCheck() and postCheck() from the
+      safety engine. If you genuinely need to bypass them, this rule must
+      be explicitly disabled and a clinical advisor sign-off recorded
+      per GOVERNANCE.md.
+    severity: WARNING
+    languages: [ts]
+    paths:
+      include:
+        - '9-HuggingFace-Global/app/api/chat/route.ts'
+    pattern-not-regex: |
+      preCheck|postCheck|safety-engine
+    pattern: |
+      export async function POST(...)

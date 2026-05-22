@@ -93,3 +93,14 @@ If the main model is busy, MedOS automatically tries other free models until one
 ## License
 
 Apache 2.0 — free to use, modify, and distribute.
+
+## MedOS Family family mode
+
+This branch adds an additive first version of the MedOS Family family layer:
+
+- `lib/family-health.ts` — local-first family tree, MedOS modes, invites, monthly records
+- `lib/hooks/useFamilyHealth.ts` — React hook for family state
+- `components/views/FamilyHealthView.tsx` — Family Admin / MedOS Family dashboard
+- Sidebar integration through the new **MedOS Family** navigation item
+
+The MVP keeps data local-first and prepares for the contracts documented in `../13-MedOS-Family/02-contracts/`.

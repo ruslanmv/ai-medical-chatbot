@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MedOS medical locale pack",
+  "type": "object",
+  "required": [
+    "locale", "language", "country", "units", "emergency",
+    "urgent_care_phrasing", "clinician_phrasing", "pediatric",
+    "pregnancy", "medications", "disclaimer", "crisis_resources"
+  ],
+  "properties": {
+    "locale":   { "type": "string", "pattern": "^[a-z]{2}-[A-Z]{2}$" },
+    "language": { "type": "string", "pattern": "^[a-z]{2}$" },
+    "country":  { "type": "string", "pattern": "^[A-Z]{2}$" },
+
+    "units": {
+      "type": "object",
+      "required": ["temperature", "weight", "length"],
+      "properties": {
+        "temperature": { "enum": ["C", "F"] },
+        "weight":      { "enum": ["kg", "lb"] },
+        "length":      { "enum": ["cm", "in"] }
+      },
+      "additionalProperties": false
+    },
+
+    "emergency": {
+      "type": "object",
+      "required": ["general", "ambulance", "police", "fire"],
+      "properties": {
+        "general":   { "type": "string", "minLength": 2 },
+        "ambulance": { "type": "string", "minLength": 2 },
+        "police":    { "type": "string", "minLength": 2 },
+        "fire":      { "type": "string", "minLength": 2 },
+        "crisis":    { "type": "string" },
+        "poison":    { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "urgent_care_phrasing": { "type": "string", "minLength": 4 },
+
+    "clinician_phrasing": {
+      "type": "object",
+      "required": ["gp", "pediatrician", "pharmacist"],
+      "properties": {
+        "gp":           { "type": "string" },
+        "pediatrician": { "type": "string" },
+        "pharmacist":   { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "pediatric": {
+      "type": "object",
+      "required": [
+        "infant_fever_threshold_c",
+        "pediatric_emergency_age_years",
+        "infant_age_months_max"
+      ],
+      "properties": {
+        "infant_fever_threshold_c":      { "type": "number" },
+        "pediatric_emergency_age_years": { "type": "integer" },
+        "infant_age_months_max":         { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+
+    "pregnancy": {
+      "type": "object",
+      "required": ["phrase_for_emergency_evaluation"],
+      "properties": {
+        "phrase_for_emergency_evaluation": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "medications": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z_]+$": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+
+    "disclaimer": {
+      "type": "object",
+      "required": ["general", "mental_health_crisis_addendum"],
+      "properties": {
+        "general":                         { "type": "string", "minLength": 20 },
+        "mental_health_crisis_addendum":   { "type": "string", "minLength": 20 }
+      },
+      "additionalProperties": false
+    },
+
+    "crisis_resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "number", "scope"],
+        "properties": {
+          "name":   { "type": "string" },
+          "number": { "type": "string" },
+          "scope":  { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

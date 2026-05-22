@@ -254,9 +254,22 @@ assert(
   'chat route exports POST handler'
 );
 
+// The route used to call triageMessage directly; since Phase 1B it goes
+// through preCheck() / postCheck() in lib/safety/safety-engine, which
+// internally invoke triageMessage AND the deterministic red-flag rules.
+// Either symbol is acceptable evidence that emergency triage runs before
+// the LLM is called.
 assert(
+  chatRouteContent.includes('preCheck') ||
   chatRouteContent.includes('triageMessage'),
   'chat route performs emergency triage before LLM call'
+);
+
+// Phase 1B also adds the post-LLM safety filter so unsafe model output is
+// rewritten or blocked before reaching the user.
+assert(
+  chatRouteContent.includes('postCheck'),
+  'chat route runs the post-LLM safety filter'
 );
 
 assert(
@@ -269,7 +282,12 @@ assert(
   'chat route uses Server-Sent Events for streaming'
 );
 
+// Phase 1B switched the chat route from streamWithFallback() to
+// chatWithFallback() because the post-LLM safety filter must run on the
+// COMPLETE response before any of it reaches the user. Either fallback
+// helper indicates the multi-provider chain is in use.
 assert(
+  chatRouteContent.includes('chatWithFallback') ||
   chatRouteContent.includes('streamWithFallback'),
   'chat route uses fallback provider chain'
 );

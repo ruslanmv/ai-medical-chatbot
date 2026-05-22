@@ -12,6 +12,10 @@ import {
   Clock,
   Download,
   MapPin,
+  LogIn,
+  UserPlus,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import {
   VITAL_META,
@@ -37,6 +41,13 @@ interface HealthDashboardProps {
   getMedStreak: (medId: string) => number;
   onExport: () => void;
   language: SupportedLanguage;
+  /**
+   * When false, the dashboard renders a friendly sign-in state instead
+   * of the empty "0 meds / 0 vitals / 0 records" graveyard. The sidebar
+   * hides this route for logged-out users; this is the defensive
+   * fallback for deep-links and expired sessions.
+   */
+  isAuthenticated?: boolean;
 }
 
 export function HealthDashboard({
@@ -50,7 +61,11 @@ export function HealthDashboard({
   getMedStreak,
   onExport,
   language,
+  isAuthenticated = true,
 }: HealthDashboardProps) {
+  if (!isAuthenticated) {
+    return <SignedOutDashboard onNavigate={onNavigate} language={language} />;
+  }
   const today = todayISO();
   const activeMeds = medications.filter((m) => m.active);
   const upcomingAppts = appointments
@@ -349,5 +364,66 @@ function NavButton({ label, onClick }: { label: string; onClick: () => void }) {
     >
       {label}
     </button>
+  );
+}
+
+/**
+ * Logged-out state for the Health Tracker. Mirror of the same component
+ * in 9-HuggingFace-Global/components/views/HealthDashboard.tsx so the
+ * Vercel and HF Spaces deployments behave identically.
+ */
+function SignedOutDashboard({
+  onNavigate,
+  language,
+}: {
+  onNavigate: (view: string) => void;
+  language: SupportedLanguage;
+}) {
+  return (
+    <div className="flex-1 overflow-y-auto p-6 sm:p-8 pb-mobile-nav scroll-touch">
+      <div className="max-w-xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="rounded-2xl border border-line/60 bg-surface-1 p-7 sm:p-9 shadow-soft">
+          <div className="w-12 h-12 rounded-2xl bg-brand-gradient text-white flex items-center justify-center shadow-glow mb-5">
+            <Heart size={22} strokeWidth={2.5} />
+          </div>
+          <h2 className="text-2xl font-bold text-ink-base tracking-tight">
+            {t("health_tracker", language)}
+          </h2>
+          <p className="text-sm text-ink-muted mt-2 leading-relaxed">
+            Sign in to track your medications, appointments, vitals, and records
+            across devices. Your data stays encrypted; we never sell it.
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              onClick={() => onNavigate("register")}
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-gradient text-white px-5 py-3 text-sm font-semibold shadow-soft hover:opacity-95 transition"
+            >
+              <UserPlus size={16} strokeWidth={2.4} />
+              Sign up free
+            </button>
+            <button
+              onClick={() => onNavigate("login")}
+              className="inline-flex items-center gap-2 rounded-xl border border-line/60 bg-surface-2 text-ink-base px-5 py-3 text-sm font-semibold hover:border-brand-500/50 transition"
+            >
+              <LogIn size={16} strokeWidth={2.4} />
+              Log in
+            </button>
+            <button
+              onClick={() => onNavigate("chat")}
+              className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-ink-muted hover:text-brand-600 transition"
+            >
+              <Sparkles size={16} strokeWidth={2.4} />
+              Or try Ask without an account
+            </button>
+          </div>
+
+          <div className="mt-7 flex items-center gap-2 text-[12px] text-ink-subtle">
+            <ShieldCheck size={14} className="text-success-600" />
+            <span>Zero chat content stored. Open source. Free forever.</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

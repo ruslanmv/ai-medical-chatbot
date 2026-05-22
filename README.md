@@ -18,7 +18,7 @@
 
 <br/>
 
-[Use it now](https://huggingface.co/spaces/ruslanmv/MediBot) &nbsp;&bull;&nbsp; [What you get](#-what-you-get) &nbsp;&bull;&nbsp; [The stack](#-the-open-source-stack) &nbsp;&bull;&nbsp; [Run it yourself](#-run-it-yourself) &nbsp;&bull;&nbsp; [Join us](#-contributing)
+[Use it now](https://huggingface.co/spaces/ruslanmv/MediBot) &nbsp;&bull;&nbsp; [What you get](#-what-you-get) &nbsp;&bull;&nbsp; [The stack](#-the-open-source-stack) &nbsp;&bull;&nbsp; [Run it yourself](#-run-it-yourself) &nbsp;&bull;&nbsp; [Join us](#-contributing) &nbsp;&bull;&nbsp; [Sponsor](#support-the-project)
 
 <br/>
 
@@ -27,6 +27,14 @@
 </a>
 
 <br/>
+
+<p align="center">
+  <a href="https://github.com/sponsors/ruslanmv"><img src="https://img.shields.io/badge/%F0%9F%92%96%20Become%20a%20sponsor-ec4899?style=for-the-badge" alt="Become a sponsor"/></a>
+  &nbsp;
+  <a href="https://huggingface.co/spaces/ruslanmv/MediBot"><img src="https://img.shields.io/badge/Try%20it%20now%20%E2%86%92%20MediBot-2e5bff?style=for-the-badge" alt="Try MediBot"/></a>
+</p>
+
+<p align="center"><sub>This project is free, open source, and runs on free-tier infrastructure. If MedOS is useful to you, <a href="https://github.com/sponsors/ruslanmv">sponsor on GitHub</a> — every dollar helps keep healthcare guidance free for everyone, in every language.</sub></p>
 
 </div>
 
@@ -39,6 +47,8 @@ Billions of people cannot afford a doctor. Millions search the internet for heal
 We believe the best medical AI in the world should be **free, private, and available to every human on earth** — regardless of where they live, what language they speak, or how much money they have.
 
 This is that project. Built by the community. Free forever.
+
+If that mission resonates, you can keep it going: [**sponsor on GitHub →**](https://github.com/sponsors/ruslanmv)
 
 > **Important:** This does not replace a doctor. It helps you understand your health, ask better questions, and know when to seek professional care.
 
@@ -187,7 +197,13 @@ Point your camera at a medicine box — AI reads the label for you
 |---|---|---|---|
 | | **[MedOS Web App](./web/)** | Full medical platform — chat, health tracker, medicine inventory, 13 languages | [![Live](https://img.shields.io/badge/Live-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/spaces/ruslanmv/MediBot) |
 | | **[MedOS Backend](./9-HuggingFace-Global/)** | API server — auth, SQLite DB, LLM routing, emergency triage, RAG | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./9-HuggingFace-Global/) |
-| | **[Medicine Scanner](./11-Medicine-Scanner/)** | Camera scan of medicine labels via Qwen2.5-VL multimodal AI | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./11-Medicine-Scanner/) |
+| 11 | **[Medicine Scanner](./11-Medicine-Scanner/)** | Camera scan of medicine labels via Qwen2.5-VL multimodal AI | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./11-Medicine-Scanner/) |
+| 12 | **[MetaEngine Nearby](./12-MetaEngine-Nearby/)** | Find nearby pharmacies and doctors via OpenStreetMap | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./12-MetaEngine-Nearby/) |
+| 13 | **[MedOS Family](./13-MedOS-Family/)** | Family health tree, adult consent, child mode, medicine reminders, family admin | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./13-MedOS-Family/) |
+| 14 | **[MedOS Connect](./14-MedOS-Connect/)** | Additive backend for device + vitals sync (Withings, Apple Health, Health Connect), reminders, notifications | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./14-MedOS-Connect/) |
+| 15 | **[MedOS Classify](./15-MedOS-Classify/)** | MCP clinical-classification + triage engine — multi-head, calibrated, red-flag floor, Hugging Face models | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./15-MedOS-Classify/) |
+| 16 | **[MedOS Pathogen](./16-MedOS-Pathogen/)** | MCP pathogen-ID layer — microscopy / chest X-ray / genomic sequence with calibrated probabilities and visible evidence | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./16-MedOS-Pathogen/) |
+| 17 | **[MedOS Research](./17-MedOS-Research/)** | R&D module — literature briefs, hypotheses, in-silico simulation plans, publication studio, safety reviewer | [![Code](https://img.shields.io/badge/Code-blue?logo=github)](./17-MedOS-Research/) |
 | | **[Medical Llama3 8B](https://huggingface.co/ruslanmv/Medical-Llama3-8B)** | Fine-tuned Llama3 on 250K medical Q&A pairs | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Llama3-8B) |
 | | **[Medical Llama3 v2](https://huggingface.co/ruslanmv/Medical-Llama3-v2)** | Improved medical Llama3 with enhanced chatbot interface | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Llama3-v2) |
 | | **[Medical Mixtral 7B](https://huggingface.co/ruslanmv/Medical-Mixtral-7B-v2k)** | Fine-tuned Mixtral for medical assistance | [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow?logo=huggingface)](https://huggingface.co/ruslanmv/Medical-Mixtral-7B-v2k) |
@@ -200,23 +216,32 @@ Point your camera at a medicine box — AI reads the label for you
 
 ---
 
-## Architecture
+## MedOS Ecosystem
 
-```
-web/                           Frontend (Next.js 14, Tailwind, PWA)
-  20 views, dark/light mode, 13 languages
-  Health tracker, EHR wizard, medicine scanner
-  Voice input, notifications, offline support
+<div align="center">
+<img src="assets/medos-ecosystem.svg" alt="MedOS Ecosystem — Patients · Core · Additive design layers (Family, Connect, Classify, Pathogen, Research)" width="100%" />
+</div>
 
-9-HuggingFace-Global/         Backend (Next.js API + SQLite)
-  Llama 3.3 70B via free providers (Groq, HF, Gemini)
-  23-topic medical RAG, 19 emergency triage patterns
-  Email auth, admin dashboard, health data sync
+<br/>
 
-11-Medicine-Scanner/           Medicine Label AI (Gradio + Qwen2.5-VL)
-  Camera scan -> structured JSON
-  REST API for mobile integration
-```
+The MedOS ecosystem is layered. The **Core** is what runs in production today — the web app, the backend API, the health tracker, the medicine scanner, and the nearby-care finder. The **Ecosystem** layer adds new modules on top, **purely additively**: each one ships as its own folder, behind a feature flag, with no destructive changes to existing files, tables, or APIs.
+
+| Layer | Module | What it adds |
+|---|---|---|
+| Core | **MedOS Web App** | The medical platform users see today — chat, vitals, medicines, records, 13 languages. |
+| Core | **MedOS Backend** | Next.js API + SQLite + LLM routing + medical RAG + emergency triage. |
+| Core | **Health Tracker** | Vitals, medicines, appointments, records, EHR wizard, JSON / print export. |
+| Core | **Medicine Scanner** | Camera → structured JSON via Qwen2.5-VL. |
+| Core | **Nearby Care** | Pharmacies and doctors via OpenStreetMap with ranking and route metadata. |
+| Ecosystem · 13 | **[MedOS Family](./13-MedOS-Family/)** | Family health tree, adult consent, child mode, medicine reminders, family admin. |
+| Ecosystem · 14 | **[MedOS Connect](./14-MedOS-Connect/)** | Device + vitals sync (Withings, Apple Health, Health Connect), reminders, notifications. |
+| Ecosystem · 15 | **[MedOS Classify](./15-MedOS-Classify/)** | MCP triage tools — multi-head, calibrated, red-flag-gated; ships through Hugging Face. |
+| Ecosystem · 16 | **[MedOS Pathogen](./16-MedOS-Pathogen/)** | MCP pathogen ID — microscopy, chest X-ray, genomic sequence; visible evidence. |
+| Ecosystem · 17 | **[MedOS Research](./17-MedOS-Research/)** | R&D module — literature briefs, hypotheses, in-silico simulation plans, safety-reviewed publication studio. |
+
+Every Ecosystem module follows the same contract: **additive only, namespaced, feature-flagged, reversible, never auto-flowing patient PHI across boundaries.**
+
+### Deployment
 
 | | Vercel | HuggingFace Space |
 |---|---|---|
@@ -293,6 +318,30 @@ git checkout -b my-improvement
 
 ---
 
+## Support the project
+
+MedOS is free for users forever. It runs on free-tier cloud and gets better only because people contribute time, translations, clinical review, and — increasingly — sponsorship to keep the lights on.
+
+If MedOS has helped you understand a symptom, prepare for a doctor's visit, or just felt like a calm voice on a rough day, please consider supporting it.
+
+<p align="center">
+  <a href="https://github.com/sponsors/ruslanmv"><img src="https://img.shields.io/badge/%F0%9F%92%96%20Sponsor%20on%20GitHub-ec4899?style=for-the-badge" alt="Sponsor on GitHub"/></a>
+  &nbsp;
+  <a href="https://github.com/ruslanmv/ai-medical-chatbot"><img src="https://img.shields.io/badge/%E2%AD%90%20Star%20the%20repo-gold?style=for-the-badge" alt="Star the repo"/></a>
+</p>
+
+Both help. Sponsorship pays for hosting beyond the free tiers, the LLM provider keys that keep the chat fast in every language, and the clinician review hours that keep the safety floor honest. Stars help the next person who needs MedOS actually find it.
+
+You can also help without spending anything:
+
+- Translate one screen into a language we don't fully cover.
+- Add one safety test case to `tests/safety/golden_prompts.jsonl`.
+- Tell a friend who could use this.
+
+Thank you. Every form of support, including a star, keeps this open.
+
+---
+
 ## License
 
 Apache 2.0 — use it, modify it, deploy it, share it. **Free forever.**
@@ -316,5 +365,9 @@ Apache 2.0 — use it, modify it, deploy it, share it. **Free forever.**
 *The best technology in the world should serve everyone — not just those who can pay for it.*
 
 *Let us use it to heal.*
+
+<br/>
+
+<a href="https://github.com/sponsors/ruslanmv"><img src="https://img.shields.io/badge/%F0%9F%92%96%20Sponsor%20MedOS-ec4899?style=flat-square" alt="Sponsor MedOS"/></a>
 
 </div>

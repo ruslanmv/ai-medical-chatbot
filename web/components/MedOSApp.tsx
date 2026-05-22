@@ -27,6 +27,7 @@ import { useChat } from "@/lib/hooks/useChat";
 import { useHealthStore } from "@/lib/hooks/useHealthStore";
 import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { usePasswordResetLink } from "@/lib/hooks/usePasswordResetLink";
 import { LoginView } from "./views/LoginView";
 import { ProfileView } from "./views/ProfileView";
 import { EHRWizard } from "./views/EHRWizard";
@@ -54,6 +55,14 @@ function MedOSAppInner() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const settings = useSettings();
   const auth = useAuth();
+  const resetLink = usePasswordResetLink();
+
+  // When the user lands here from a password-reset email, drop them on
+  // the login screen with the reset step pre-filled. Done once on mount;
+  // the hook itself clears the params from the URL so it won't re-fire.
+  useEffect(() => {
+    if (resetLink) setActiveNav("login");
+  }, [resetLink]);
   const { messages, isTyping, error, sendMessage, clearMessages } = useChat();
   const health = useHealthStore(auth.token);
   const notif = useNotifications();
@@ -231,6 +240,7 @@ function MedOSAppInner() {
             getMedStreak={health.getMedStreak}
             onExport={health.downloadAll}
             language={settings.language}
+            isAuthenticated={auth.isAuthenticated}
           />
         );
       case "medications":
@@ -367,6 +377,9 @@ function MedOSAppInner() {
               return res;
             }}
             language={settings.language}
+            initialFlow={resetLink ? "reset" : "login"}
+            initialEmail={resetLink?.email}
+            initialCode={resetLink?.code}
           />
         );
       case "ehr-wizard":
@@ -541,18 +554,27 @@ function MedOSAppInner() {
         </main>
       </div>
 
-      {/* Right Panel — context-aware */}
-      <RightPanel
-        language={settings.language}
-        emergencyNumber={settings.emergencyNumber}
-        vitals={health.vitals}
-        medications={health.medications}
-        appointments={health.appointments}
-        isMedTaken={health.isMedTaken}
-        onNavigate={handleNavigate}
-        notificationCount={notif.count}
-        onOpenNotifications={() => {}}
-      />
+      {/* Right Panel — only rendered for authenticated users.
+       *
+       * The right rail carries personal health context (Vitals Today,
+       * Upcoming meds + appointments). For guests it offered no value
+       * and competed with the left sidebar's auth card. Gating the
+       * whole component eliminates the 'two sidebars feeling' and the
+       * duplicate sign-up prompts. */}
+      {auth.isAuthenticated && (
+        <RightPanel
+          language={settings.language}
+          emergencyNumber={settings.emergencyNumber}
+          vitals={health.vitals}
+          medications={health.medications}
+          appointments={health.appointments}
+          isMedTaken={health.isMedTaken}
+          onNavigate={handleNavigate}
+          isAuthenticated
+          notificationCount={notif.count}
+          onOpenNotifications={() => {}}
+        />
+      )}
       </div>
       <DisclaimerBanner language={settings.language} />
     </div>

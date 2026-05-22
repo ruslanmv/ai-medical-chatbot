@@ -1,0 +1,42 @@
+{
+  "locale": "es-MX",
+  "language": "es",
+  "country": "MX",
+  "units": { "temperature": "C", "weight": "kg", "length": "cm" },
+  "emergency": {
+    "general":   "911",
+    "ambulance": "911",
+    "police":    "911",
+    "fire":      "911",
+    "crisis":    "800 290 0024",
+    "poison":    "800 008 4000"
+  },
+  "urgent_care_phrasing": "acuda al servicio de urgencias o al hospital más cercano",
+  "clinician_phrasing": {
+    "gp":           "médico familiar",
+    "pediatrician": "pediatra",
+    "pharmacist":   "farmacéutico"
+  },
+  "pediatric": {
+    "infant_fever_threshold_c":      38.0,
+    "pediatric_emergency_age_years": 18,
+    "infant_age_months_max":         3
+  },
+  "pregnancy": {
+    "phrase_for_emergency_evaluation": "acuda inmediatamente al hospital o a su servicio de obstetricia para una evaluación urgente"
+  },
+  "medications": {
+    "acetaminophen": ["Tempra", "Tylenol", "Paracetamol"],
+    "ibuprofen":     ["Advil", "Motrin", "Tabalon"],
+    "epinephrine":   ["EpiPen"]
+  },
+  "disclaimer": {
+    "general": "MedOS proporciona información general de salud y no sustituye el consejo médico profesional, el diagnóstico o el tratamiento. Para decisiones sobre su salud, consulte a un profesional de la salud autorizado.",
+    "mental_health_crisis_addendum": "Si está en crisis o piensa en hacerse daño, llame al 911 o a la SAPTEL (línea de crisis nacional) al 55 5259 8121 ahora mismo. No está solo."
+  },
+  "crisis_resources": [
+    { "name": "SAPTEL",       "number": "55 5259 8121", "scope": "crisis y prevención del suicidio (24/7)" },
+    { "name": "Línea de la Vida", "number": "800 290 0024", "scope": "salud mental y crisis emocional" },
+    { "name": "Locatel CDMX",     "number": "55 5658 1111", "scope": "orientación general en CDMX" }
+  ]
+}

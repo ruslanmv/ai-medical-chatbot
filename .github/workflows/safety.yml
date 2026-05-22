@@ -1,0 +1,109 @@
+name: safety
+
+# Phase 1C: safety + security regression on every PR and on push to main.
+#
+# Jobs:
+#   golden          — runs the deterministic safety engine against the
+#                     clinician-reviewable prompt bank in tests/safety/.
+#                     Blocks merge on any red-flag or output-filter
+#                     regression.
+#   semgrep         — static analysis. Catches console.log of user input,
+#                     unsanitised innerHTML on chat surfaces, and our
+#                     custom MedOS rules.
+#   secret-scan     — gitleaks on full history of the PR.
+#   dep-audit       — npm audit on each app folder; fails on high/critical.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ───── Safety golden test set ───────────────────────────────────────
+  golden:
+    name: Golden safety prompts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The runner is self-contained; it imports directly from
+      # 9-HuggingFace-Global/lib/safety via a relative path. We use tsx
+      # so we don't need a full Next.js build.
+      - name: Install tsx
+        run: npm install --no-save tsx@4
+
+      - name: Run golden + output-filter tests
+        run: npx tsx tests/safety/run_golden.ts
+
+  # ───── Semgrep SAST ─────────────────────────────────────────────────
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+    if: github.actor != 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          semgrep \
+            --config=p/typescript \
+            --config=p/javascript \
+            --config=p/react \
+            --config=p/owasp-top-ten \
+            --config=p/security-audit \
+            --config=.semgrep/medos.yml \
+            --error \
+            --severity=ERROR \
+            --severity=WARNING \
+            --metrics=off \
+            --skip-unknown-extensions \
+            --exclude='**/node_modules/**' \
+            --exclude='**/.next/**' \
+            --exclude='**/dist/**' \
+            --exclude='**/build/**'
+
+  # ───── Secret scan ──────────────────────────────────────────────────
+  secret-scan:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ───── Dependency audit ─────────────────────────────────────────────
+  dep-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        path:
+          - web
+          - 9-HuggingFace-Global
+          - 13-MedOS-Family/frontend
+          - 17-MedOS-Research/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: npm audit
+        working-directory: ${{ matrix.path }}
+        run: |
+          if [ -f package.json ]; then
+            npm audit --audit-level=high --omit=dev || \
+              (echo 'High/critical vulnerabilities found in ${{ matrix.path }}'; exit 1)
+          else
+            echo 'No package.json in ${{ matrix.path }}; skipping.'
+          fi
