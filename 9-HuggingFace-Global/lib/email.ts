@@ -105,21 +105,39 @@ export async function sendPasswordResetEmail(
   to: string,
   code: string,
 ): Promise<boolean> {
+  // One-click reset link — the frontend (both Vercel and HF) parses
+  // ?action=reset&email=…&code=… on mount and drops the user straight
+  // into the "set new password" step with everything pre-filled.
+  // The 6-digit code is still shown so users who can't click (some
+  // mail clients strip query strings) can paste it manually.
+  const linkUrl =
+    `${APP_URL}?action=reset` +
+    `&email=${encodeURIComponent(to)}` +
+    `&code=${encodeURIComponent(code)}`;
+
   return sendEmail(
     to,
     `${APP_NAME} — reset your password`,
     wrap(`
       <h3 style="color:#0f172a;font-size:18px;margin:0 0 8px;">Reset your password</h3>
       <p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 20px;">
-        Someone requested a password reset for your ${APP_NAME} account. Use this code to set a new password.
+        Someone requested a password reset for your ${APP_NAME} account. Click the button below to set a new password, or enter the 6-digit code in the app.
       </p>
-      <div style="text-align:center;margin:24px 0;">
+      <div style="text-align:center;margin:20px 0;">
+        <a href="${linkUrl}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#3b82f6,#14b8a6);color:white;text-decoration:none;border-radius:10px;font-weight:700;font-size:14px;">
+          Reset password
+        </a>
+      </div>
+      <p style="color:#94a3b8;font-size:12px;text-align:center;margin:0 0 16px;">
+        Or enter this code manually:
+      </p>
+      <div style="text-align:center;margin:8px 0 24px;">
         <div style="display:inline-block;padding:16px 32px;background:#f1f5f9;border-radius:12px;border:2px dashed #cbd5e1;">
           <span style="font-size:32px;font-weight:800;letter-spacing:8px;color:#0f172a;">${code}</span>
         </div>
       </div>
       <p style="color:#94a3b8;font-size:13px;text-align:center;margin:0;">
-        This code expires in 1 hour. If you didn't request this, ignore this email.
+        This code expires in 1 hour. If you didn't request this, ignore this email — your password will stay the same.
       </p>
     `),
   );

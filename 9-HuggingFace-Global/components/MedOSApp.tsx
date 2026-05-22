@@ -27,6 +27,7 @@ import { useHealthStore } from "@/lib/hooks/useHealthStore";
 import { useFamilyHealth } from "@/lib/hooks/useFamilyHealth";
 import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { usePasswordResetLink } from "@/lib/hooks/usePasswordResetLink";
 import { LoginView } from "./views/LoginView";
 import { ProfileView } from "./views/ProfileView";
 import { EHRWizard } from "./views/EHRWizard";
@@ -51,7 +52,15 @@ function MedOSAppInner() {
   const [activeNav, setActiveNav] = useState<NavView>("home");
   const settings = useSettings();
   const auth = useAuth();
+  const resetLink = usePasswordResetLink();
   const { messages, isTyping, error, sendMessage, clearMessages } = useChat();
+
+  // When the user lands here from a password-reset email, drop them on
+  // the login screen with the reset step pre-filled. Done once on mount;
+  // the hook itself clears the params from the URL so it won't re-fire.
+  useEffect(() => {
+    if (resetLink) setActiveNav("login");
+  }, [resetLink]);
   const health = useHealthStore(auth.token);
   const family = useFamilyHealth();
   const notif = useNotifications();
@@ -324,7 +333,15 @@ function MedOSAppInner() {
       case "register":
         return (
           <LoginView
-            initialFlow={activeNav === "register" ? "register" : "login"}
+            initialFlow={
+              resetLink
+                ? "reset"
+                : activeNav === "register"
+                  ? "register"
+                  : "login"
+            }
+            initialEmail={resetLink?.email}
+            initialCode={resetLink?.code}
             onLogin={async (e, p) => {
               const res = await auth.login(e, p);
               if (res.ok) setActiveNav("home");
