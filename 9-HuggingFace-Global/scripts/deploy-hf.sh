@@ -51,9 +51,22 @@ for f in MedOSApp.tsx ThemeProvider.tsx ThemeToggle.tsx WelcomeScreen.tsx; do
   [ -f "$WEB_DIR/components/$f" ] && cp "$WEB_DIR/components/$f" "$BUILD_DIR/components/"
 done
 
-# Hooks
+# Hooks. The list is explicit (not a wildcard) on purpose: HF has its
+# own backend-flavored hooks under 9-HuggingFace-Global/lib/hooks that
+# we DON'T want overwritten silently. When you add a new web/ hook
+# that MedOSApp imports, add it here too — otherwise the HF build
+# breaks with "Module not found: @/lib/hooks/<your-hook>".
 mkdir -p "$BUILD_DIR/lib/hooks"
-for f in useChat.ts useSettings.ts useAuth.ts useHealthStore.ts useNotifications.ts useGeoDetect.ts useMedicineScanner.ts; do
+for f in \
+  useChat.ts \
+  useSettings.ts \
+  useAuth.ts \
+  useHealthStore.ts \
+  useNotifications.ts \
+  useGeoDetect.ts \
+  useMedicineScanner.ts \
+  usePasswordResetLink.ts \
+; do
   [ -f "$WEB_DIR/lib/hooks/$f" ] && cp "$WEB_DIR/lib/hooks/$f" "$BUILD_DIR/lib/hooks/"
 done
 
