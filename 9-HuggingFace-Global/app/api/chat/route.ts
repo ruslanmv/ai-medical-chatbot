@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { chatWithFallback, type ChatMessage } from '@/lib/providers';
+import { chatWithFallback, AllProvidersUnavailableError, type ChatMessage } from '@/lib/providers';
 import { getEmergencyInfo } from '@/lib/safety/emergency-numbers';
 import { preCheck, postCheck } from '@/lib/safety/safety-engine';
 import { snapshotFlags } from '@/lib/feature-flags';
@@ -309,6 +309,20 @@ export async function POST(request: NextRequest) {
       return new Response(
         JSON.stringify({ error: 'Invalid request', details: error.errors }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // When every LLM provider has failed we surface a 503 with a
+    // plain-language message. useChat shows this verbatim in the chat
+    // bubble; the proxy + 503 status also lets the frontend's existing
+    // backend-availability handling kick in.
+    if (error instanceof AllProvidersUnavailableError) {
+      return new Response(
+        JSON.stringify({
+          error: error.message,
+          code: 'all_providers_unavailable',
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } },
       );
     }
 

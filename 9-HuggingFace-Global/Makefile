@@ -112,9 +112,17 @@ test-providers: ## Test provider modules exist and export correctly
 	@test -f $(APP_DIR)/lib/providers/index.ts            || (echo "$(RED)FAIL: providers/index.ts missing$(NC)" && exit 1)
 	@test -f $(APP_DIR)/lib/providers/ollabridge.ts       || (echo "$(RED)FAIL: ollabridge.ts missing$(NC)" && exit 1)
 	@test -f $(APP_DIR)/lib/providers/huggingface-direct.ts || (echo "$(RED)FAIL: huggingface-direct.ts missing$(NC)" && exit 1)
-	@test -f $(APP_DIR)/lib/providers/cached-faq.ts       || (echo "$(RED)FAIL: cached-faq.ts missing$(NC)" && exit 1)
 	@test -f $(APP_DIR)/lib/providers/ollabridge-models.ts || (echo "$(RED)FAIL: ollabridge-models.ts missing$(NC)" && exit 1)
-	@echo "$(GREEN)  Provider modules verified (5/5).$(NC)"
+	@# cached-faq.ts was intentionally removed (commit b83db95) because the
+	@# keyword-matched dictionary fallback produced unrelated canned answers
+	@# ("my child has fever" returned malaria info). Failures now throw
+	@# AllProvidersUnavailableError and the chat route returns a 503 with a
+	@# clear message. Re-introducing a canned-response fallback would
+	@# regress the safety contract.
+	@! test -f $(APP_DIR)/lib/providers/cached-faq.ts     || (echo "$(RED)FAIL: cached-faq.ts re-introduced — see commit b83db95$(NC)" && exit 1)
+	@grep -q "AllProvidersUnavailableError" $(APP_DIR)/lib/providers/index.ts \
+		|| (echo "$(RED)FAIL: providers/index.ts must export AllProvidersUnavailableError$(NC)" && exit 1)
+	@echo "$(GREEN)  Provider modules verified (4/4 + no-canned-fallback guard).$(NC)"
 
 .PHONY: test-i18n
 test-i18n: ## Verify i18n translations exist (synced or in web/ source)
