@@ -9,38 +9,31 @@ MedOS supports **two database drivers** chosen at runtime by a single env var.
 
 The schema is the same on both drivers. Migrations apply driver-specific SQL automatically.
 
-> **Refusing the fallback.** In production deployments (Vercel / HF Spaces), set `REQUIRE_POSTGRES=true`. The server will then refuse to start if `DATABASE_URL` is missing or invalid, instead of silently coming up on SQLite. This prevents a partial-outage deploy from accepting writes against the wrong store.
+> **Refusing the fallback in production.** When `NODE_ENV=production` and `DATABASE_URL` is missing or invalid, the server refuses to start instead of silently coming up on SQLite. There is no separate flag — `NODE_ENV` already tells us this is production. Set `NODE_ENV=development` locally to opt into the SQLite fallback.
 
 ## Choosing a Postgres host
 
 The project is tested against **Neon** but works with any Postgres ≥ 13 — Supabase, Railway, RDS, Cloud SQL, plain `postgres:16`. Neon's pooler endpoint (`...-pooler....neon.tech`) is what the code expects for serverless deployments.
 
-## Required env vars (production)
+## The one new env var
 
-The full list:
+For the database migration itself you only have to add **one** variable:
 
-| Var | Where to set | Example | Notes |
-|---|---|---|---|
-| `DATABASE_URL` | **secret** | `postgresql://USER:PASS@host:5432/db?sslmode=require` | Neon: use the pooler URL. Never commit. |
-| `REQUIRE_POSTGRES` | variable | `true` | Production guard. Refuse to start without `DATABASE_URL`. |
-| `ADMIN_EMAIL` | variable | `admin@medos.health` | Seed admin email. |
-| `ADMIN_PASSWORD` | **secret** | (strong random) | Seed admin password. **Do not leave at the `admin123456` default.** |
-| `ENCRYPTION_KEY` | **secret** | 64 hex chars | At-rest encryption key for BYO Hugging Face tokens etc. Generate with `openssl rand -hex 32`. |
-| `SMTP_HOST` | variable | `smtp.sendgrid.net` | Email transport. |
-| `SMTP_PORT` | variable | `587` |  |
-| `SMTP_USER` | variable | `apikey` |  |
-| `SMTP_PASS` | **secret** | (provider key) |  |
-| `FROM_EMAIL` | variable | `MedOS <noreply@your-domain>` |  |
-| `APP_URL` | variable | `https://your-deploy.example` | Used inside outbound email templates. |
-
-### Optional tuning
-
-| Var | Default | Notes |
+| Var | Type | Example |
 |---|---|---|
-| `DATABASE_SSL` | `true` (when `DATABASE_URL` is set) | Set to `no-verify` for self-signed certs. |
-| `DATABASE_POOL_MAX` | `10` | Lower this for Vercel serverless (try `3`). |
-| `DATABASE_STATEMENT_TIMEOUT_MS` | `5000` | Hard timeout per query. |
-| `DB_PATH` | `/data/medos.db` | SQLite path. Ignored when `DATABASE_URL` is set. |
+| `DATABASE_URL` | secret | `postgresql://USER:PASS@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require` |
+
+Everything else (SSL mode, pool size, statement timeout, fallback path) has a sensible default baked into the code. Defaults are listed at the bottom of this doc — you only override them if a deployment proves you need to.
+
+The pre-existing MedOS env vars stay the same; they were already required before this migration:
+
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD` — first-run admin seed.
+- `ENCRYPTION_KEY` — at-rest encryption for BYO HF tokens.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `FROM_EMAIL` — email transport.
+- `APP_URL` — used in outbound email links.
+- `NODE_ENV` — standard Node.js env tag. Set to `production` on Vercel + HF.
+
+See `.env.example` for the consolidated list.
 
 ## Setting env vars per platform
 
@@ -60,8 +53,8 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     env:
+      NODE_ENV: production
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      REQUIRE_POSTGRES: ${{ vars.REQUIRE_POSTGRES }}
       ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
@@ -93,7 +86,7 @@ secrets:
   - ENCRYPTION_KEY
   - SMTP_PASS
 variables:
-  REQUIRE_POSTGRES: "true"
+  NODE_ENV: "production"
   ADMIN_EMAIL: "admin@medos.health"
   SMTP_HOST: "smtp.sendgrid.net"
   SMTP_PORT: "587"
@@ -107,7 +100,6 @@ variables:
 `Project → Settings → Environment Variables`.
 
 - Tag every var for **Production** and **Preview** (you'll typically want a separate Neon database branch for Preview).
-- For serverless functions: set `DATABASE_POOL_MAX=3` to avoid exhausting Neon's pooler under burst load.
 - The Neon connection string already includes `sslmode=require`; do not modify it.
 
 You can also use Vercel's Neon integration to inject `DATABASE_URL` automatically per branch.
@@ -130,11 +122,11 @@ The same `npm run db:migrate` works for both drivers. Migrations are version-gat
 
 | Driver | Boot | First request | Mid-request |
 |---|---|---|---|
-| Postgres + `REQUIRE_POSTGRES=true` | Process exits 1 if connect fails | Same as boot | 503 response, structured log line |
-| Postgres + `REQUIRE_POSTGRES=false` | Logs warning, falls back to SQLite | Reads from SQLite at `$DB_PATH` | Same |
-| SQLite | Always succeeds locally; fails only if path is unwritable | Reads from local file | n/a |
+| Postgres + `NODE_ENV=production` | Process exits 1 if connect fails (no silent fallback) | Same as boot | 503 response, structured log line |
+| Postgres + `NODE_ENV=development` | Logs warning, falls back to SQLite | Reads from SQLite at `$DB_PATH` | Same |
+| SQLite (dev only) | Always succeeds locally; fails only if path is unwritable | Reads from local file | n/a |
 
-Prefer `REQUIRE_POSTGRES=true` in production. Silent fallback is convenient in development; it is a foot-gun in production.
+Production is always Postgres-required: when `NODE_ENV=production` and `DATABASE_URL` is missing or invalid, the server refuses to start. Silent fallback is convenient in development; it is a foot-gun in production, so we never enable it there.
 
 ## Rotating the database password
 
