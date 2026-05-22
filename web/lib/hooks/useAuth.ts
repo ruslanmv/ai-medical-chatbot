@@ -166,6 +166,40 @@ export function useAuth() {
     setUser(null);
   }, [persistToken]);
 
+  /**
+   * Self-service account deletion (GDPR Art. 17). The backend at
+   * DELETE /api/auth/me enforces password re-auth, email match,
+   * admin-self-delete block, and per-IP rate limiting; this hook
+   * only forwards the request and wipes local state on success
+   * (same as logout). On any non-2xx response we surface the
+   * backend's error verbatim so the user sees "Password is
+   * incorrect" / "Email confirmation does not match" / "Too many
+   * deletion attempts" rather than a generic failure.
+   */
+  const deleteMe = useCallback(
+    async (password: string, confirmEmail: string) => {
+      const t = localStorage.getItem(TOKEN_KEY);
+      if (!t) return { ok: false as const, error: "Not authenticated" };
+      try {
+        const res = await fetch("/api/proxy/auth/me", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+          body: JSON.stringify({ password, confirmEmail }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return { ok: false as const, error: data.error || "Account deletion failed" };
+        }
+        persistToken(null);
+        setUser(null);
+        return { ok: true as const, message: data.message };
+      } catch {
+        return { ok: false as const, error: "Network error" };
+      }
+    },
+    [persistToken],
+  );
+
   return {
     user,
     token,
@@ -179,5 +213,6 @@ export function useAuth() {
     forgotPassword,
     resetPassword,
     logout,
+    deleteMe,
   };
 }

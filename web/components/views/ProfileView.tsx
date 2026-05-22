@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   User2,
   LogOut,
@@ -11,6 +12,8 @@ import {
   FileText,
   Printer,
   ClipboardList,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 import type { User } from "@/lib/hooks/useAuth";
@@ -20,6 +23,19 @@ interface ProfileViewProps {
   onLogout: () => void;
   onExport: () => void;
   onOpenEHR: () => void;
+  /**
+   * Self-service account deletion. Wired to useAuth.deleteMe which
+   * calls DELETE /api/auth/me with the user's current password +
+   * email confirmation. On success the parent navigates away (the
+   * session is already invalidated server-side and the auth state
+   * cleared locally). On failure the API's error message is shown
+   * inline — typically "Password is incorrect" or "Too many
+   * deletion attempts. Try again later." (3/hour rate limit).
+   */
+  onDeleteAccount: (
+    password: string,
+    confirmEmail: string,
+  ) => Promise<{ ok: boolean; error?: string; message?: string }>;
   medicationCount: number;
   appointmentCount: number;
   vitalCount: number;
@@ -32,6 +48,7 @@ export function ProfileView({
   onLogout,
   onExport,
   onOpenEHR,
+  onDeleteAccount,
   medicationCount,
   appointmentCount,
   vitalCount,
@@ -154,7 +171,150 @@ export function ProfileView({
             ? new Date(user.createdAt).toLocaleDateString()
             : "recently"}
         </p>
+
+        {/*
+         * Danger zone — self-service account deletion (GDPR Art. 17).
+         *
+         * Intentionally placed below the privacy note + logout, behind
+         * an extra click, and rendered in muted danger styling rather
+         * than a primary CTA. The submit step requires the user to
+         * RE-TYPE both their email and current password — these are
+         * also enforced server-side; the client copy is just to make
+         * accidental clicks harder.
+         *
+         * Admins cannot self-delete from this UI: the backend returns
+         * 403 for is_admin users, and we hide the trigger button up
+         * front so admins don't get an "error" experience for a
+         * deliberate restriction.
+         */}
+        {!user.isAdmin && (
+          <DangerZone email={user.email} onDeleteAccount={onDeleteAccount} />
+        )}
       </div>
+    </div>
+  );
+}
+
+function DangerZone({
+  email,
+  onDeleteAccount,
+}: {
+  email: string;
+  onDeleteAccount: ProfileViewProps["onDeleteAccount"];
+}) {
+  const [open, setOpen] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const reset = () => {
+    setConfirmEmail("");
+    setPassword("");
+    setError("");
+  };
+
+  const handleCancel = () => {
+    setOpen(false);
+    reset();
+  };
+
+  const handleSubmit = async () => {
+    if (!confirmEmail.trim() || !password) {
+      setError("Type your email and current password to continue.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    const res = await onDeleteAccount(password, confirmEmail.trim());
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.error || "Deletion failed");
+      return;
+    }
+    // On success the auth hook has already wiped local state and the
+    // parent (MedOSApp) navigates away — no further action needed here.
+  };
+
+  return (
+    <div className="mt-10 pt-6 border-t border-danger-500/20">
+      <div className="flex items-center gap-2 mb-2">
+        <AlertTriangle size={14} className="text-danger-500" />
+        <h3 className="text-xs font-bold uppercase tracking-wider text-danger-500">
+          Danger zone
+        </h3>
+      </div>
+      <p className="text-xs text-ink-muted mb-3 leading-relaxed">
+        Permanently delete your account and all associated health data
+        (medications, appointments, vitals, records, chat history, settings).
+        This action cannot be undone.
+      </p>
+
+      {!open && (
+        <button
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-danger-500 hover:text-danger-600 transition-colors"
+        >
+          <Trash2 size={14} />
+          Delete my account
+        </button>
+      )}
+
+      {open && (
+        <div className="rounded-2xl border border-danger-500/40 bg-danger-500/5 p-4 space-y-3">
+          <p className="text-sm font-semibold text-danger-500">
+            Are you sure? This is permanent.
+          </p>
+
+          <label className="block">
+            <span className="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1">
+              Re-type your email
+            </span>
+            <input
+              type="email"
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              placeholder={email}
+              autoComplete="off"
+              className="w-full bg-surface-1 border border-line/60 text-ink-base rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-danger-500/30"
+            />
+          </label>
+
+          <label className="block">
+            <span className="block text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1">
+              Current password
+            </span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              className="w-full bg-surface-1 border border-line/60 text-ink-base rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-danger-500/30"
+            />
+          </label>
+
+          {error && (
+            <p className="text-xs text-danger-500 font-semibold">{error}</p>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleCancel}
+              disabled={busy}
+              className="flex-1 py-2 rounded-xl bg-surface-1 border border-line/60 text-ink-base text-sm font-bold hover:bg-surface-2 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={busy}
+              className="flex-1 py-2 rounded-xl bg-danger-500 text-white text-sm font-bold hover:bg-danger-600 transition-colors disabled:opacity-50"
+            >
+              {busy ? "Deleting…" : "Permanently delete"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
