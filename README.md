@@ -18,7 +18,7 @@
 
 <br/>
 
-[Use it now](https://huggingface.co/spaces/ruslanmv/MediBot) &nbsp;&bull;&nbsp; [What you get](#-what-you-get) &nbsp;&bull;&nbsp; [The stack](#-the-open-source-stack) &nbsp;&bull;&nbsp; [Run it yourself](#-run-it-yourself) &nbsp;&bull;&nbsp; [Join us](#-contributing)
+[Use it now](https://huggingface.co/spaces/ruslanmv/MediBot) &nbsp;&bull;&nbsp; [What you get](#-what-you-get) &nbsp;&bull;&nbsp; [The stack](#-the-open-source-stack) &nbsp;&bull;&nbsp; [Run it yourself](#-run-it-yourself) &nbsp;&bull;&nbsp; [Join us](#-contributing) &nbsp;&bull;&nbsp; [Sponsor](#support-the-project)
 
 <br/>
 
@@ -27,6 +27,14 @@
 </a>
 
 <br/>
+
+<p align="center">
+  <a href="https://github.com/sponsors/ruslanmv"><img src="https://img.shields.io/badge/%F0%9F%92%96%20Become%20a%20sponsor-ec4899?style=for-the-badge" alt="Become a sponsor"/></a>
+  &nbsp;
+  <a href="https://huggingface.co/spaces/ruslanmv/MediBot"><img src="https://img.shields.io/badge/Try%20it%20now%20%E2%86%92%20MediBot-2e5bff?style=for-the-badge" alt="Try MediBot"/></a>
+</p>
+
+<p align="center"><sub>This project is free, open source, and runs on free-tier infrastructure. If MedOS is useful to you, <a href="https://github.com/sponsors/ruslanmv">sponsor on GitHub</a> — every dollar helps keep healthcare guidance free for everyone, in every language.</sub></p>
 
 </div>
 
@@ -39,6 +47,8 @@ Billions of people cannot afford a doctor. Millions search the internet for heal
 We believe the best medical AI in the world should be **free, private, and available to every human on earth** — regardless of where they live, what language they speak, or how much money they have.
 
 This is that project. Built by the community. Free forever.
+
+If that mission resonates, you can keep it going: [**sponsor on GitHub →**](https://github.com/sponsors/ruslanmv)
 
 > **Important:** This does not replace a doctor. It helps you understand your health, ask better questions, and know when to seek professional care.
 
@@ -308,6 +318,30 @@ git checkout -b my-improvement
 
 ---
 
+## Support the project
+
+MedOS is free for users forever. It runs on free-tier cloud and gets better only because people contribute time, translations, clinical review, and — increasingly — sponsorship to keep the lights on.
+
+If MedOS has helped you understand a symptom, prepare for a doctor's visit, or just felt like a calm voice on a rough day, please consider supporting it.
+
+<p align="center">
+  <a href="https://github.com/sponsors/ruslanmv"><img src="https://img.shields.io/badge/%F0%9F%92%96%20Sponsor%20on%20GitHub-ec4899?style=for-the-badge" alt="Sponsor on GitHub"/></a>
+  &nbsp;
+  <a href="https://github.com/ruslanmv/ai-medical-chatbot"><img src="https://img.shields.io/badge/%E2%AD%90%20Star%20the%20repo-gold?style=for-the-badge" alt="Star the repo"/></a>
+</p>
+
+Both help. Sponsorship pays for hosting beyond the free tiers, the LLM provider keys that keep the chat fast in every language, and the clinician review hours that keep the safety floor honest. Stars help the next person who needs MedOS actually find it.
+
+You can also help without spending anything:
+
+- Translate one screen into a language we don't fully cover.
+- Add one safety test case to `tests/safety/golden_prompts.jsonl`.
+- Tell a friend who could use this.
+
+Thank you. Every form of support, including a star, keeps this open.
+
+---
+
 ## License
 
 Apache 2.0 — use it, modify it, deploy it, share it. **Free forever.**
@@ -331,5 +365,9 @@ Apache 2.0 — use it, modify it, deploy it, share it. **Free forever.**
 *The best technology in the world should serve everyone — not just those who can pay for it.*
 
 *Let us use it to heal.*
+
+<br/>
+
+<a href="https://github.com/sponsors/ruslanmv"><img src="https://img.shields.io/badge/%F0%9F%92%96%20Sponsor%20MedOS-ec4899?style=flat-square" alt="Sponsor MedOS"/></a>
 
 </div>
