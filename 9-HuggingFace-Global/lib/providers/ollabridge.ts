@@ -36,16 +36,28 @@ function getClient(): OpenAI {
     'https://ruslanmv-ollabridge.hf.space';
   const apiKey = configKey || process.env.OLLABRIDGE_API_KEY || 'not-required';
 
-  // Cold-start at OllaBridge can take 10-20s while HF Router warms a
-  // routed sub-provider. 8s was too tight — we'd time out before the
-  // first real token and force the request through the HF-direct
-  // fallback every time. 25s covers observed cold-start latencies
-  // while still leaving 20s of the Vercel-side 50s budget for the
-  // HF-direct fallback when OllaBridge genuinely fails.
+  // Why 45s?
+  //
+  // The OllaBridge chain has four latency regimes:
+  //   * Cloud rung succeeds:                    ~0.5-3s
+  //   * Cloud rung fails fast (401/402/403):    ~100ms each, chain
+  //                                              of 9 rungs ≈ 1s
+  //   * local-ollama fallback (qwen2.5:0.5b on CPU-basic Space):
+  //       short prompt:                          ~13s
+  //       MediBot's full 3700-char system prompt: ~28s
+  //                                              (KV cache fill)
+  //   * Everything dead, OllaBridge raises a structured 503: ~1s
+  //
+  // 8s was too tight (cut off real cloud answers).
+  // 25s covered cloud answers but not the slow local-ollama
+  // fallback, so emergency cases lost their LLM follow-up.
+  // 45s covers the worst-case local-ollama path while leaving
+  // ~5s of the Vercel-side 50s edge budget for the rest of
+  // route.ts (RAG, safety checks, audit log).
   return new OpenAI({
     baseURL: `${baseURL.replace(/\/+$/, '')}/v1`,
     apiKey,
-    timeout: 25000,
+    timeout: 45000,
     maxRetries: 0,
   });
 }
@@ -83,7 +95,13 @@ export async function streamWithOllaBridge(
     model,
     messages: allMessages,
     stream: true,
-    max_tokens: 1000,
+    // 256 keeps the worst-case local-ollama path (~20 tok/s on
+    // cpu-basic Spaces) under ~13s. 1000 was burning the entire
+    // 45s budget on a single answer (we saw the chat-pain test
+    // generate 1640 tokens in 80s before this cap). Real medical
+    // answers fit comfortably in 256 tokens; the consumer-side UI
+    // can request more in a follow-up message.
+    max_tokens: 256,
     temperature: 0.7,
   });
 
@@ -126,7 +144,13 @@ export async function chatWithOllaBridge(
   const response = await client.chat.completions.create({
     model,
     messages: allMessages,
-    max_tokens: 1000,
+    // 256 keeps the worst-case local-ollama path (~20 tok/s on
+    // cpu-basic Spaces) under ~13s. 1000 was burning the entire
+    // 45s budget on a single answer (we saw the chat-pain test
+    // generate 1640 tokens in 80s before this cap). Real medical
+    // answers fit comfortably in 256 tokens; the consumer-side UI
+    // can request more in a follow-up message.
+    max_tokens: 256,
     temperature: 0.7,
   });
 
