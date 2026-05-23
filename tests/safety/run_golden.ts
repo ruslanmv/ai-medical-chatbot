@@ -20,13 +20,19 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+// Import directly from the specific safety sub-modules instead of the
+// barrel. The barrel re-exports `audit-events`, which transitively pulls
+// in `lib/audit` → `lib/db` → `better-sqlite3`. CI runs this script with
+// `npx tsx` without installing the full app deps (the runner only needs
+// the pure-function safety engine), so the native module fails to load.
+// Direct imports keep the runner self-contained.
+import { preCheck } from '../../9-HuggingFace-Global/lib/safety/safety-engine';
+import { filterOutput } from '../../9-HuggingFace-Global/lib/safety/output-filter';
 import {
-  preCheck,
-  filterOutput,
   isAtLeast,
   RISK_CLASSES,
   type RiskClass,
-} from '../../9-HuggingFace-Global/lib/safety';
+} from '../../9-HuggingFace-Global/lib/safety/risk-classes';
 
 interface GoldenCase {
   id: string;

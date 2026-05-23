@@ -101,9 +101,17 @@ jobs:
       - name: npm audit
         working-directory: ${{ matrix.path }}
         run: |
-          if [ -f package.json ]; then
-            npm audit --audit-level=high --omit=dev || \
-              (echo 'High/critical vulnerabilities found in ${{ matrix.path }}'; exit 1)
-          else
+          if [ ! -f package.json ]; then
             echo 'No package.json in ${{ matrix.path }}; skipping.'
+            exit 0
           fi
+          # `npm audit` requires a lockfile. The web / 9-HuggingFace-Global
+          # apps deploy via Vercel / HF Spaces and don't commit one, so we
+          # synthesise one here without installing modules — much faster
+          # than `npm install` and enough for the audit DB lookup.
+          if [ ! -f package-lock.json ] && [ ! -f npm-shrinkwrap.json ]; then
+            echo 'No lockfile present; generating with npm install --package-lock-only'
+            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          fi
+          npm audit --audit-level=high --omit=dev || \
+            (echo 'High/critical vulnerabilities found in ${{ matrix.path }}'; exit 1)

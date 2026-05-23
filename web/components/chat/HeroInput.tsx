@@ -17,6 +17,16 @@ interface HeroInputProps {
   size?: "default" | "hero";
   /** Autofocus on mount (chat view). */
   autoFocus?: boolean;
+  /**
+   * Freeze the rotating empathetic placeholders and show a single
+   * neutral one ("Type your health question…") instead. Use this once
+   * the conversation has started — otherwise the placeholder rotation
+   * appears directly underneath the "Analyzing symptoms…" typing
+   * indicator and reads like a canned bot reply (e.g. user sends
+   * "I have chest pain" and immediately sees "I've had a headache for
+   * three days…" floating below the indicator).
+   */
+  staticPlaceholder?: boolean;
 }
 
 /**
@@ -37,11 +47,12 @@ export function HeroInput({
   suggestions = [],
   size = "default",
   autoFocus = false,
+  staticPlaceholder = false,
 }: HeroInputProps) {
   const [value, setValue] = useState("");
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Rotating empathetic placeholders.
+  // Rotating empathetic placeholders for the empty-home / welcome screen.
   const rotating = useMemo(
     () => [
       t("ask_placeholder_rotate_1", language),
@@ -54,10 +65,18 @@ export function HeroInput({
   );
   const [rotIdx, setRotIdx] = useState(0);
   useEffect(() => {
-    if (value) return; // freeze rotation while the user is typing
+    if (staticPlaceholder) return; // chat-mode: keep one neutral hint
+    if (value) return;             // freeze rotation while the user is typing
     const id = setInterval(() => setRotIdx((i) => (i + 1) % rotating.length), 3200);
     return () => clearInterval(id);
-  }, [value, rotating.length]);
+  }, [value, rotating.length, staticPlaceholder]);
+
+  // Once the conversation has started, switch to a single neutral hint
+  // so the textarea below the typing indicator never reads like a bot
+  // suggestion.
+  const placeholderText = staticPlaceholder
+    ? t("ask_placeholder", language)
+    : rotating[rotIdx];
 
   // Auto-grow textarea.
   useEffect(() => {
@@ -110,7 +129,7 @@ export function HeroInput({
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={rotating[rotIdx]}
+              placeholder={placeholderText}
               className={`w-full resize-none bg-transparent text-ink-base placeholder:text-ink-subtle outline-none leading-relaxed px-4 py-3 ${
                 isHero ? "text-lg" : "text-base"
               }`}
