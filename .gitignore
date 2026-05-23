@@ -1,6 +1,10 @@
 #My env
 my_venv/
 
+# Node — none of the Next.js apps in this repo commit modules.
+node_modules/
+**/node_modules/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

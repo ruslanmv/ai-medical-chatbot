@@ -108,6 +108,89 @@ export function SettingsView({
     message?: string;
   }>({});
 
+  // Generic Test Connection — sends a tiny "Reply with OK" probe through
+  // whichever preset/provider the user has selected and reports latency
+  // + model used + status. Works for every preset including the
+  // recommended default; does NOT require any API key (uses server-side
+  // routing exactly like a real chat).
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    success?: boolean;
+    latencyMs?: number;
+    model?: string;
+    provider?: string;
+    answer?: string;
+    error?: string;
+  } | null>(null);
+
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    setTestResult(null);
+    const started = Date.now();
+    try {
+      const response = await fetch("/api/proxy/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: "Reply with exactly: OK" }],
+          model: "qwen2.5:1.5b",
+          language,
+          countryCode: country,
+          // Tag the request so the server skips audit / persistence
+          // for this probe — purely a connection test.
+          test_probe: true,
+        }),
+      });
+      const latencyMs = Date.now() - started;
+      if (!response.ok) {
+        let detail = "";
+        try {
+          const data = await response.json();
+          detail = data?.error || data?.message || JSON.stringify(data).slice(0, 200);
+        } catch {
+          detail = `HTTP ${response.status}`;
+        }
+        setTestResult({ success: false, latencyMs, error: detail });
+        return;
+      }
+      // The chat endpoint streams SSE; for the probe we just read the
+      // first data: chunk and pull the content + provider/model out.
+      const text = await response.text();
+      const firstDataLine = text
+        .split("\n")
+        .find((line) => line.startsWith("data:") && !line.includes("[DONE]"));
+      let model = "?";
+      let provider = "?";
+      let answer = "";
+      if (firstDataLine) {
+        try {
+          const obj = JSON.parse(firstDataLine.replace(/^data:\s*/, ""));
+          model = obj.model || "?";
+          provider = obj.provider || "?";
+          answer = obj.choices?.[0]?.delta?.content || "";
+        } catch {
+          // ignore parse errors; we still have latency + status
+        }
+      }
+      setTestResult({
+        success: true,
+        latencyMs,
+        model,
+        provider,
+        answer: (answer || "").slice(0, 200),
+      });
+    } catch (error: any) {
+      const latencyMs = Date.now() - started;
+      setTestResult({
+        success: false,
+        latencyMs,
+        error: error?.message || "Network error",
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   const isRecommended = preset === "free-best" || preset === "free-fastest" || preset === "free-flexible";
 
   const handleVerifyConnection = async () => {
@@ -304,6 +387,84 @@ export function SettingsView({
               )}
             </div>
           </details>
+
+          {/* ─────────────────────────────────────────────── */}
+          {/* TEST CONNECTION — works for every preset.       */}
+          {/* Sends a 1-token probe through the live chat     */}
+          {/* path and shows latency + resolved model.        */}
+          {/* ─────────────────────────────────────────────── */}
+          <div className="mt-4 pt-4 border-t border-line/60">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <div className="text-sm font-semibold text-ink-base">Test connection</div>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Send a tiny prompt through your current model and see latency, provider, and the live response.
+                </p>
+              </div>
+              <button
+                onClick={handleTestConnection}
+                disabled={isTesting}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:bg-brand-500/40 text-white text-sm font-semibold transition-colors disabled:cursor-not-allowed shrink-0"
+              >
+                {isTesting ? (
+                  <>
+                    <Activity size={14} className="animate-pulse" />
+                    Testing…
+                  </>
+                ) : (
+                  <>
+                    <Activity size={14} />
+                    Test
+                  </>
+                )}
+              </button>
+            </div>
+
+            {testResult && (
+              <div
+                className={`rounded-xl border p-3 text-xs space-y-1.5 ${
+                  testResult.success
+                    ? "bg-success-500/5 border-success-500/40 text-success-700 dark:text-success-300"
+                    : "bg-danger-500/5 border-danger-500/40 text-danger-700 dark:text-danger-300"
+                }`}
+              >
+                <div className="flex items-center gap-2 font-semibold">
+                  {testResult.success ? "✓ Connected" : "✗ Failed"}
+                  {testResult.latencyMs != null && (
+                    <span className="font-mono opacity-75">
+                      · {testResult.latencyMs} ms
+                    </span>
+                  )}
+                </div>
+                {testResult.success ? (
+                  <>
+                    {testResult.provider && testResult.provider !== "?" && (
+                      <div className="opacity-80">
+                        Provider: <span className="font-mono">{testResult.provider}</span>
+                      </div>
+                    )}
+                    {testResult.model && testResult.model !== "?" && (
+                      <div className="opacity-80">
+                        Model: <span className="font-mono">{testResult.model}</span>
+                      </div>
+                    )}
+                    {testResult.answer && (
+                      <div className="opacity-80 pt-1 border-t border-current/20">
+                        Response:{" "}
+                        <span className="font-mono">
+                          {testResult.answer.replace(/\n+/g, " ").slice(0, 120)}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="opacity-90 break-words">
+                    {testResult.error || "Unknown error"}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </SettingsSection>
 
         {/* ============================================ */}

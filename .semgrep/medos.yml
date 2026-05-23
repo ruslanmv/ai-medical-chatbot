@@ -13,7 +13,10 @@ rules:
       structured audit-log helper with metadata only (risk class, rule
       ids, latencies, request id).
     severity: ERROR
-    languages: [ts, tsx, js, jsx]
+    # Semgrep dropped the legacy short forms (`ts`/`tsx`/`jsx`) in recent
+    # releases; `typescript` covers both `.ts` and `.tsx`, and
+    # `javascript` covers both `.js` and `.jsx`.
+    languages: [typescript, javascript]
     paths:
       include:
         - '9-HuggingFace-Global/**'
@@ -39,7 +42,7 @@ rules:
       auditLog meta must not contain raw chat content, symptoms, or other
       PHI. Use stable identifiers, counts, latencies, and rule ids only.
     severity: ERROR
-    languages: [ts, tsx]
+    languages: [typescript]
     pattern-either:
       - pattern: |
           auditLog({ ..., meta: { ..., $K: $V, ... }, ... })
@@ -55,7 +58,7 @@ rules:
       Chat / message surfaces must not use dangerouslySetInnerHTML.
       Render via escaped React text or a sanitised markdown renderer.
     severity: ERROR
-    languages: [tsx, jsx]
+    languages: [typescript, javascript]
     paths:
       include:
         - '**/chat/**'
@@ -69,7 +72,7 @@ rules:
       Provider API keys must be server-only. Do NOT expose them on the
       client via NEXT_PUBLIC_* or similar. See PRIVACY.md and SECURITY.md.
     severity: ERROR
-    languages: [ts, tsx, js, jsx]
+    languages: [typescript, javascript]
     pattern-regex: |
       NEXT_PUBLIC_(GROQ|HF|HUGGINGFACE|GEMINI|OPENAI|ANTHROPIC|GOOGLE)_(API_)?KEY
 
@@ -81,7 +84,7 @@ rules:
       be explicitly disabled and a clinical advisor sign-off recorded
       per GOVERNANCE.md.
     severity: WARNING
-    languages: [ts]
+    languages: [typescript]
     paths:
       include:
         - '9-HuggingFace-Global/app/api/chat/route.ts'

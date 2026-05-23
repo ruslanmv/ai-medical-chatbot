@@ -191,6 +191,11 @@ export function ChatView({
             voiceEnabled={voiceEnabled}
             suggestions={suggestions}
             autoFocus
+            // Once the user has sent at least one message, freeze the
+            // rotating examples to a single neutral hint. The rotation
+            // was bleeding visually into the bot's "Analyzing symptoms…"
+            // typing indicator and reading like a canned suggestion.
+            staticPlaceholder={hasMessages}
           />
         </div>
       </div>
