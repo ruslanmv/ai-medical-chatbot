@@ -253,10 +253,33 @@ export async function POST(request: NextRequest) {
         model: 'emergency-template',
       };
     } else {
-      // Non-emergency turn: call the LLM. Total chain failure falls
-      // through to the outer try/catch in this route, which returns
-      // an AllProvidersUnavailableError to the client.
-      providerResponse = await chatWithFallback(augmentedMessages, model);
+      // Non-emergency turn: call the LLM. On total chain failure we
+      // do NOT raise a 5xx — the API should always return 200 with a
+      // graceful, conversational degradation message. Returning errors
+      // from a medical chatbot reads as broken and trains users to
+      // give up; a polite "I can't reach the AI right now — please try
+      // again in a moment" keeps the thread alive and is the
+      // industry-standard zero-downtime behaviour.
+      try {
+        providerResponse = await chatWithFallback(augmentedMessages, model);
+      } catch (chainErr: any) {
+        const isUnavailable =
+          chainErr instanceof AllProvidersUnavailableError;
+        console.warn(
+          `[Chat] route.provider.degraded reason=${
+            isUnavailable ? 'all_providers_failed' : 'unexpected_error'
+          } msg=${String(chainErr?.message || chainErr).slice(0, 200)}`,
+        );
+        providerResponse = {
+          content:
+            "I'm having trouble reaching the medical AI right now. " +
+            "Please try again in a moment. If this is urgent, contact " +
+            `your healthcare provider or call ${emergencyInfo.emergency} ` +
+            `(${emergencyInfo.country}).`,
+          provider: 'safety-engine',
+          model: 'graceful-degradation',
+        };
+      }
     }
 
     const riskClass = safetyDecision?.kind === 'allow_llm'

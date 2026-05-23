@@ -32,18 +32,10 @@ export type SendOptions = {
 const BYO_KEY_PROVIDERS: Provider[] = ["openai", "gemini", "claude"];
 
 export function useChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      role: "ai",
-      content:
-        "Hello! I'm your medical AI assistant. I'm here to help answer health questions and provide guidance. How can I assist you today?\n\n*Please note: I'm an AI and cannot replace professional medical advice. For emergencies, please call 911 or visit your nearest emergency room.*",
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    },
-  ]);
+  // Start the thread empty — see web/lib/hooks/useChat.ts for the
+  // rationale (canned-greeting bubble removed for a more real-time
+  // voice).
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -159,15 +151,19 @@ export function useChat() {
           }
         }
       } catch (err: any) {
-        const errorMessage = err?.message || "Failed to send message";
+        const errorMessage =
+          err?.message || "I'm having trouble reaching the medical AI right now.";
         setError(errorMessage);
 
+        // Gentle, professional inline message — no "⚠️ Error:" prefix,
+        // no "check your settings" trailer (the user almost never can
+        // fix backend availability from settings).
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now() + 2,
             role: "ai",
-            content: `⚠️ Error: ${errorMessage}\n\nPlease check your settings and try again.`,
+            content: errorMessage,
             timestamp: new Date().toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -182,18 +178,7 @@ export function useChat() {
   );
 
   const clearMessages = useCallback(() => {
-    setMessages([
-      {
-        id: 1,
-        role: "ai",
-        content:
-          "Hello! I'm your medical AI assistant. How can I assist you today?",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-    ]);
+    setMessages([]);
     setError(null);
   }, []);
 

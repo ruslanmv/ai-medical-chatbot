@@ -32,18 +32,14 @@ export type SendOptions = {
 const BYO_KEY_PROVIDERS: Provider[] = ["openai", "gemini", "claude"];
 
 export function useChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      role: "ai",
-      content:
-        "Hello! I'm your medical AI assistant. I'm here to help answer health questions and provide guidance. How can I assist you today?\n\n*Please note: I'm an AI and cannot replace professional medical advice. For emergencies, please call 911 or visit your nearest emergency room.*",
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    },
-  ]);
+  // Start with NO canned greeting. The empty-state hero in ChatView
+  // already shows the welcome card ("ask_hero_title" / subtitle /
+  // TrustBar). A hardcoded "Hello! I'm your medical AI assistant…"
+  // bubble was reading as a generic AI script and clashed with the
+  // "professional, real-time" voice the rest of the product is going
+  // for. The first message in the thread will be the user's question;
+  // the first AI message will be the actual LLM reply.
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,9 +75,15 @@ export function useChat() {
       setError(null);
 
       try {
-        // 45-second timeout — prevents infinite loading on cold starts
+        // 58-second timeout. The Vercel proxy has its own 50s abort
+        // (with a friendlier 504 "Backend is waking up" payload) and
+        // Vercel's hard function cap is 60s. Setting the client to 58s
+        // gives the proxy 8s of headroom to surface its actionable
+        // message before the client aborts with a generic
+        // "Response took too long". The old 45s cap was racing the
+        // proxy and showing the worse error.
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 45000);
+        const timeout = setTimeout(() => controller.abort(), 58000);
 
         const response = await fetch("/api/proxy/chat", {
           method: "POST",
@@ -217,19 +219,24 @@ export function useChat() {
       } catch (err: any) {
         const errorMessage =
           err?.name === "AbortError"
-            ? "Response took too long. The AI service may be starting up — please try again in a moment."
-            : err?.message || "Failed to send message";
+            ? "The medical AI is taking longer than usual to respond. Please try again in a moment."
+            : err?.message || "I'm having trouble reaching the medical AI right now.";
         setError(errorMessage);
         if (typeof console !== "undefined") {
           console.error("[Chat] Stream failed:", errorMessage, err);
         }
 
+        // Render a gentle, professional message — no "⚠️ Error:" prefix
+        // and no "check your settings" trailer (the user almost never
+        // can fix backend availability from settings). The message is
+        // delivered as the assistant turn so the thread reads
+        // naturally; the user can retry by sending again.
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now() + 2,
             role: "ai",
-            content: `⚠️ Error: ${errorMessage}\n\nPlease check your settings and try again.`,
+            content: errorMessage,
             timestamp: new Date().toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -244,18 +251,10 @@ export function useChat() {
   );
 
   const clearMessages = useCallback(() => {
-    setMessages([
-      {
-        id: 1,
-        role: "ai",
-        content:
-          "Hello! I'm your medical AI assistant. How can I assist you today?",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
-    ]);
+    // Reset to an empty thread — the empty-state hero in ChatView
+    // re-renders ("ask_hero_title" + TrustBar) the moment messages
+    // is empty.
+    setMessages([]);
     setError(null);
   }, []);
 
