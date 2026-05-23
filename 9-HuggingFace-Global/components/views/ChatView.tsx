@@ -88,7 +88,10 @@ export function ChatView({
     setIsListening(false);
   };
 
-  const hasMessages = messages.length > 1;
+  // The thread now starts empty (the canned greeting bubble was
+  // removed for a more real-time/professional voice), so gate on
+  // >= 1 instead of > 1.
+  const hasMessages = messages.length >= 1;
 
   // Dynamic suggestions — contextual chips under the input.
   const suggestions = useMemo(() => {

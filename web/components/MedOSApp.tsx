@@ -475,7 +475,10 @@ function MedOSAppInner() {
     );
   }
 
-  const hasActiveChat = messages.length > 1;
+  // Thread now starts empty (the canned greeting was removed for a
+  // more real-time voice), so a single message means the chat is
+  // active.
+  const hasActiveChat = messages.length >= 1;
 
   return (
     <div
