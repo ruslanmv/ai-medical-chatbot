@@ -223,28 +223,40 @@ export async function POST(request: NextRequest) {
     // the only honest way to enforce the safety contract (SAFETY.md). UX
     // optimisations (server-side chunking of the filtered output) can
     // happen in a follow-up without changing the safety guarantee.
-    // Call the provider chain. If we have an emergency banner the safety
-    // floor is already authored — a chain failure must not turn into a
-    // 503 for the user. Catch AllProvidersUnavailableError specifically
-    // and degrade to "banner only" instead.
+    // Call the provider chain.
+    //
+    // For R5 emergencies (chest pain, stroke, anaphylaxis, severe
+    // bleeding, etc.) we deliberately SKIP the LLM and ship only the
+    // deterministic, clinically-authored safety floor. Reasons:
+    //   1. The free fallback chain currently lands on qwen2.5:0.5b, a
+    //      tiny CPU model that, in real traffic, ignored the "keep it
+    //      under 6 sentences" instruction and generated ~1700 tokens
+    //      of unstructured prose — including incorrect advice like
+    //      "don't lie down" and "take shallow breaths" for a
+    //      suspected MI.
+    //   2. An enterprise medical product cannot rely on a 0.5B model
+    //      to author urgent guidance. The deterministic template is
+    //      reviewable by clinicians and changes through PR review.
+    //   3. The safety floor already routes the user to emergency
+    //      services and lists do-while-waiting steps. The LLM was
+    //      adding noise, not value.
+    // Lower-risk turns (R0–R4) still call the LLM as before; their
+    // answers are not life-critical and a verbose model is forgivable.
     let providerResponse: { content: string; provider: string; model: string };
-    try {
+    if (isEmergency) {
+      console.log(
+        `[Chat] route.provider.skipped reason=R5_emergency_deterministic_floor`,
+      );
+      providerResponse = {
+        content: '',                    // banner is the entire answer
+        provider: 'safety-engine',
+        model: 'emergency-template',
+      };
+    } else {
+      // Non-emergency turn: call the LLM. Total chain failure falls
+      // through to the outer try/catch in this route, which returns
+      // an AllProvidersUnavailableError to the client.
       providerResponse = await chatWithFallback(augmentedMessages, model);
-    } catch (chainErr: any) {
-      if (chainErr instanceof AllProvidersUnavailableError && isEmergency) {
-        console.warn(
-          `[Chat] route.provider.degraded banner-only — chain unavailable: ${
-            String(chainErr.message).slice(0, 200)
-          }`,
-        );
-        providerResponse = {
-          content: '',                  // LLM didn't respond; banner is the answer
-          provider: 'safety-engine',
-          model: 'emergency-template',
-        };
-      } else {
-        throw chainErr;
-      }
     }
 
     const riskClass = safetyDecision?.kind === 'allow_llm'
@@ -255,6 +267,11 @@ export async function POST(request: NextRequest) {
       response: providerResponse.content,
       riskClass,
       emergency: emergencyInfo,
+      // Suppress the post-filter's "see a primary-care doctor" append
+      // when we're already showing the emergency floor — that floor
+      // routes the user to emergency services, and a GP referral on
+      // top of it is misdirection (e.g. on a suspected MI).
+      isEmergencyTemplatePath: isEmergency,
     });
 
     // Prepend the emergency banner so the user always sees the safety
