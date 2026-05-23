@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useEffect, useState } from "react";
-import { AlertTriangle, Phone, X, ChevronRight, Stethoscope } from "lucide-react";
+import { X, Stethoscope } from "lucide-react";
 import { MessageBubble } from "../chat/MessageBubble";
 import { HeroInput } from "../chat/HeroInput";
 import { TypingIndicator } from "../chat/TypingIndicator";
 import { TrustBar } from "../chat/TrustBar";
 import type { ChatMessage } from "@/lib/hooks/useChat";
-import { t, detectEmergencyKeywords, type SupportedLanguage } from "@/lib/i18n";
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface ChatViewProps {
   messages: ChatMessage[];
@@ -31,7 +31,6 @@ export function ChatView({
   onNavigateEmergency,
 }: ChatViewProps) {
   const [isListening, setIsListening] = useState(false);
-  const [showEmergencyBanner, setShowEmergencyBanner] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -39,14 +38,14 @@ export function ChatView({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // Red-flag auto-detection on latest user message.
-  useEffect(() => {
-    if (messages.length === 0) return;
-    const last = messages[messages.length - 1];
-    if (last.role === "user" && detectEmergencyKeywords(last.content, language)) {
-      setShowEmergencyBanner(true);
-    }
-  }, [messages, language]);
+  // The persistent client-side "This may be an emergency" banner was
+  // removed — it fired off a fixed i18n template the instant the user
+  // typed an emergency keyword, which made every reply feel canned.
+  // The safety floor is still enforced server-side: when preCheck()
+  // classifies the turn as R5, the chat route weaves the emergency
+  // template into the bot's reply itself, so the user still sees the
+  // call-emergency guidance — just delivered as part of the bot's
+  // message rather than pinned above the thread.
 
   // Read aloud the latest AI message.
   useEffect(() => {
