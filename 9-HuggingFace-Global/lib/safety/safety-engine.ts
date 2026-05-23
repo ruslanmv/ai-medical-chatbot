@@ -76,20 +76,37 @@ export function preCheck(req: PreCheckRequest): PreCheckDecision {
       triage.guidance ||
       'This may be a medical emergency. Please call your local emergency number now.';
 
-    const template = [
+    // The 988 / mental-health crisis line is appropriate only for
+    // self-harm and psychiatric emergencies. Including it on every R5
+    // (e.g. chest pain, stroke, anaphylaxis) misroutes the user and
+    // pads the safety floor with content unrelated to the actual
+    // emergency. Gate it on the rule's category.
+    const flagCategory = flags.matches[0]?.category;
+    const triageCategory = triage.category;
+    const isMentalHealthEmergency =
+      flagCategory === 'suicidal_ideation' ||
+      triageCategory === 'mental_health_crisis';
+
+    // Markdown is rendered by the chat surface (web/'s MessageBubble
+    // interprets `**bold**`), so we keep the `**` for visual hierarchy
+    // — the `Emergency` header and the action bullets read more like a
+    // clinical note and less like a paragraph of prose.
+    const lines: string[] = [
       `**Emergency**`,
       ``,
       guidance,
       ``,
       `**Call now:**`,
       `- Emergency: **${emergency.emergency}** (${emergency.country})`,
-      `- Ambulance: **${emergency.ambulance}**`,
-      emergency.crisisHotline ? `- Crisis line: **${emergency.crisisHotline}**` : '',
-      ``,
-      `Please don't wait. Every minute matters.`,
-    ]
-      .filter(Boolean)
-      .join('\n');
+    ];
+    if (emergency.ambulance && emergency.ambulance !== emergency.emergency) {
+      lines.push(`- Ambulance: **${emergency.ambulance}**`);
+    }
+    if (isMentalHealthEmergency && emergency.crisisHotline) {
+      lines.push(`- Crisis line: **${emergency.crisisHotline}**`);
+    }
+    lines.push('', "Please don't wait. Every minute matters.");
+    const template = lines.join('\n');
 
     return {
       kind: 'emergency_template',
@@ -142,6 +159,15 @@ export interface PostCheckRequest {
   response: string;
   riskClass: RiskClass;
   emergency: EmergencyInfo;
+  /**
+   * True when preCheck() returned an emergency template and the chat
+   * route is appending the LLM's reasoning underneath it. In that case
+   * the deterministic floor has already routed the user to emergency
+   * services, so the post-filter must NOT also tack on
+   * "Please check in with a clinician — a primary-care doctor…":
+   * for a suspected MI, sending the user to their GP is misleading.
+   */
+  isEmergencyTemplatePath?: boolean;
 }
 
 export interface PostCheckResult {
@@ -170,9 +196,21 @@ export function postCheck(req: PostCheckRequest): PostCheckResult {
   const spec = RISK_CLASSES[req.riskClass];
   const result = filterOutput(req.response, {
     riskClass: req.riskClass,
-    emergencyNumberRequired: spec.emergencyNumberRequired,
+    // The deterministic emergency template already lists the local
+    // emergency number AND the right clinician routing. Both of the
+    // filter's missing-content appends become noise on top of it:
+    //   - "If this is or becomes an emergency, call (e.g. 911)" —
+    //     duplicates the bullet in the template's `Call now:` block
+    //   - "Please check in with a clinician — primary-care doctor" —
+    //     misroutes a suspected MI to a GP
+    // Both are gated off when the template path is active. The
+    // appends still run on the LLM's output for non-emergency turns,
+    // where they're the right behaviour.
+    emergencyNumberRequired:
+      spec.emergencyNumberRequired && !req.isEmergencyTemplatePath,
     emergencyNumber: req.emergency.emergency,
-    clinicianReferralRequired: spec.clinicianReferralRequired,
+    clinicianReferralRequired:
+      spec.clinicianReferralRequired && !req.isEmergencyTemplatePath,
   });
   return {
     filtered: result.filtered,
