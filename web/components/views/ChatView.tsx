@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useEffect, useState } from "react";
-import { AlertTriangle, Phone, X, ChevronRight, Stethoscope } from "lucide-react";
+import { X, Stethoscope } from "lucide-react";
 import { MessageBubble } from "../chat/MessageBubble";
 import { HeroInput } from "../chat/HeroInput";
 import { TypingIndicator } from "../chat/TypingIndicator";
 import { TrustBar } from "../chat/TrustBar";
 import type { ChatMessage } from "@/lib/hooks/useChat";
-import { t, detectEmergencyKeywords, type SupportedLanguage } from "@/lib/i18n";
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface ChatViewProps {
   messages: ChatMessage[];
@@ -31,7 +31,6 @@ export function ChatView({
   onNavigateEmergency,
 }: ChatViewProps) {
   const [isListening, setIsListening] = useState(false);
-  const [showEmergencyBanner, setShowEmergencyBanner] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -39,14 +38,16 @@ export function ChatView({
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // Red-flag auto-detection on latest user message.
-  useEffect(() => {
-    if (messages.length === 0) return;
-    const last = messages[messages.length - 1];
-    if (last.role === "user" && detectEmergencyKeywords(last.content, language)) {
-      setShowEmergencyBanner(true);
-    }
-  }, [messages, language]);
+  // The persistent top-of-thread "This may be an emergency / Call 112"
+  // banner was removed. It was authored client-side from a fixed i18n
+  // template and fired as soon as the user typed an emergency keyword,
+  // which made the reply feel hardcoded (a wall of red instructions
+  // shown BEFORE the model had a chance to answer). The safety floor
+  // is still enforced server-side: when preCheck() classifies the
+  // turn as R5 the chat route weaves the emergency-template text into
+  // the bot's reply itself, so the user always sees the call-emergency
+  // guidance — just delivered conversationally as part of the bot's
+  // message, not pinned above it.
 
   // Read aloud the latest AI message.
   useEffect(() => {
@@ -104,35 +105,6 @@ export function ChatView({
 
   return (
     <>
-      {/* Red-flag emergency banner */}
-      {showEmergencyBanner && (
-        <div className="relative z-10 bg-danger-500 text-white p-4 flex items-center gap-3 animate-fade-up shadow-danger-glow">
-          <AlertTriangle size={24} className="flex-shrink-0" />
-          <div className="flex-1">
-            <p className="font-bold text-base">
-              {t("emergency_may_be", language)}
-            </p>
-            <p className="text-sm text-white/85">
-              {t("emergency_call_now", language)}
-            </p>
-          </div>
-          <a
-            href={`tel:${emergencyNumber}`}
-            className="px-5 py-2.5 bg-white text-danger-600 rounded-xl font-bold text-sm flex items-center gap-2 flex-shrink-0 hover:bg-white/90 transition-colors"
-          >
-            <Phone size={16} />
-            {t("emergency_call", language)} {emergencyNumber}
-          </a>
-          <button
-            onClick={() => setShowEmergencyBanner(false)}
-            className="text-white/75 hover:text-white p-1"
-            aria-label="Dismiss"
-          >
-            <X size={18} />
-          </button>
-        </div>
-      )}
-
       {/* Conversation area */}
       <div className="flex-1 overflow-y-auto scroll-smooth scroll-touch">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-mobile-nav">

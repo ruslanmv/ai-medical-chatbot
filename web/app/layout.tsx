@@ -8,27 +8,72 @@ const inter = Inter({
   variable: "--font-sans",
 });
 
+// Canonical site URL. NEXT_PUBLIC_SITE_URL lets us override per env
+// (preview deployments, staging). Falls back to the production domain.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ||
+  "https://ai-medical-chabot.com";
+
+const SITE_NAME = "MedOS";
+const SITE_TITLE = "MedOS — your worldwide medical assistant";
+const SITE_DESCRIPTION_LONG =
+  "Tell MedOS what's bothering you. Instant, private, multilingual health guidance aligned with WHO, CDC, and NHS.";
+const SITE_DESCRIPTION_SHORT =
+  "Private, multilingual health guidance aligned with WHO, CDC, and NHS — available 24/7.";
+
 export const metadata: Metadata = {
-  title: "MedOS — your worldwide medical assistant",
-  description:
-    "Tell MedOS what's bothering you. Instant, private, multilingual health guidance aligned with WHO, CDC, and NHS.",
+  // metadataBase is required for `openGraph.url` and `openGraph.images`
+  // to resolve relative URLs (Next.js emits a warning at build otherwise
+  // and falls back to localhost, which kills link previews in
+  // production).
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION_LONG,
   keywords: ["medical AI", "healthcare", "chatbot", "telemedicine", "WHO", "CDC"],
   authors: [{ name: "MedOS Team" }],
+  applicationName: SITE_NAME,
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     shortcut: "/favicon.svg",
+    apple: "/apple-touch-icon.png",
+  },
+  alternates: {
+    canonical: "/",
   },
   openGraph: {
-    title: "MedOS — your worldwide medical assistant",
-    description:
-      "Private, multilingual health guidance aligned with WHO, CDC, and NHS — available 24/7.",
     type: "website",
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION_SHORT,
+    url: SITE_URL,
+    locale: "en_US",
+    // Image is supplied by app/opengraph-image.tsx (dynamic), which
+    // Next.js automatically wires into <meta property="og:image"> when
+    // present. Listing it here is redundant but makes the intent
+    // explicit and gives explorers like Twitter's card validator a
+    // direct hit.
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "MedOS — your worldwide medical assistant",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION_SHORT,
+    images: ["/twitter-image"],
+    // No personal Twitter handle to avoid stale references; can be
+    // added once a brand account exists.
   },
   robots: { index: true, follow: true },
   appleWebApp: {
     capable: true,
-    title: "MedOS",
+    title: SITE_NAME,
   },
   other: {
     "mobile-web-app-capable": "yes",

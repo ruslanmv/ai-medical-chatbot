@@ -73,8 +73,25 @@ jobs:
           echo "Push failed after 4 retries" && exit 1
           echo "::endgroup::"
 
+      # GitHub Actions forbids referencing `secrets.*` directly in an
+      # `if:` expression — the parser flags it as
+      # "Unrecognized named-value: 'secrets'". The supported pattern is
+      # to surface the secret's presence as a boolean step output and
+      # gate the protected step on that.
+      - name: Check if HF_TOKEN_INFERENCE is configured
+        id: has_inference_token
+        env:
+          HF_TOKEN_INFERENCE: ${{ secrets.HF_TOKEN_INFERENCE }}
+        run: |
+          if [ -n "$HF_TOKEN_INFERENCE" ]; then
+            echo "value=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+            echo "HF_TOKEN_INFERENCE secret not set; skipping Space-secret upload."
+          fi
+
       - name: Set HF_TOKEN_INFERENCE secret on Space
-        if: ${{ secrets.HF_TOKEN_INFERENCE != '' }}
+        if: steps.has_inference_token.outputs.value == 'true'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_TOKEN_INFERENCE: ${{ secrets.HF_TOKEN_INFERENCE }}
