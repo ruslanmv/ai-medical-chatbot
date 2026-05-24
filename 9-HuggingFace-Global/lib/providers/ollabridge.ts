@@ -30,20 +30,28 @@ function getClient(): OpenAI {
     'https://ruslanmv-ollabridge.hf.space';
   const apiKey = configKey || process.env.OLLABRIDGE_API_KEY || 'not-required';
 
-  // Timeout: 12s.
+  // Timeout: 45s.
   //
   // OllaBridge is now the SECONDARY provider (Groq is primary). When a
   // request reaches OllaBridge, Groq has already failed or is unconfigured,
   // and we still have to leave headroom for HuggingFace as the tertiary
   // fallback inside the same edge-function budget (~50s on Vercel /
-  // ~60s on HF Spaces). 12s comfortably covers the OllaBridge cloud
-  // rungs (~0.5-3s each) and a fast local-ollama path, but cuts off
-  // pathological 30s+ local generations that used to burn the entire
-  // budget and starve the HF fallback.
+  // ~60s on HF Spaces).
+  //
+  // Raised from 12s → 45s because the Cloud's own fallback chain
+  // (HF 402 cascade → local-ollama on the Space) legitimately needs
+  // ~24s end-to-end when the free HF tier is exhausted — observed in
+  // production logs after the admin-issued API key flow shipped:
+  //   provider.ollabridge.fail.nonstream {"error":"Request timed out."}
+  //   …while the Cloud server completed in 24.198s via local-ollama.
+  // 45s comfortably covers that worst case and still leaves ~15s for
+  // the HF tertiary fallback inside the 60s HF Space budget. Healthy
+  // routes (Groq/Gemini on the Cloud) still respond in <1s — the
+  // ceiling only matters when the Cloud has to cascade.
   return new OpenAI({
     baseURL: `${baseURL.replace(/\/+$/, '')}/v1`,
     apiKey,
-    timeout: 12000,
+    timeout: 45000,
     maxRetries: 0,
   });
 }
@@ -79,8 +87,9 @@ export async function streamWithOllaBridge(
     // 512 tokens: enough room for the structured OUTPUT_CONTRACT response
     // (Assessment / Red flags / Possible causes / What to do now / When
     // to seek care / Sources). 256 was truncating mid-section on the
-    // primary path. Inside the 12s provider timeout this stays well
-    // within budget on cloud OllaBridge rungs (~150-400 tok/s).
+    // primary path. Inside the 45s provider timeout this stays well
+    // within budget on cloud OllaBridge rungs (~150-400 tok/s) and
+    // tolerates the worst-case local-ollama fallback (~25s).
     max_tokens: 512,
     temperature: 0.4,
   });
@@ -119,8 +128,9 @@ export async function chatWithOllaBridge(
   const response = await client.chat.completions.create({
     model,
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
-    // 512 tokens: enough for the structured OUTPUT_CONTRACT response
-    // without overrunning the 12s provider timeout on cloud rungs.
+    // 512 tokens: enough for the structured OUTPUT_CONTRACT response.
+    // Bounded by the 45s provider timeout above; healthy cloud rungs
+    // finish in <1s, worst-case local-ollama fallback ~25s.
     max_tokens: 512,
     temperature: 0.4,
   });

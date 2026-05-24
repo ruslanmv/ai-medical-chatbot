@@ -286,8 +286,18 @@ export function Sidebar({
                 <User2 size={20} />
               </button>
             ) : (
+              /* Enterprise-grade guest panel.
+               *
+               * The previous design surfaced Sign up / Log in but hid
+               * Language / Help / Settings / About behind a `...` icon
+               * — a mobile-overflow idiom that read as unfinished for a
+               * logged-out healthcare app where trust signals matter.
+               * Secondary actions are now visible as small text links
+               * directly beneath the CTAs, matching the ChatGPT /
+               * Claude / Gemini logged-out pattern. The pop-up menu
+               * (bottomMenuOpen) is still wired for the authenticated
+               * branch above and is untouched here. */
               <div className="space-y-2">
-                {/* Subtle value message — not a gate, a benefit */}
                 <div className="px-3 py-2">
                   <p className="text-[11px] text-ink-muted leading-snug">
                     Sign up to sync your health data across all your devices.
@@ -305,12 +315,33 @@ export function Sidebar({
                 >
                   Log in
                 </button>
-                <button
-                  onClick={() => setBottomMenuOpen(!bottomMenuOpen)}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 text-ink-subtle hover:text-ink-base text-xs transition-colors"
-                >
-                  <MoreHorizontal size={14} />
-                </button>
+
+                {/* Secondary actions — small text links, always visible.
+                 * Mirrors the bottomMenuOpen popup's content but inline. */}
+                <div className="pt-1.5 mt-1 border-t border-line/40 space-y-0.5">
+                  <GuestLink
+                    icon={Globe}
+                    label={t("settings_language", language)}
+                    detail={language.toUpperCase()}
+                    onClick={() => navTo("settings")}
+                  />
+                  <GuestLink
+                    icon={HelpCircle}
+                    label="Help"
+                    onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot/issues", "_blank")}
+                  />
+                  <GuestLink
+                    icon={Settings}
+                    label={t("nav_settings", language)}
+                    onClick={() => navTo("settings")}
+                  />
+                  <GuestLink
+                    icon={Info}
+                    label="About MedOS"
+                    detail="v1.0"
+                    onClick={() => setShowAbout(true)}
+                  />
+                </div>
               </div>
             )
           )}
@@ -377,6 +408,40 @@ function MenuItem({
         </kbd>
       )}
       {external && <ExternalLink size={12} className="text-ink-subtle" />}
+    </button>
+  );
+}
+
+/**
+ * Compact text link used in the guest sidebar's secondary-actions list.
+ *
+ * Visually quieter than MenuItem (smaller text, no surface-2 hover fill,
+ * tighter row height) because these are always visible — they shouldn't
+ * pull attention away from the Sign up / Log in CTAs above. ChatGPT /
+ * Claude / Gemini use the same "small text link list" pattern in their
+ * logged-out sidebars.
+ */
+function GuestLink({
+  icon: Icon,
+  label,
+  detail,
+  onClick,
+}: {
+  icon: any;
+  label: string;
+  detail?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-xs text-ink-muted hover:text-ink-base hover:bg-surface-2/60 transition-colors"
+    >
+      <Icon size={13} className="text-ink-subtle flex-shrink-0" />
+      <span className="flex-1 text-left">{label}</span>
+      {detail && (
+        <span className="text-[10px] text-ink-subtle font-mono">{detail}</span>
+      )}
     </button>
   );
 }
