@@ -2,19 +2,13 @@ import OpenAI from 'openai';
 import type { ChatMessage, ProviderResponse } from './index';
 import { loadConfig } from '@/lib/server-config';
 
-const MEDICAL_SYSTEM_PROMPT = `You are MedOS, a knowledgeable and empathetic AI medical assistant. Your role is to provide helpful, accurate general health information while being clear about your limitations.
-
-IMPORTANT GUIDELINES:
-- Always clarify that you provide general health information, NOT medical diagnoses
-- Encourage users to consult healthcare professionals for specific medical concerns
-- Be empathetic and supportive in your responses
-- If the user describes emergency symptoms (chest pain, difficulty breathing, severe bleeding, suicidal thoughts), IMMEDIATELY advise them to call their local emergency number
-- Respond in the same language the user writes in
-- Use clear, simple language accessible to people of all health literacy levels
-- When discussing medications, always recommend consulting a pharmacist or doctor
-- Never prescribe medications or provide dosage instructions
-- Cite general medical knowledge without making definitive claims
-- Be culturally sensitive in your responses`;
+// NOTE: the medical system prompt is built once in app/api/chat/route.ts via
+// buildMedicalSystemPrompt() and passed in as messages[0]. We deliberately
+// do NOT prepend a second, shorter prompt here — stacking two system roles
+// caused the model to see contradictory guidance (the route's structured
+// OUTPUT_CONTRACT vs. the simpler bullet list this provider used to inject),
+// and on small ollama models it triggered the OUTPUT_CONTRACT to be
+// dropped entirely. The provider is now content-neutral.
 
 function getClient(): OpenAI {
   // Prefer admin-configured values (from /api/admin/config PUT) so updates
@@ -36,28 +30,20 @@ function getClient(): OpenAI {
     'https://ruslanmv-ollabridge.hf.space';
   const apiKey = configKey || process.env.OLLABRIDGE_API_KEY || 'not-required';
 
-  // Why 45s?
+  // Timeout: 12s.
   //
-  // The OllaBridge chain has four latency regimes:
-  //   * Cloud rung succeeds:                    ~0.5-3s
-  //   * Cloud rung fails fast (401/402/403):    ~100ms each, chain
-  //                                              of 9 rungs ≈ 1s
-  //   * local-ollama fallback (qwen2.5:0.5b on CPU-basic Space):
-  //       short prompt:                          ~13s
-  //       MediBot's full 3700-char system prompt: ~28s
-  //                                              (KV cache fill)
-  //   * Everything dead, OllaBridge raises a structured 503: ~1s
-  //
-  // 8s was too tight (cut off real cloud answers).
-  // 25s covered cloud answers but not the slow local-ollama
-  // fallback, so emergency cases lost their LLM follow-up.
-  // 45s covers the worst-case local-ollama path while leaving
-  // ~5s of the Vercel-side 50s edge budget for the rest of
-  // route.ts (RAG, safety checks, audit log).
+  // OllaBridge is now the SECONDARY provider (Groq is primary). When a
+  // request reaches OllaBridge, Groq has already failed or is unconfigured,
+  // and we still have to leave headroom for HuggingFace as the tertiary
+  // fallback inside the same edge-function budget (~50s on Vercel /
+  // ~60s on HF Spaces). 12s comfortably covers the OllaBridge cloud
+  // rungs (~0.5-3s each) and a fast local-ollama path, but cuts off
+  // pathological 30s+ local generations that used to burn the entire
+  // budget and starve the HF fallback.
   return new OpenAI({
     baseURL: `${baseURL.replace(/\/+$/, '')}/v1`,
     apiKey,
-    timeout: 45000,
+    timeout: 12000,
     maxRetries: 0,
   });
 }
@@ -86,23 +72,17 @@ export async function streamWithOllaBridge(
     })}`,
   );
 
-  const allMessages: ChatMessage[] = [
-    { role: 'system', content: MEDICAL_SYSTEM_PROMPT },
-    ...messages,
-  ];
-
   const stream = await client.chat.completions.create({
     model,
-    messages: allMessages,
+    messages: messages.map((m) => ({ role: m.role, content: m.content })),
     stream: true,
-    // 256 keeps the worst-case local-ollama path (~20 tok/s on
-    // cpu-basic Spaces) under ~13s. 1000 was burning the entire
-    // 45s budget on a single answer (we saw the chat-pain test
-    // generate 1640 tokens in 80s before this cap). Real medical
-    // answers fit comfortably in 256 tokens; the consumer-side UI
-    // can request more in a follow-up message.
-    max_tokens: 256,
-    temperature: 0.7,
+    // 512 tokens: enough room for the structured OUTPUT_CONTRACT response
+    // (Assessment / Red flags / Possible causes / What to do now / When
+    // to seek care / Sources). 256 was truncating mid-section on the
+    // primary path. Inside the 12s provider timeout this stays well
+    // within budget on cloud OllaBridge rungs (~150-400 tok/s).
+    max_tokens: 512,
+    temperature: 0.4,
   });
 
   const encoder = new TextEncoder();
@@ -136,22 +116,13 @@ export async function chatWithOllaBridge(
 ): Promise<ProviderResponse> {
   const client = getClient();
 
-  const allMessages: ChatMessage[] = [
-    { role: 'system', content: MEDICAL_SYSTEM_PROMPT },
-    ...messages,
-  ];
-
   const response = await client.chat.completions.create({
     model,
-    messages: allMessages,
-    // 256 keeps the worst-case local-ollama path (~20 tok/s on
-    // cpu-basic Spaces) under ~13s. 1000 was burning the entire
-    // 45s budget on a single answer (we saw the chat-pain test
-    // generate 1640 tokens in 80s before this cap). Real medical
-    // answers fit comfortably in 256 tokens; the consumer-side UI
-    // can request more in a follow-up message.
-    max_tokens: 256,
-    temperature: 0.7,
+    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    // 512 tokens: enough for the structured OUTPUT_CONTRACT response
+    // without overrunning the 12s provider timeout on cloud rungs.
+    max_tokens: 512,
+    temperature: 0.4,
   });
 
   return {

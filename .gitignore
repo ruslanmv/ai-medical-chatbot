@@ -23,6 +23,13 @@ eggs/
 .eggs/
 lib/
 lib64/
+# Re-include TypeScript `lib/` trees that the Python-style `lib/` rule
+# above would otherwise hide. Without these exceptions new files under
+# any Next.js app's lib/ directory silently fail to be tracked by git.
+!9-HuggingFace-Global/lib/
+!9-HuggingFace-Global/lib/**
+!web/lib/
+!web/lib/**
 parts/
 sdist/
 var/
