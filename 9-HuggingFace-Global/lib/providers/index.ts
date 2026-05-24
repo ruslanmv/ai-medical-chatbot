@@ -7,6 +7,11 @@ import {
   streamWithHuggingFace,
   chatWithHuggingFace,
 } from './huggingface-direct';
+import {
+  streamWithGroq,
+  chatWithGroq,
+  isGroqConfigured,
+} from './groq';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -45,16 +50,17 @@ function log(stage: string, details?: Record<string, unknown>) {
 
 /**
  * Stream chat completion with automatic fallback chain:
- *   1. OllaBridge-Cloud — only if admin has set OllaBridge URL.
- *   2. Direct HuggingFace Inference API — 12-model cascade.
+ *   1. Groq Cloud (llama-3.3-70b-versatile) — primary when GROQ_API_KEY is set.
+ *      Sub-second first-token latency, generous free tier, follows the
+ *      structured medical output contract reliably.
+ *   2. OllaBridge-Cloud — only if admin has set OllaBridge URL. Acts as a
+ *      warm secondary; covers Groq outages and rate-limit spikes.
+ *   3. Direct HuggingFace Inference API — 9-model cascade. Kept for
+ *      compatibility but most rungs currently return 402 on the free tier.
  *
- * If both providers fail, throws AllProvidersUnavailableError so the
- * chat route can surface a clean "service unavailable" message to the
- * user. There is intentionally NO third "cached FAQ" fallback: a
- * static keyword dictionary that pretends to be the AI is worse than
- * an honest error (users acted on it as if it were a real answer, and
- * its keyword scoring routinely matched unrelated topics, e.g.
- * "my child has fever" surfacing a malaria preamble).
+ * If every provider fails, throws AllProvidersUnavailableError. There is
+ * intentionally NO "cached FAQ" fallback: a keyword dictionary speaking
+ * in the voice of a medical AI is worse than an honest error.
  *
  * Each step logs its decision so the workflow can be traced from the
  * HF Space run logs.
@@ -75,7 +81,32 @@ export async function streamWithFallback(
 
   const failures: string[] = [];
 
-  // Step 1 — OllaBridge (only when the admin has set OLLABRIDGE_URL).
+  // Step 1 — Groq (primary). Skipped silently when no key is set so
+  // self-hosters who only run OllaBridge are not penalised.
+  if (isGroqConfigured()) {
+    const tg = Date.now();
+    try {
+      const stream = await streamWithGroq(messages, model);
+      log('provider.groq.ok', {
+        requestId,
+        latencyMs: Date.now() - tg,
+        totalMs: Date.now() - startedAt,
+      });
+      return stream;
+    } catch (error: any) {
+      const msg = String(error?.message || error).slice(0, 200);
+      log('provider.groq.fail', {
+        requestId,
+        latencyMs: Date.now() - tg,
+        error: msg,
+      });
+      failures.push(`groq: ${msg}`);
+    }
+  } else {
+    log('provider.groq.skipped', { requestId, reason: 'not configured' });
+  }
+
+  // Step 2 — OllaBridge (only when the admin has set OLLABRIDGE_URL).
   if (isOllaBridgeConfigured()) {
     const t0 = Date.now();
     try {
@@ -99,7 +130,7 @@ export async function streamWithFallback(
     log('provider.ollabridge.skipped', { requestId, reason: 'not configured' });
   }
 
-  // Step 2 — HuggingFace Inference (cascades internally through 12 models).
+  // Step 3 — HuggingFace Inference (cascades internally through 9 models).
   const t1 = Date.now();
   try {
     const stream = await streamWithHuggingFace(messages);
@@ -143,6 +174,30 @@ export async function chatWithFallback(
   log('request.start.nonstream', { requestId, model });
 
   const failures: string[] = [];
+
+  // Step 1 — Groq (primary).
+  if (isGroqConfigured()) {
+    const tg = Date.now();
+    try {
+      const resp = await chatWithGroq(messages, model);
+      log('provider.groq.ok.nonstream', {
+        requestId,
+        latencyMs: Date.now() - tg,
+        model: resp.model,
+      });
+      return resp;
+    } catch (error: any) {
+      const msg = String(error?.message || error).slice(0, 200);
+      log('provider.groq.fail.nonstream', {
+        requestId,
+        latencyMs: Date.now() - tg,
+        error: msg,
+      });
+      failures.push(`groq: ${msg}`);
+    }
+  } else {
+    log('provider.groq.skipped.nonstream', { requestId });
+  }
 
   if (isOllaBridgeConfigured()) {
     try {

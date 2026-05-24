@@ -219,57 +219,44 @@ export async function POST(request: NextRequest) {
     // provider, run postCheck(), and re-emit the filtered text as a single
     // SSE chunk so the existing client SSE parser keeps working.
     //
-    // This adds end-to-end latency relative to mid-stream display, but it is
-    // the only honest way to enforce the safety contract (SAFETY.md). UX
-    // optimisations (server-side chunking of the filtered output) can
-    // happen in a follow-up without changing the safety guarantee.
-    // Call the provider chain.
+    // ALL risk classes — including R5 — call the LLM. The deterministic
+    // banner is still authored by the safety engine and is prepended below;
+    // the LLM only ADDS clinical reasoning AFTER the banner (next steps,
+    // what to tell EMS, what to bring). This eliminates the "every
+    // chest-pain question gets the same canned reply" complaint while
+    // keeping the safety floor non-negotiable: if the LLM returns nothing,
+    // or returns text that the post-filter strips, the banner stands alone.
     //
-    // For R5 emergencies (chest pain, stroke, anaphylaxis, severe
-    // bleeding, etc.) we deliberately SKIP the LLM and ship only the
-    // deterministic, clinically-authored safety floor. Reasons:
-    //   1. The free fallback chain currently lands on qwen2.5:0.5b, a
-    //      tiny CPU model that, in real traffic, ignored the "keep it
-    //      under 6 sentences" instruction and generated ~1700 tokens
-    //      of unstructured prose — including incorrect advice like
-    //      "don't lie down" and "take shallow breaths" for a
-    //      suspected MI.
-    //   2. An enterprise medical product cannot rely on a 0.5B model
-    //      to author urgent guidance. The deterministic template is
-    //      reviewable by clinicians and changes through PR review.
-    //   3. The safety floor already routes the user to emergency
-    //      services and lists do-while-waiting steps. The LLM was
-    //      adding noise, not value.
-    // Lower-risk turns (R0–R4) still call the LLM as before; their
-    // answers are not life-critical and a verbose model is forgivable.
+    // For emergencies, the system-prompt augmentation ([EMERGENCY SAFETY
+    // FLOOR] block in Step 4 above) tells the model that the banner has
+    // already been shown and constrains it to ≤6 sentences of additive
+    // advice. With Groq llama-3.3-70b-versatile as primary this is
+    // reliable; the old failure mode (qwen2.5:0.5b ignoring length caps
+    // and inventing dangerous advice) is no longer in the hot path.
     let providerResponse: { content: string; provider: string; model: string };
-    if (isEmergency) {
-      console.log(
-        `[Chat] route.provider.skipped reason=R5_emergency_deterministic_floor`,
+    try {
+      providerResponse = await chatWithFallback(augmentedMessages, model);
+    } catch (chainErr: any) {
+      const isUnavailable =
+        chainErr instanceof AllProvidersUnavailableError;
+      console.warn(
+        `[Chat] route.provider.degraded reason=${
+          isUnavailable ? 'all_providers_failed' : 'unexpected_error'
+        } emergency=${isEmergency} msg=${String(
+          chainErr?.message || chainErr,
+        ).slice(0, 200)}`,
       );
-      providerResponse = {
-        content: '',                    // banner is the entire answer
-        provider: 'safety-engine',
-        model: 'emergency-template',
-      };
-    } else {
-      // Non-emergency turn: call the LLM. On total chain failure we
-      // do NOT raise a 5xx — the API should always return 200 with a
-      // graceful, conversational degradation message. Returning errors
-      // from a medical chatbot reads as broken and trains users to
-      // give up; a polite "I can't reach the AI right now — please try
-      // again in a moment" keeps the thread alive and is the
-      // industry-standard zero-downtime behaviour.
-      try {
-        providerResponse = await chatWithFallback(augmentedMessages, model);
-      } catch (chainErr: any) {
-        const isUnavailable =
-          chainErr instanceof AllProvidersUnavailableError;
-        console.warn(
-          `[Chat] route.provider.degraded reason=${
-            isUnavailable ? 'all_providers_failed' : 'unexpected_error'
-          } msg=${String(chainErr?.message || chainErr).slice(0, 200)}`,
-        );
+      if (isEmergency) {
+        // Safety floor never disappears. If every provider is down on an
+        // emergency turn, the deterministic banner alone is the answer —
+        // it already routes the user to EMS and lists do-while-waiting
+        // steps. No conversational hedge is appropriate here.
+        providerResponse = {
+          content: '',
+          provider: 'safety-engine',
+          model: 'emergency-template',
+        };
+      } else {
         providerResponse = {
           content:
             "I'm having trouble reaching the medical AI right now. " +
