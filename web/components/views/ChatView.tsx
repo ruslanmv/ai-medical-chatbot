@@ -19,6 +19,10 @@ interface ChatViewProps {
   voiceEnabled?: boolean;
   readAloud?: boolean;
   onNavigateEmergency?: () => void;
+  /** Fired when the user taps a button inside a card (greeting,
+   *  profile_gate, …). Parents typically synthesize a follow-up user
+   *  message for intent chips, or navigate for routing actions. */
+  onCardAction?: (action: import("@/lib/medical-flow/types").Action, card: import("@/lib/medical-flow/types").Card) => void;
   /** Set by the parent right after the user finishes the EHR wizard with
    *  "Save & continue chat". Renders a one-time dismissible card that names
    *  what the AI now knows about the patient — the explicit payoff signal
@@ -39,6 +43,7 @@ export function ChatView({
   voiceEnabled = true,
   readAloud = false,
   onNavigateEmergency,
+  onCardAction,
   profileWelcome = false,
   onDismissProfileWelcome,
   ehrProfile,
@@ -155,7 +160,23 @@ export function ChatView({
             <MessageBubble
               key={msg.id}
               message={msg}
-              showSourceChip={msg.role === "ai" && i <= 1}
+              /* Source chip is a clinical-trust signal — only show
+               * it when the assistant's reply ACTUALLY gives medical
+               * guidance. Three suppressions:
+               *   1. Card-only turns (greeting, profile_gate, intake)
+               *      carry their own framing — chip would feel decorative.
+               *   2. Pure greetings ("Hi, how can I help?") — chip is
+               *      misleading there.
+               *   3. After the second AI turn — the chip's job is to
+               *      establish trust once, not annotate every reply. */
+              showSourceChip={
+                msg.role === "ai" &&
+                i <= 1 &&
+                !msg.content.includes("[card:") &&
+                !/^\s*(hi|hello|hey)[\s,]/i.test(msg.content) &&
+                msg.content.length > 80
+              }
+              onCardAction={onCardAction}
             />
           ))}
 

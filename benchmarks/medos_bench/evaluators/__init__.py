@@ -17,6 +17,7 @@ from .brevity import BrevityEvaluator, FollowUpQuestionEvaluator
 from .bubble_format import BubbleFormatEvaluator
 from .personalization import PersonalizationEvaluator
 from .errors import NoErrorEvaluator
+from .card_flow import CardFlowEvaluator, CareLevelClassificationEvaluator
 
 
 ALL_EVALUATORS: list[Evaluator] = [
@@ -28,6 +29,10 @@ ALL_EVALUATORS: list[Evaluator] = [
     FollowUpQuestionEvaluator(),
     BubbleFormatEvaluator(),
     PersonalizationEvaluator(),
+    # MedOS-structural-moat evaluators — added in Batch 4. ChatGPT
+    # cannot ship these by design.
+    CardFlowEvaluator(),
+    CareLevelClassificationEvaluator(),
 ]
 
 __all__ = ["Evaluator", "ALL_EVALUATORS"]

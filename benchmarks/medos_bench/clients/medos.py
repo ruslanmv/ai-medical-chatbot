@@ -15,6 +15,7 @@ and timestamp deterministically.
 
 from __future__ import annotations
 
+import json
 import time
 
 import httpx
@@ -80,21 +81,41 @@ class MedOSClient(ChatClient):
                     system=self.name,
                     error=f"HTTP {res.status_code}: {res.text[:200]}",
                 )
-            data = res.json()
-            # The route returns either `{ content }` (non-streaming) or
-            # `{ choices: [{ message: { content } }] }` depending on
-            # which provider answered. Handle both shapes defensively.
-            content = (
-                data.get("content")
-                or (data.get("choices") or [{}])[0].get("message", {}).get("content", "")
-                or data.get("text", "")
-                or ""
-            )
+            # The chat route ALWAYS returns SSE (text/event-stream) even
+            # when stream:false — each line is `data: {...JSON delta...}`
+            # terminated by `data: [DONE]`. We accumulate every chunk's
+            # `choices[0].delta.content` (the format both card and bubble
+            # paths emit) into the full reply, then return that.
+            full_content = ""
+            model_seen = ""
+            for raw_line in (res.text or "").splitlines():
+                line = raw_line.strip()
+                if not line.startswith("data:"):
+                    continue
+                payload = line[len("data:") :].strip()
+                if payload == "[DONE]" or not payload:
+                    continue
+                try:
+                    chunk = json.loads(payload)
+                except json.JSONDecodeError:
+                    # Non-JSON SSE line (rare — diagnostic / keep-alive).
+                    # Skip rather than fail the whole request.
+                    continue
+                # Three shapes seen in production:
+                #   { choices:[{delta:{content:"..."}}] }      ← LLM stream
+                #   { choices:[{delta:{content:"...card..."}}]}← card emitter
+                #   { content: "..." }                          ← rare fallback
+                delta = (chunk.get("choices") or [{}])[0].get("delta", {})
+                piece = delta.get("content") or chunk.get("content") or ""
+                if piece:
+                    full_content += piece
+                if not model_seen and chunk.get("model"):
+                    model_seen = chunk["model"]
             return Reply(
-                content=content,
+                content=full_content,
                 latency_ms=latency_ms,
                 system=self.name,
-                model=data.get("model", "medos"),
+                model=model_seen or "medos",
             )
         except Exception as e:
             latency_ms = int((time.monotonic() - start) * 1000)

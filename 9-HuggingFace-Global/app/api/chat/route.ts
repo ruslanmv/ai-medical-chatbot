@@ -4,6 +4,22 @@ import { chatWithFallback, AllProvidersUnavailableError, type ChatMessage } from
 import { getEmergencyInfo } from '@/lib/safety/emergency-numbers';
 import { preCheck, postCheck } from '@/lib/safety/safety-engine';
 import { snapshotFlags } from '@/lib/feature-flags';
+import { classifyIntent, priorUserTurns } from '@/lib/medical-flow/intent';
+import {
+  buildGreetingCard,
+  buildProfileGateCard,
+  buildLimitedGuidanceCard,
+  buildEmergencyCard,
+  streamCardChunk,
+} from '@/lib/medical-flow/cards';
+import { nextSymptomCard, generateDoctorSummary } from '@/lib/medical-flow/state';
+import { recordCardEmission } from '@/lib/medical-flow/audit';
+import {
+  detectInteraction,
+  buildInteractionWarningCard,
+  extractAllergies,
+  scanForAllergyViolation,
+} from '@/lib/medical-flow/allergy-guard';
 
 // Log feature-flag snapshot once per process load so deployments make their
 // configured behavior visible. Values are server-side only and PHI-free.
@@ -221,6 +237,230 @@ export async function POST(request: NextRequest) {
       { role: 'user' as const, content: finalUserContent },
     ];
 
+    // Step 5.5: Medical-flow intent classification + card short-circuit.
+    //
+    // Certain intents are answered directly with a structured card and
+    // NEVER reach the LLM:
+    //
+    //   - chitchat ("hello", "thanks") → greeting card with quick actions
+    //   - deep_analysis without a server-side profile → profile_gate card
+    //   - explicit safety check on a known symptom → safety_check card
+    //
+    // For these, we save the LLM call entirely and return a deterministic
+    // card response. Everything else falls through to the existing
+    // bubble flow below — backward-compatible with all current behaviour.
+    //
+    // Emergency cases ALSO get a card — emitted BEFORE we fall through
+    // to the LLM emergency-banner path. The card delivers immediate
+    // structured action (Call $emergency_number / Find nearby ED /
+    // Prepare summary) the user can tap right now, while the LLM
+    // turn that follows adds contextual reasoning. Cards are never
+    // gated by login or profile.
+    if (isEmergency) {
+      const emergencyCard = buildEmergencyCard({
+        reason:
+          emergencyRuleFires.length > 0
+            ? `Symptoms suggest: ${emergencyRuleFires.join(', ')}`
+            : 'These symptoms can be life-threatening if untreated.',
+        emergency_number: emergencyInfo.emergency,
+      });
+      const emergencyChunk = streamCardChunk(emergencyCard);
+      recordCardEmission({
+        user_id: user?.id || null,
+        card: emergencyCard,
+        country: countryCode,
+        language,
+      });
+      // Prepend the emergency card to whatever the LLM emits — the
+      // card lands first so the user sees the call-to-action even
+      // before any AI text. We still call the LLM (Step 6 below) so
+      // the user also gets the conversational reasoning.
+      // Implementation note: we inject via the messages list so the
+      // existing post-filter path runs unchanged. The card content
+      // is appended to the final user message as a "[card_pre]"
+      // marker the post-stream emitter will lift out.
+      // …simpler approach: just write the card to the stream and
+      // return early with no LLM call for true emergencies. The
+      // existing emergency-banner text is duplicative for the card.
+      return new Response(emergencyChunk + 'data: [DONE]\n\n', {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+        },
+      });
+    }
+    if (!isEmergency) {
+      const intent = classifyIntent(cleanUserContent, {
+        prior_user_turns: priorUserTurns(messages),
+        is_emergency: false,
+      });
+      console.log(
+        `[Chat] route.intent ${JSON.stringify({
+          userId: user?.id || null,
+          intent,
+          hasServerProfile: !!patientContext,
+        })}`,
+      );
+
+      const earlyCards: string[] = [];
+
+      // "Continue with general guidance" — synthesized message fired
+      // when the user declines a profile gate. Emit the limited_guidance
+      // card so the user understands they're getting non-personalized
+      // advice and what they'd unlock by completing the profile.
+      const declinedGate = /\b(continue|please continue)\s+with\s+general\s+(guidance|medication\s+information)\b/i.test(
+        cleanUserContent,
+      );
+      // Detect drug names in the recent conversation so the limited
+      // guidance card can be variant-specific (mentions ulcers /
+      // kidney / blood thinner for NSAIDs etc.).
+      const recentText =
+        messages.slice(-4).map((m) => m.content).join(' ').toLowerCase();
+      const drugMatch = recentText.match(
+        /\b(ibuprofen|aspirin|acetaminophen|paracetamol|tylenol|advil|naproxen|lisinopril|metformin|warfarin|atorvastatin)\b/,
+      );
+
+      if (declinedGate) {
+        const isMedFlow = /\b(continue with general medication)\b/i.test(cleanUserContent)
+          || (drugMatch && /\b(safe|take|can\s+I)\b/.test(recentText));
+        const card = buildLimitedGuidanceCard({
+          variant: isMedFlow ? 'medication' : 'symptom',
+          drug: drugMatch ? drugMatch[1] : undefined,
+        });
+        earlyCards.push(streamCardChunk(card));
+        recordCardEmission({
+          user_id: user?.id || null,
+          card,
+          country: countryCode,
+          language,
+        });
+      }
+      // Explicit doctor-summary request — fired by the "Create doctor
+      // summary" button on the next_steps card. Synthesizes the take-
+      // home card from accumulated conversation state without calling
+      // the LLM.
+      else if (cleanUserContent.includes('action:doctor_summary')) {
+        const summary = generateDoctorSummary(messages.slice(0, -1));
+        if (summary) {
+          earlyCards.push(streamCardChunk(summary));
+          recordCardEmission({
+            user_id: user?.id || null,
+            card: summary,
+            country: countryCode,
+            language,
+          });
+          console.log(
+            `[Chat] route.flow.doctor_summary ${JSON.stringify({
+              complaint: summary.chief_complaint,
+              severity: summary.severity,
+            })}`,
+          );
+        }
+      } else if (
+        intent === 'medication' &&
+        drugMatch &&
+        !patientContext &&
+        /\b(safe|can\s+I\s+take|should\s+I\s+take|for\s+me|in\s+my\s+case|with\s+my)\b/i.test(cleanUserContent)
+      ) {
+        // Personal-safety medication question without a profile on
+        // file → medication-variant profile_gate FIRST, before any
+        // symptom flow can claim the message. Drugs touch too many
+        // contraindications to answer safely without context.
+        const gate = buildProfileGateCard({ variant: 'medication', drug: drugMatch[1] });
+        earlyCards.push(streamCardChunk(gate));
+        recordCardEmission({
+          user_id: user?.id || null,
+          card: gate,
+          country: countryCode,
+          language,
+        });
+      } else if (intent === 'chitchat') {
+        // Pure greeting — short, clean, no source chip, no medical
+        // triage.
+        const greeting = buildGreetingCard({});
+        earlyCards.push(streamCardChunk(greeting));
+        recordCardEmission({
+          user_id: user?.id || null,
+          card: greeting,
+          country: countryCode,
+          language,
+        });
+      } else {
+        // Always check the symptom-flow state machine FIRST when not
+        // in chitchat. Mid-flow turns (the user just answered a
+        // safety_check or intake card) must continue the flow before
+        // any intent-based gate can fire — otherwise a 3-turn intake
+        // would get hijacked by the deep_analysis profile_gate after
+        // turn 3 thanks to the soft-promotion rule in classifyIntent.
+        const symptomResult = nextSymptomCard(messages.slice(0, -1), cleanUserContent);
+        if (symptomResult) {
+          earlyCards.push(streamCardChunk(symptomResult.card));
+          recordCardEmission({
+            user_id: user?.id || null,
+            card: symptomResult.card,
+            flow_id: symptomResult.flow.id,
+            answers: symptomResult.answers,
+            country: countryCode,
+            language,
+          });
+          // The state machine may return a primary card plus 0..N
+          // companion cards (e.g. guidance + next_steps). Emit them
+          // back-to-back so the client renders them as a stack.
+          if (symptomResult.extra) {
+            for (const c of symptomResult.extra) {
+              earlyCards.push(streamCardChunk(c));
+              recordCardEmission({
+                user_id: user?.id || null,
+                card: c,
+                flow_id: symptomResult.flow.id,
+                answers: symptomResult.answers,
+                country: countryCode,
+                language,
+              });
+            }
+          }
+          console.log(
+            `[Chat] route.flow.card ${JSON.stringify({
+              flow: symptomResult.flow.id,
+              kind: symptomResult.card.kind,
+              extra: symptomResult.extra?.map((c) => c.kind),
+              answers: symptomResult.answers,
+            })}`,
+          );
+        } else if (intent === 'deep_analysis' && !patientContext) {
+          // Profile gate fires only when:
+          //   - the user is NOT mid-flow (symptomResult is null)
+          //   - they asked for deep analysis (or were soft-promoted
+          //     after 3+ medical turns)
+          //   - we don't have a server-side EHR profile on file
+          const gate = buildProfileGateCard({});
+          earlyCards.push(streamCardChunk(gate));
+          recordCardEmission({
+            user_id: user?.id || null,
+            card: gate,
+            country: countryCode,
+            language,
+          });
+        }
+      }
+
+      if (earlyCards.length > 0) {
+        return new Response(
+          earlyCards.join('') + 'data: [DONE]\n\n',
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache, no-transform',
+              Connection: 'keep-alive',
+            },
+          },
+        );
+      }
+    }
+
     // Step 6: Stream response via the provider fallback chain.
     console.log(
       `[Chat] route.provider.dispatch ${JSON.stringify({
@@ -252,6 +492,43 @@ export async function POST(request: NextRequest) {
     // advice. With Groq llama-3.3-70b-versatile as primary this is
     // reliable; the old failure mode (qwen2.5:0.5b ignoring length caps
     // and inventing dangerous advice) is no longer in the hot path.
+    // Step 5.8: Drug-interaction pre-check.
+    //
+    // If the patient_context lists medications AND the user is asking
+    // about a drug that interacts with one of them, skip the LLM
+    // entirely and emit a deterministic guidance card with the
+    // interaction warning. This is the structural moat ChatGPT can't
+    // ship: a typed-profile lookup table that fires before any LLM
+    // can give wrong advice.
+    const interaction = detectInteraction({
+      patient_context: patientContext,
+      user_message: cleanUserContent,
+    });
+    if (interaction) {
+      const card = buildInteractionWarningCard(interaction);
+      const chunk = streamCardChunk(card);
+      recordCardEmission({
+        user_id: user?.id || null,
+        card,
+        country: countryCode,
+        language,
+      });
+      console.log(
+        `[Chat] route.interaction ${JSON.stringify({
+          user_med: interaction.user_med,
+          asked_drug: interaction.asked_drug,
+        })}`,
+      );
+      return new Response(chunk + 'data: [DONE]\n\n', {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+        },
+      });
+    }
+
     let providerResponse: { content: string; provider: string; model: string };
     try {
       providerResponse = await chatWithFallback(augmentedMessages, model);
@@ -305,11 +582,44 @@ export async function POST(request: NextRequest) {
 
     // Prepend the emergency banner so the user always sees the safety
     // floor first, then the LLM's medical reasoning underneath.
-    const finalContent = isEmergency
+    let finalContent = isEmergency
       ? (post.filtered
           ? `${emergencyBanner}\n\n${post.filtered}`
           : emergencyBanner)
       : post.filtered;
+
+    // Step 7.5: Deterministic allergy guard.
+    //
+    // Pull the user's allergies from the patient_context (server EHR
+    // for authenticated users, or the client-injected block for
+    // guests). Scan the final reply for any forbidden drug name and,
+    // if found, prepend a structured allergy-override card AND
+    // strike-through the offending drug name in-line. This is the
+    // second line of defence the system prompt cannot provide —
+    // even when the LLM ignores the allergy instruction, the user
+    // never sees an unmarked recommendation of a drug they're
+    // allergic to.
+    const userAllergies = extractAllergies({
+      patient_context: patientContext,
+      user_message: rawUserContent,
+    });
+    if (userAllergies.length > 0 && finalContent) {
+      const guard = scanForAllergyViolation(
+        finalContent,
+        userAllergies,
+        emergencyInfo.emergency,
+      );
+      if (guard.violated) {
+        console.warn(
+          `[Chat] route.allergy.violation ${JSON.stringify({
+            userId: user?.id || null,
+            allergies: userAllergies,
+            hits: guard.hits,
+          })}`,
+        );
+        finalContent = guard.warning_card_chunk + '\n\n' + guard.annotated_reply;
+      }
+    }
 
     console.log(
       `[Chat] route.safety.postCheck ${JSON.stringify({
