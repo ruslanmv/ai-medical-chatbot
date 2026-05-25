@@ -11,12 +11,81 @@
  */
 
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
-export const CONFIG_PATH = path.join(
-  process.env.PERSISTENT_DIR || '/data',
-  'medos-config.json',
-);
+/**
+ * Resolve a writable persistence directory.
+ *
+ * Order: `PERSISTENT_DIR` env (operator override) → `/data` (HF Spaces
+ * paid tier + Docker volume mounts) → `/tmp/medos` (always writable but
+ * ephemeral, used as last-resort fallback on free-tier HF Spaces where
+ * /data is absent). Cached on first call so we never probe twice in
+ * the same process.
+ *
+ * If the chosen dir is ephemeral, persistence still "works" within the
+ * container's lifetime — the OllaBridge URL and API key the admin saves
+ * remain in effect until the Space sleeps/restarts. The admin GET
+ * response surfaces `persistencePath` + `persistencePersistent` so the
+ * operator can SEE whether their save is durable.
+ */
+let _persistenceDirCache: { path: string; persistent: boolean } | null = null;
+
+function isDirWritable(p: string): boolean {
+  try {
+    if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+    const probe = path.join(p, `.write-probe-${process.pid}`);
+    fs.writeFileSync(probe, '');
+    fs.unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolvePersistenceDir(): { path: string; persistent: boolean } {
+  if (_persistenceDirCache) return _persistenceDirCache;
+  const envDir = process.env.PERSISTENT_DIR;
+  const candidates: Array<{ path: string; persistent: boolean }> = [];
+  if (envDir) candidates.push({ path: envDir, persistent: true });
+  candidates.push(
+    { path: '/data', persistent: true },
+    { path: path.join(os.tmpdir(), 'medos'), persistent: false },
+  );
+  for (const c of candidates) {
+    if (isDirWritable(c.path)) {
+      _persistenceDirCache = c;
+      if (!c.persistent) {
+        console.warn(
+          `[Config] /data not writable — falling back to ephemeral ${c.path}. ` +
+            `Saved settings survive within the container but are lost on Space restart. ` +
+            `Set PERSISTENT_DIR or mount /data to make persistence durable.`,
+        );
+      } else {
+        console.log(`[Config] persistence dir: ${c.path}`);
+      }
+      return c;
+    }
+  }
+  // Final fallback — even tmpdir failed. Surface the error rather than
+  // silently dropping writes.
+  throw new Error('No writable persistence directory available');
+}
+
+export function getPersistenceStatus(): { path: string; persistent: boolean } {
+  const dir = resolvePersistenceDir();
+  return { path: path.join(dir.path, 'medos-config.json'), persistent: dir.persistent };
+}
+
+/** Lazy getter — resolves once, then memoized via the dir cache. */
+export function getConfigPath(): string {
+  return path.join(resolvePersistenceDir().path, 'medos-config.json');
+}
+
+// Eager export for legacy callers (system-info route). Safe because
+// it triggers the dir probe at module load time; resolvePersistenceDir
+// is idempotent so subsequent calls just hit the cache.
+export const CONFIG_PATH = getConfigPath();
 
 export interface ServerConfig {
   smtp: {
@@ -84,7 +153,12 @@ export function getDefaultConfig(): ServerConfig {
       hfToken: process.env.HF_TOKEN || '',
       hfTokenInference: process.env.HF_TOKEN_INFERENCE || '',
       ollabridgeUrl: process.env.OLLABRIDGE_URL || '',
-      ollabridgeApiKey: process.env.OLLABRIDGE_API_KEY || '',
+      // `OB_TOKEN` is the canonical name used in OllaBridge Cloud admin
+      // documentation; `OLLABRIDGE_API_KEY` is the legacy env name that
+      // shipped first. Accept either so a freshly-minted `ob_…` key from
+      // the cloud admin tab works without renaming.
+      ollabridgeApiKey:
+        process.env.OLLABRIDGE_API_KEY || process.env.OB_TOKEN || '',
       openaiApiKey: process.env.OPENAI_API_KEY || '',
       anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
       groqApiKey: process.env.GROQ_API_KEY || '',

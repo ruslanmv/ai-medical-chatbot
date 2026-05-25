@@ -67,10 +67,66 @@ export function isOllaBridgeConfigured(): boolean {
   return !!process.env.OLLABRIDGE_URL;
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// Circuit breaker
+// ─────────────────────────────────────────────────────────────────────
+// OllaBridge Cloud occasionally hangs for ~2 minutes when its routing
+// chain hits a stalled `local-ollama` backend. On each such turn MedOS
+// would pay the full 45 s OllaBridge timeout BEFORE falling through to
+// HF — compounding badly across rapid retries.
+//
+// This is a process-local breaker:
+//   - On every failure we increment `consecutiveFailures` and stamp
+//     `lastFailureAt`.
+//   - When `consecutiveFailures >= COOLDOWN_TRIGGER` the breaker opens
+//     for `COOLDOWN_MS`, during which `isCircuitOpen()` returns true
+//     and callers (the chat route) skip the OllaBridge attempt
+//     entirely — going straight to HF for sub-second responses.
+//   - The first successful call after cooldown closes the breaker.
+//
+// Operator override: `OLLABRIDGE_CIRCUIT_BREAKER=off` disables it.
+// Tunable: `OLLABRIDGE_CIRCUIT_COOLDOWN_MS` (default 120 000).
+const COOLDOWN_TRIGGER = 2;
+const COOLDOWN_MS = Number(process.env.OLLABRIDGE_CIRCUIT_COOLDOWN_MS) || 120_000;
+let consecutiveFailures = 0;
+let openedAt = 0;
+
+export function isCircuitOpen(): boolean {
+  if (process.env.OLLABRIDGE_CIRCUIT_BREAKER === 'off') return false;
+  if (consecutiveFailures < COOLDOWN_TRIGGER) return false;
+  if (Date.now() - openedAt > COOLDOWN_MS) {
+    // Cooldown expired — give the next request a chance to close it.
+    return false;
+  }
+  return true;
+}
+
+export function recordSuccess(): void {
+  if (consecutiveFailures > 0) {
+    console.log('[Chat] provider.ollabridge.circuit.close');
+  }
+  consecutiveFailures = 0;
+  openedAt = 0;
+}
+
+export function recordFailure(): void {
+  consecutiveFailures += 1;
+  if (consecutiveFailures === COOLDOWN_TRIGGER) {
+    openedAt = Date.now();
+    console.warn(
+      `[Chat] provider.ollabridge.circuit.open cooldown=${COOLDOWN_MS}ms ` +
+        `failures=${consecutiveFailures}`,
+    );
+  }
+}
+
 export async function streamWithOllaBridge(
   messages: ChatMessage[],
   model: string = 'qwen2.5:1.5b'
 ): Promise<ReadableStream> {
+  if (isCircuitOpen()) {
+    throw new Error('OllaBridge circuit open (recent failures) — skipping');
+  }
   const client = getClient();
   console.log(
     `[Chat] provider.ollabridge.dispatch ${JSON.stringify({
@@ -80,19 +136,20 @@ export async function streamWithOllaBridge(
     })}`,
   );
 
-  const stream = await client.chat.completions.create({
-    model,
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
-    stream: true,
-    // 512 tokens: enough room for the structured OUTPUT_CONTRACT response
-    // (Assessment / Red flags / Possible causes / What to do now / When
-    // to seek care / Sources). 256 was truncating mid-section on the
-    // primary path. Inside the 45s provider timeout this stays well
-    // within budget on cloud OllaBridge rungs (~150-400 tok/s) and
-    // tolerates the worst-case local-ollama fallback (~25s).
-    max_tokens: 512,
-    temperature: 0.4,
-  });
+  let stream;
+  try {
+    stream = await client.chat.completions.create({
+      model,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      stream: true,
+      // 512 tokens: enough room for the structured OUTPUT_CONTRACT response.
+      max_tokens: 512,
+      temperature: 0.4,
+    });
+  } catch (err) {
+    recordFailure();
+    throw err;
+  }
 
   const encoder = new TextEncoder();
 
@@ -110,9 +167,11 @@ export async function streamWithOllaBridge(
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
         }
+        recordSuccess();
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
       } catch (error) {
+        recordFailure();
         controller.error(error);
       }
     },
@@ -123,21 +182,32 @@ export async function chatWithOllaBridge(
   messages: ChatMessage[],
   model: string = 'qwen2.5:1.5b'
 ): Promise<ProviderResponse> {
+  if (isCircuitOpen()) {
+    // Circuit breaker: skip this attempt entirely so the caller falls
+    // through to HF in milliseconds rather than waiting 45 s for the
+    // known-stalled cloud. See the breaker block above for tunables.
+    throw new Error('OllaBridge circuit open (recent failures) — skipping');
+  }
   const client = getClient();
 
-  const response = await client.chat.completions.create({
-    model,
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
-    // 512 tokens: enough for the structured OUTPUT_CONTRACT response.
-    // Bounded by the 45s provider timeout above; healthy cloud rungs
-    // finish in <1s, worst-case local-ollama fallback ~25s.
-    max_tokens: 512,
-    temperature: 0.4,
-  });
-
-  return {
-    content: response.choices[0]?.message?.content || '',
-    provider: 'ollabridge',
-    model: response.model || model,
-  };
+  try {
+    const response = await client.chat.completions.create({
+      model,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      // 512 tokens: enough for the structured OUTPUT_CONTRACT response.
+      // Bounded by the 45s provider timeout above; healthy cloud rungs
+      // finish in <1s, worst-case local-ollama fallback ~25s.
+      max_tokens: 512,
+      temperature: 0.4,
+    });
+    recordSuccess();
+    return {
+      content: response.choices[0]?.message?.content || '',
+      provider: 'ollabridge',
+      model: response.model || model,
+    };
+  } catch (err) {
+    recordFailure();
+    throw err;
+  }
 }
