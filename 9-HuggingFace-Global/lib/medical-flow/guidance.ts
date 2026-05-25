@@ -29,6 +29,7 @@ import type {
 import type { SymptomFlow } from './symptoms';
 import { hasRedFlag } from './symptoms';
 import { buildGuidanceCard, buildDoctorSummaryCard } from './cards';
+import { emergencyCardEnabled } from '../feature-flags';
 
 export interface Answers {
   red_flags_selected?: string[]; // raw tokens
@@ -52,7 +53,16 @@ export function classifyCareLevel(
   if (redFlags.length > 0) {
     // Headache flow escalates harder — thunderclap / worst-of-life is
     // an emergency, not "urgent care today".
-    if (flow.safety.on_positive === 'emergency') return 'emergency';
+    if (flow.safety.on_positive === 'emergency') {
+      // When the MEDOS_EMERGENCY_CARD_ENABLED feature flag is OFF
+      // (default), downgrade `emergency` → `urgent`. Users with red
+      // flags still get a strongly-worded guidance card directing
+      // them to seek same-day care (with the local emergency number
+      // in `seek_care_if`), but they don't see the alarming red
+      // emergency UI. Re-enabling the flag restores the original
+      // emergency classification.
+      return emergencyCardEnabled() ? 'emergency' : 'urgent';
+    }
     if (flow.safety.on_positive === 'urgent_care') return 'urgent';
     return 'routine';
   }
@@ -184,6 +194,61 @@ const COPY: Record<
       ],
       seek_care_if: [
         'Symptoms worsening en route — call emergency services',
+      ],
+    },
+  },
+  'chest-pain': {
+    self_care: {
+      why: 'Your answers do not show red-flag features. Chest pain at this severity is often musculoskeletal (chest wall, costochondritis), reflux, or anxiety-related — but new chest pain still deserves evaluation.',
+      what_now: [
+        'Rest and avoid heavy exertion until evaluated',
+        'Note exactly when the pain started and what makes it worse',
+        'Avoid heavy meals, caffeine, and alcohol for a few hours',
+        'Track if it returns; book a routine clinician visit',
+      ],
+      seek_care_if: [
+        'Pain radiates to arm, jaw, or neck',
+        'You develop shortness of breath, sweating, nausea, or fainting',
+        'Pain becomes crushing or pressure-like',
+        'Pain returns with exertion',
+      ],
+    },
+    routine: {
+      why: 'Moderate chest pain without classic red flags should be evaluated by a clinician this week to rule out specific causes.',
+      what_now: [
+        'Book an appointment within the next few days',
+        'Avoid heavy exertion until seen',
+        'Bring a list of medications and any recent symptom diary',
+        'Note any pattern (after meals, with activity, at rest, with breathing)',
+      ],
+      seek_care_if: [
+        'Pain becomes severe or constant',
+        'You develop shortness of breath, sweating, fainting',
+        'Pain radiates to arm or jaw — go to the ER',
+      ],
+    },
+    urgent: {
+      why: 'Severe chest pain warrants same-day evaluation even without classic red flags.',
+      what_now: [
+        'Seek same-day care (urgent care or ER)',
+        'Do not drive yourself',
+        'Note exact onset time and any associated symptoms',
+      ],
+      seek_care_if: [
+        'Pain radiates to arm or jaw — call emergency services en route',
+        'You develop fainting or severe shortness of breath',
+      ],
+    },
+    emergency: {
+      why: 'Your symptoms include features that suggest a possible cardiac emergency. Get emergency help NOW.',
+      what_now: [
+        'Call your local emergency number immediately',
+        'Sit upright, stay calm, loosen tight clothing',
+        'Chew aspirin ONLY if you are not allergic AND a clinician has previously advised it',
+        'Do NOT drive yourself — wait for an ambulance',
+      ],
+      seek_care_if: [
+        'Symptoms worsen on the way — call emergency services en route',
       ],
     },
   },

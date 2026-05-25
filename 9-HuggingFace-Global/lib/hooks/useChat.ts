@@ -121,8 +121,26 @@ export function useChat() {
               try {
                 const parsed = JSON.parse(data);
                 if (parsed.error) throw new Error(parsed.error);
-                if (parsed.content) {
-                  aiContent += parsed.content;
+                // Extract content from THREE possible chunk shapes (in
+                // priority order):
+                //   1. OpenAI-style stream:  { choices: [{ delta: { content }}]}
+                //      ← every card emitter (streamCardChunk) and the
+                //      ← post-LLM-filtered single-chunk reply use this.
+                //   2. OpenAI non-stream:    { choices: [{ message: { content }}]}
+                //   3. Legacy MedOS:         { content: "..." }
+                //
+                // The HF Space client previously only checked #3, which
+                // meant every server chunk (all OpenAI-shaped) was
+                // silently dropped — aiContent stayed empty and the UI
+                // showed nothing. Logs showed 200/ok at the API level
+                // because the failure was 100% on the parse side.
+                const piece =
+                  (parsed.choices?.[0]?.delta?.content) ||
+                  (parsed.choices?.[0]?.message?.content) ||
+                  parsed.content ||
+                  "";
+                if (piece) {
+                  aiContent += piece;
                   setMessages((prev) => {
                     const existing = prev.find((m) => m.id === aiMessageId);
                     if (existing) {
