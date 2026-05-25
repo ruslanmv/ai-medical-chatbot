@@ -82,7 +82,16 @@ export async function POST(request: NextRequest) {
     //     malicious client sends one.
     const lastUserMessage = messages.filter((m) => m.role === 'user').pop();
     const rawUserContent = lastUserMessage?.content || '';
-    const cleanUserContent = stripInjectedPatientContext(rawUserContent);
+    // For authenticated users we strip the client-shipped block and
+    // re-derive it from the server-side DB below — that's the
+    // cross-user-leak fix. For guests there IS no server-side profile,
+    // so the client's localStorage-built block is the only personalization
+    // signal available; stripping it would silently regress logged-out
+    // users to fully generic answers. Self-supplied data carries no
+    // cross-user risk so we let it pass through.
+    const cleanUserContent = user
+      ? stripInjectedPatientContext(rawUserContent)
+      : rawUserContent;
 
     // Step 1: Run the deterministic safety pre-check. This is the FLOOR;
     // the LLM cannot relax it. The engine returns either an emergency
@@ -151,10 +160,20 @@ export async function POST(request: NextRequest) {
     // safety-engine policy block so the LLM is aware of the deterministic
     // floor — the post-filter is the second line of defence.
     const emergencyInfo = getEmergencyInfo(countryCode);
+    // First-turn detection: when there are zero prior assistant turns,
+    // the system prompt enables the one-time `[bubble:welcome]` greeting.
+    // On subsequent turns the greeting is suppressed so the user is not
+    // re-welcomed on every reply.
+    const isFirstTurn = !messages.some((m) => m.role === 'assistant');
+    // Guest detection: gates the optional `[bubble:signup]` soft prompt
+    // and ensures we never block general help on registration.
+    const isGuest = !user;
     const baseSystemPrompt = buildMedicalSystemPrompt({
       country: countryCode,
       language,
       emergencyNumber: emergencyInfo.emergency,
+      isFirstTurn,
+      isGuest,
     });
     // Stack the system instructions: base + allow-llm hints + emergency
     // augmentation. Emergency augmentation tells the LLM the deterministic

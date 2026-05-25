@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useEffect, useState } from "react";
-import { X, Stethoscope } from "lucide-react";
+import { X, Stethoscope, CheckCircle2 } from "lucide-react";
 import { MessageBubble } from "../chat/MessageBubble";
 import { HeroInput } from "../chat/HeroInput";
 import { TypingIndicator } from "../chat/TypingIndicator";
 import { TrustBar } from "../chat/TrustBar";
 import type { ChatMessage } from "@/lib/hooks/useChat";
+import type { EHRProfile } from "@/lib/health-store";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface ChatViewProps {
@@ -18,6 +19,15 @@ interface ChatViewProps {
   voiceEnabled?: boolean;
   readAloud?: boolean;
   onNavigateEmergency?: () => void;
+  /** Set by the parent right after the user finishes the EHR wizard with
+   *  "Save & continue chat". Renders a one-time dismissible card that names
+   *  what the AI now knows about the patient — the explicit payoff signal
+   *  that closes the wizard → chat loop. */
+  profileWelcome?: boolean;
+  onDismissProfileWelcome?: () => void;
+  /** Used to summarise the saved profile in the welcome card. */
+  ehrProfile?: EHRProfile;
+  activeMedicationsCount?: number;
 }
 
 export function ChatView({
@@ -29,6 +39,10 @@ export function ChatView({
   voiceEnabled = true,
   readAloud = false,
   onNavigateEmergency,
+  profileWelcome = false,
+  onDismissProfileWelcome,
+  ehrProfile,
+  activeMedicationsCount = 0,
 }: ChatViewProps) {
   const [isListening, setIsListening] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -129,6 +143,14 @@ export function ChatView({
             </div>
           )}
 
+          {profileWelcome && (
+            <ProfileWelcome
+              profile={ehrProfile}
+              activeMedicationsCount={activeMedicationsCount}
+              onDismiss={onDismissProfileWelcome}
+            />
+          )}
+
           {messages.map((msg, i) => (
             <MessageBubble
               key={msg.id}
@@ -176,5 +198,94 @@ export function ChatView({
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * One-time card shown after the user finishes the EHR wizard via
+ * "Save & continue chat". The purpose is single: confirm in plain
+ * language what the AI now knows so the user feels the payoff before
+ * sending their next message. No diagnosis claims, no medical advice —
+ * just a factual recap and an "augments, doesn't replace, a clinician"
+ * reassurance, matching the enterprise medical-support tone.
+ */
+function ProfileWelcome({
+  profile,
+  activeMedicationsCount,
+  onDismiss,
+}: {
+  profile?: EHRProfile;
+  activeMedicationsCount: number;
+  onDismiss?: () => void;
+}) {
+  // Build a short factual summary from whatever the user filled in.
+  // We intentionally only mention fields that are PRESENT so the card
+  // never says "0 medications" or "no conditions known" — both of which
+  // read as accusatory for a healthy user just trying out the app.
+  const summary = useMemo(() => {
+    const p = profile || {};
+    const parts: string[] = [];
+    let demo = "";
+    if (p.dateOfBirth) {
+      const t = new Date(p.dateOfBirth).getTime();
+      if (Number.isFinite(t)) {
+        const age = Math.floor((Date.now() - t) / (365.25 * 86400000));
+        if (age >= 0 && age < 130) demo = `${age}-year-old`;
+      }
+    }
+    if (p.gender === "male") demo = demo ? `${demo} man` : "Male";
+    else if (p.gender === "female") demo = demo ? `${demo} woman` : "Female";
+    if (demo) parts.push(demo);
+    if (p.chronicConditions?.length) {
+      parts.push(
+        p.chronicConditions.length === 1
+          ? "1 condition"
+          : `${p.chronicConditions.length} conditions`,
+      );
+    }
+    if (activeMedicationsCount > 0) {
+      parts.push(
+        activeMedicationsCount === 1 ? "1 medication" : `${activeMedicationsCount} medications`,
+      );
+    }
+    if (p.allergies?.length && !p.allergies.includes("None known")) {
+      parts.push(
+        p.allergies.length === 1 ? "1 allergy" : `${p.allergies.length} allergies`,
+      );
+    }
+    return parts.join(" · ");
+  }, [profile, activeMedicationsCount]);
+
+  return (
+    <div className="mb-6 rounded-2xl border border-success-500/30 bg-success-500/5 p-4 sm:p-5 animate-in fade-in slide-in-from-top-2 duration-300">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-success-500/15 flex items-center justify-center">
+          <CheckCircle2 size={18} className="text-success-500" strokeWidth={2.25} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-ink-base text-sm">
+            Profile saved — MedOS will tailor its replies
+          </p>
+          {summary && (
+            <p className="mt-0.5 text-xs text-ink-muted truncate">
+              {summary}
+            </p>
+          )}
+          <p className="mt-2 text-[11px] text-ink-subtle leading-relaxed">
+            Your next question will use this context. This augments, but does not
+            replace, a licensed healthcare provider.
+          </p>
+        </div>
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            aria-label="Dismiss"
+            className="flex-shrink-0 p-1 rounded-md text-ink-subtle hover:text-ink-base hover:bg-surface-2 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

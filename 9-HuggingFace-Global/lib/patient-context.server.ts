@@ -1,17 +1,16 @@
 /**
  * Server-side patient-context builder.
  *
- * Mirrors the compact format produced by the legacy client function
- * `buildPatientContext()` in lib/health-store.ts, but reads from the
- * SQLite database scoped to ONE authenticated user. This is the
- * cross-user-leak fix: the client is never trusted to ship its own
- * EHR — the server looks it up by user_id at chat time.
+ * Reads from the SQLite database scoped to ONE authenticated user. This is the
+ * cross-user-leak fix: the client is never trusted to ship its own EHR for
+ * an authenticated session — the server looks it up by user_id at chat time.
  *
- * Output (kept identical so the LLM behaviour is unchanged):
- *   '\n[Patient: 47/M | Dx: Diabetes | Allergies: Penicillin | Meds: Metformin 500mg | smoker]'
+ * Output (XML-tagged block the LLM is taught to consume in
+ * `buildMedicalSystemPrompt`):
+ *   '\n<patient_context>\nage=47 sex=M\nconditions=Diabetes\nallergies=Penicillin\nmedications=Metformin 500mg\nlifestyle=smoker\n</patient_context>'
  *
  * Returns '' when:
- *   - userId is empty (guest chat)
+ *   - userId is empty (guest chat — client-side context survives)
  *   - the user has no EHR profile and no active medications
  *
  * Server-only module: imports better-sqlite3 (native, Node-only).
@@ -46,70 +45,70 @@ export function buildPatientContextForUser(userId: string | null | undefined): s
     })
     .filter((m) => m && typeof m === 'object' && (m as any).active !== false);
 
-  const bits: string[] = [];
+  const lines: string[] = [];
 
-  // Demographics (age + gender initial).
+  // Demographics — clinical signal for differential weighting.
   const demo: string[] = [];
   if (ehr.dateOfBirth) {
     const t = new Date(ehr.dateOfBirth).getTime();
     if (Number.isFinite(t)) {
       const age = Math.floor((Date.now() - t) / (365.25 * 86400000));
-      if (age >= 0 && age < 130) demo.push(`${age}y`);
+      if (age >= 0 && age < 130) demo.push(`age=${age}`);
     }
   }
   if (ehr.gender && ehr.gender !== 'prefer-not-to-say') {
-    demo.push(String(ehr.gender)[0].toUpperCase());
+    demo.push(`sex=${String(ehr.gender)[0].toUpperCase()}`);
   }
-  if (demo.length) bits.push(demo.join('/'));
+  if (demo.length) lines.push(demo.join(' '));
 
-  // Chronic conditions — most important for clinical context.
   if (Array.isArray(ehr.chronicConditions) && ehr.chronicConditions.length) {
-    bits.push(`Dx: ${ehr.chronicConditions.join(', ')}`);
+    lines.push(`conditions=${ehr.chronicConditions.join(', ')}`);
   }
 
-  // Allergies — safety-critical.
   if (
     Array.isArray(ehr.allergies) &&
     ehr.allergies.length &&
     !ehr.allergies.includes('None known')
   ) {
-    bits.push(`Allergies: ${ehr.allergies.join(', ')}`);
+    lines.push(`allergies=${ehr.allergies.join(', ')}`);
   }
 
-  // Active medications — abbreviated to name + dose.
   if (meds.length > 0) {
-    bits.push(
-      `Meds: ${meds
+    lines.push(
+      `medications=${meds
         .map((m: any) => `${m.name || '?'} ${m.dose || ''}`.trim())
         .join(', ')}`,
     );
   }
 
-  // Lifestyle — compact.
   const life: string[] = [];
   if (ehr.smokingStatus === 'current') life.push('smoker');
-  if (ehr.smokingStatus === 'former') life.push('ex-smoker');
+  else if (ehr.smokingStatus === 'former') life.push('ex-smoker');
   if (ehr.alcoholUse === 'heavy') life.push('heavy alcohol');
-  if (life.length) bits.push(life.join(', '));
+  if (life.length) lines.push(`lifestyle=${life.join(', ')}`);
 
-  if (bits.length === 0) return '';
-  return `\n[Patient: ${bits.join(' | ')}]`;
+  if (lines.length === 0) return '';
+  return `\n<patient_context>\n${lines.join('\n')}\n</patient_context>`;
 }
 
 /**
- * Defence-in-depth: strip any client-provided `[Patient: ...]` block
- * from a user message before it hits the LLM. Even if a malicious or
- * stale client tries to smuggle EHR claims, the server's own
- * buildPatientContextForUser() output is the only one that reaches
- * the model.
+ * Defence-in-depth: strip any client-provided patient-context block
+ * from a message before it hits the LLM. Recognises BOTH formats:
  *
- * Matches the bracketed token at the start of a line (with optional
- * leading newline) and trims one trailing newline if present.
+ *   1. New: `<patient_context>...</patient_context>` (current builder).
+ *   2. Legacy: `[Patient: ...]` (older clients, in-flight conversations
+ *      from before the format change).
+ *
+ * Always called on PRIOR turns (anti-stale-leak). For the CURRENT turn
+ * the chat route only strips when the user is authenticated — because
+ * for authenticated users the server re-derives the truth from the DB,
+ * while for guests the client's localStorage-built block is the only
+ * personalization signal available.
  */
 export function stripInjectedPatientContext(content: string): string {
   if (!content) return '';
-  // Multi-line, case-sensitive, non-greedy until newline or end.
   return content
+    .replace(/\n?<patient_context>[\s\S]*?<\/patient_context>\s*/gi, '')
     .replace(/(^|\n)\s*\[Patient:[^\]\n]*\](?=\n|$)/g, '')
     .replace(/^\n+/, '');
 }

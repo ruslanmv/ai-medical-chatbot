@@ -12,6 +12,7 @@ import {
   Check,
   Plus,
   X,
+  MessageCircle,
 } from "lucide-react";
 import {
   loadEHRProfile,
@@ -28,6 +29,14 @@ interface EHRWizardProps {
   onComplete: () => void;
   onCancel: () => void;
   language: SupportedLanguage;
+  /**
+   * Optional CTA on the Review step that saves the profile and drops the
+   * user back into chat. When provided, the wizard renders a primary
+   * "Save & continue chat" button next to the standard "Save Profile"
+   * button so users feel the payoff of completing the form immediately —
+   * their next chat reply uses the new context.
+   */
+  onContinueChat?: () => void;
 }
 
 const STEPS = [
@@ -47,7 +56,7 @@ const GENDERS = [
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "unknown"] as const;
 
-export function EHRWizard({ onComplete, onCancel, language }: EHRWizardProps) {
+export function EHRWizard({ onComplete, onCancel, language, onContinueChat }: EHRWizardProps) {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState<EHRProfile>({});
   const [meds, setMeds] = useState<Medication[]>([]);
@@ -95,6 +104,15 @@ export function EHRWizard({ onComplete, onCancel, language }: EHRWizardProps) {
     const final: EHRProfile = { ...profile, completedAt: new Date().toISOString(), wizardStep: 5 };
     saveEHRProfile(final);
     onComplete();
+  };
+
+  // Save the profile and route back to chat. Same persistence as `finish`,
+  // different completion callback so the parent can show the welcome bubble
+  // and switch to the chat view.
+  const finishAndChat = () => {
+    const final: EHRProfile = { ...profile, completedAt: new Date().toISOString(), wizardStep: 5 };
+    saveEHRProfile(final);
+    onContinueChat?.();
   };
 
   const progress = ((step + 1) / STEPS.length) * 100;
@@ -207,6 +225,26 @@ export function EHRWizard({ onComplete, onCancel, language }: EHRWizardProps) {
             >
               Next <ChevronRight size={16} />
             </button>
+          ) : onContinueChat ? (
+            /* Review step with both completion paths.
+             * Primary CTA is "Save & continue chat" — the payoff signal:
+             * the user immediately sees the AI use their profile in the
+             * next reply. Secondary "Save" preserves the original flow
+             * for users who landed here from the Profile view. */
+            <div className="flex items-center gap-2">
+              <button
+                onClick={finish}
+                className="flex items-center gap-1.5 px-4 py-2.5 border border-line/60 text-ink-base rounded-xl font-semibold text-sm hover:bg-surface-2 transition-all"
+              >
+                <Check size={16} /> Save
+              </button>
+              <button
+                onClick={finishAndChat}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 transition-all"
+              >
+                <MessageCircle size={16} /> Save &amp; continue chat
+              </button>
+            </div>
           ) : (
             <button
               onClick={finish}
@@ -232,19 +270,24 @@ function StepBasicInfo({
   profile: EHRProfile;
   update: (p: Partial<EHRProfile>) => void;
 }) {
+  // Trimmed to the three fields with the highest clinical signal-to-effort
+  // ratio. Age (via dateOfBirth) and sex change differential-diagnosis
+  // weighting for nearly every symptom; first name personalizes the reply.
+  // Optional details (last name, blood type, height, weight) are still in
+  // the EHRProfile shape and are surfaced in the Profile view, but the
+  // onboarding wizard no longer demands them — that high-friction wall
+  // was the main reason users abandoned the form.
   return (
     <div className="space-y-4">
       <h3 className="font-bold text-lg text-ink-base">Basic Information</h3>
-      <p className="text-sm text-ink-muted">All fields are optional.</p>
+      <p className="text-sm text-ink-muted">
+        Just three quick details so MedOS can tailor its advice. All optional.
+      </p>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <InputField label="First name" value={profile.firstName} onChange={(v) => update({ firstName: v })} placeholder="John" />
-        <InputField label="Last name" value={profile.lastName} onChange={(v) => update({ lastName: v })} placeholder="Doe" />
         <InputField label="Date of birth" value={profile.dateOfBirth} onChange={(v) => update({ dateOfBirth: v })} type="date" />
-        <SelectField label="Gender" value={profile.gender || ""} onChange={(v) => update({ gender: v as any })} options={GENDERS.map((g) => ({ value: g.value, label: g.label }))} />
-        <SelectField label="Blood type" value={profile.bloodType || ""} onChange={(v) => update({ bloodType: v as any })} options={BLOOD_TYPES.map((b) => ({ value: b, label: b === "unknown" ? "Unknown" : b }))} />
-        <InputField label="Height" value={profile.height} onChange={(v) => update({ height: v })} placeholder="175 cm" />
-        <InputField label="Weight" value={profile.weight} onChange={(v) => update({ weight: v })} placeholder="70 kg" />
+        <SelectField label="Sex" value={profile.gender || ""} onChange={(v) => update({ gender: v as any })} options={GENDERS.map((g) => ({ value: g.value, label: g.label }))} />
       </div>
     </div>
   );
