@@ -257,39 +257,39 @@ export function saveEHRProfile(profile: EHRProfile): void {
 export function buildPatientContext(): string {
   const p = loadEHRProfile();
   const meds = loadMedications().filter((m) => m.active);
-  const bits: string[] = [];
+  const lines: string[] = [];
 
-  // Demographics — one line
+  // Demographics — clinical signal for differential weighting.
   const demo: string[] = [];
   if (p.dateOfBirth) {
     const age = Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / (365.25 * 86400000));
-    demo.push(`${age}y`);
+    if (age >= 0 && age < 130) demo.push(`age=${age}`);
   }
-  if (p.gender && p.gender !== 'prefer-not-to-say') demo.push(p.gender[0].toUpperCase());
-  if (demo.length) bits.push(demo.join('/'));
+  if (p.gender && p.gender !== 'prefer-not-to-say') {
+    demo.push(`sex=${p.gender[0].toUpperCase()}`);
+  }
+  if (demo.length) lines.push(demo.join(' '));
 
-  // Conditions — most important for clinical context
-  if (p.chronicConditions?.length) bits.push(`Dx: ${p.chronicConditions.join(', ')}`);
+  if (p.chronicConditions?.length) lines.push(`conditions=${p.chronicConditions.join(', ')}`);
 
-  // Allergies — safety-critical
   if (p.allergies?.length && !p.allergies.includes('None known')) {
-    bits.push(`Allergies: ${p.allergies.join(', ')}`);
+    lines.push(`allergies=${p.allergies.join(', ')}`);
   }
 
-  // Active medications — abbreviated
   if (meds.length > 0) {
-    bits.push(`Meds: ${meds.map((m) => `${m.name} ${m.dose}`).join(', ')}`);
+    lines.push(`medications=${meds.map((m) => `${m.name} ${m.dose}`).join(', ')}`);
   }
 
-  // Lifestyle — compact
   const life: string[] = [];
   if (p.smokingStatus === 'current') life.push('smoker');
-  if (p.smokingStatus === 'former') life.push('ex-smoker');
+  else if (p.smokingStatus === 'former') life.push('ex-smoker');
   if (p.alcoholUse === 'heavy') life.push('heavy alcohol');
-  if (life.length) bits.push(life.join(', '));
+  if (life.length) lines.push(`lifestyle=${life.join(', ')}`);
 
-  if (bits.length === 0) return '';
-  return `\n[Patient: ${bits.join(' | ')}]`;
+  if (lines.length === 0) return '';
+  // XML-tagged block matches the format the server-side builder emits
+  // and the system prompt instructs the LLM to consume.
+  return `\n<patient_context>\n${lines.join('\n')}\n</patient_context>`;
 }
 
 // ============================================================

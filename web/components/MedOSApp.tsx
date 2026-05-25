@@ -53,6 +53,10 @@ export default function MedOSApp() {
 function MedOSAppInner() {
   const [activeNav, setActiveNav] = useState<NavView>("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Set when the user finishes the EHR wizard via "Save & continue chat".
+  // ChatView consumes it once on mount to render a dismissible welcome
+  // bubble showing what the AI now knows. Single-use — cleared on dismiss.
+  const [showProfileWelcome, setShowProfileWelcome] = useState(false);
   const settings = useSettings();
   const auth = useAuth();
   const resetLink = usePasswordResetLink();
@@ -388,6 +392,10 @@ function MedOSAppInner() {
             onComplete={() => setActiveNav("profile")}
             onCancel={() => setActiveNav("home")}
             language={settings.language}
+            onContinueChat={() => {
+              setShowProfileWelcome(true);
+              setActiveNav("chat");
+            }}
           />
         );
       case "profile":
@@ -445,6 +453,10 @@ function MedOSAppInner() {
             voiceEnabled={settings.voiceEnabled}
             readAloud={settings.readAloud}
             onNavigateEmergency={() => setActiveNav("emergency")}
+            profileWelcome={showProfileWelcome}
+            onDismissProfileWelcome={() => setShowProfileWelcome(false)}
+            ehrProfile={health.ehrProfile}
+            activeMedicationsCount={health.medications.filter((m) => m.active).length}
           />
         );
     }
