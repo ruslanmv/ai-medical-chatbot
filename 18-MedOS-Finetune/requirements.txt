@@ -1,0 +1,17 @@
+# Unsloth — installs torch + triton + bitsandbytes pinned versions.
+# For Linux x86_64 + CUDA 12.x. Adjust for ROCm / Mac per their docs.
+unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git
+# TRL provides SFTTrainer + DPOTrainer used by train.py
+trl>=0.11.0
+# HuggingFace datasets for stage3-sft.jsonl loading
+datasets>=2.20.0
+# Standard accelerate (Unsloth uses its own optimized paths but
+# accelerate is required by Transformers)
+accelerate>=0.34.0
+# For pushing the trained adapter to the HF Hub (optional)
+huggingface-hub>=0.24.0
+# TensorBoard for the custom card-compliance callback
+tensorboard>=2.17.0
+# Already used by the rest of the benchmark suite:
+pyyaml>=6.0
+httpx>=0.27.0

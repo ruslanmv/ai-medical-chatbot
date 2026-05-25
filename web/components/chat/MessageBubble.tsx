@@ -1,62 +1,38 @@
 "use client";
 
-import { Stethoscope, User2, ShieldCheck, AlertTriangle, UserPlus } from "lucide-react";
+import { Stethoscope, User2, ShieldCheck } from "lucide-react";
 import type { ChatMessage } from "@/lib/hooks/useChat";
+import type { Action, Card } from "@/lib/medical-flow/types";
+import { CardRenderer, parseCardSegments } from "./cards/CardRenderer";
 
 interface MessageBubbleProps {
   message: ChatMessage;
   showSourceChip?: boolean;
+  /** Fired when the user taps an action chip/button inside a card.
+   *  Parents typically synthesize a follow-up user message (for chip
+   *  selections) or navigate (for `open_ehr_wizard` / `open_login` /
+   *  `open_emergency`). When absent, action clicks are no-ops. */
+  onCardAction?: (action: Action, card: Card) => void;
 }
 
 /**
- * Bubble types emitted by the LLM as `[bubble:type]` headers and rendered
- * as separate visual cards stacked under one MedOS avatar — the WhatsApp /
- * Messenger sequential-message style.
+ * The legacy [bubble:type] system was retired (Batch 7): every AI turn
+ * now produces ONE unified reply card, not multiple fragmented bubbles.
  *
- * Keep the union in sync with BUBBLE_TYPES in
- * `9-HuggingFace-Global/lib/medical-knowledge.ts`. New types added there
- * fall back to the neutral style here so the UI never breaks on unknown
- * markers from a newer server.
+ * This helper strips any stray markers from content — older server
+ * deployments, model outputs that ignored the "no markers" rule, and
+ * cached older conversation history can still carry the tokens. We
+ * filter them on the way to the renderer so the user never sees raw
+ * `[bubble:answer]` text in the chat. Pure cosmetic safety net; new
+ * server emissions never produce markers in the first place.
  */
-type BubbleType = "welcome" | "answer" | "questions" | "urgent" | "signup";
-type Bubble = { type: BubbleType | "neutral"; text: string };
-
-const BUBBLE_HEADER_RE = /^\s*\[bubble:([a-z_]+)\]\s*$/i;
-
-/**
- * Split an AI message into typed bubble segments.
- *
- * Robust against:
- *   - streaming (incomplete trailing bubble shows progressively)
- *   - legacy / non-conforming output (no markers → single neutral bubble)
- *   - unknown types from a newer server (rendered with neutral styling)
- *   - whitespace and stray markdown around the markers
- */
-function parseBubbles(content: string): Bubble[] {
-  if (!content) return [];
-  const lines = content.split("\n");
-  const out: Bubble[] = [];
-  let cur: Bubble | null = null;
-  for (const line of lines) {
-    const m = line.match(BUBBLE_HEADER_RE);
-    if (m) {
-      if (cur && cur.text.trim()) out.push({ ...cur, text: cur.text.trim() });
-      const raw = m[1].toLowerCase();
-      const type = (["welcome", "answer", "questions", "urgent", "signup"] as const).includes(
-        raw as BubbleType,
-      )
-        ? (raw as BubbleType)
-        : "neutral";
-      cur = { type, text: "" };
-    } else if (cur) {
-      cur.text += (cur.text ? "\n" : "") + line;
-    } else {
-      // Content before the first [bubble:...] marker — treat as neutral.
-      cur = { type: "neutral", text: line };
-    }
-  }
-  if (cur && cur.text.trim()) out.push({ ...cur, text: cur.text.trim() });
-  return out;
+function stripBubbleMarkers(content: string): string {
+  if (!content) return "";
+  return content
+    .replace(/^\s*\[bubble:[a-z_]+\]\s*$/gim, "")
+    .replace(/\[bubble:[a-z_]+\]\s*/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**
@@ -69,7 +45,7 @@ function parseBubbles(content: string): Bubble[] {
  *
  * User bubbles keep the right-aligned chat style.
  */
-export function MessageBubble({ message, showSourceChip }: MessageBubbleProps) {
+export function MessageBubble({ message, showSourceChip, onCardAction }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   if (isUser) {
@@ -92,11 +68,20 @@ export function MessageBubble({ message, showSourceChip }: MessageBubbleProps) {
     );
   }
 
-  const bubbles = parseBubbles(message.content);
-  // Single neutral chunk = legacy / non-conforming output. Render it as
-  // one card to preserve backward compatibility with old conversations
-  // and any LLM turn that drops the markers (rare but possible).
-  const isLegacy = bubbles.length <= 1 && (bubbles[0]?.type ?? "neutral") === "neutral";
+  // First pass: lift any [card:KIND]…[/card] blocks out of the content.
+  // Returns an ordered list of `text` and `card` segments. Card-only
+  // messages skip the legacy bubble system entirely and render as a
+  // vertical stack of card components.
+  const segments = parseCardSegments(message.content);
+  const hasCards = segments.some((s) => s.type === "card");
+
+  // Strip any stray `[bubble:type]` markers from text content. Older
+  // server deployments and any LLM that ignored the "no markers"
+  // instruction can leak these as visible text — render them as plain
+  // prose instead of letting the raw markers reach the user.
+  const cleanedContent = hasCards
+    ? message.content
+    : stripBubbleMarkers(message.content);
 
   return (
     <div className="flex justify-start mb-6 animate-fade-up">
@@ -116,27 +101,34 @@ export function MessageBubble({ message, showSourceChip }: MessageBubbleProps) {
               </span>
             )}
           </div>
-          {isLegacy ? (
-            <div className="rounded-2xl rounded-tl-sm border border-line/60 bg-surface-1 shadow-soft px-4 py-3.5 text-[15px] leading-relaxed text-ink-base">
-              <MarkdownContent content={message.content} />
+          {hasCards ? (
+            <div className="space-y-3">
+              {segments.map((seg, i) =>
+                seg.type === "card" ? (
+                  <CardRenderer
+                    key={i}
+                    card={seg.card}
+                    onAction={(a, c) => onCardAction?.(a, c)}
+                  />
+                ) : (
+                  <div
+                    key={i}
+                    className="rounded-2xl rounded-tl-sm border border-line/60 bg-surface-1 shadow-soft px-4 py-3 text-[15px] leading-relaxed text-ink-base"
+                  >
+                    <MarkdownContent content={stripBubbleMarkers(seg.text)} />
+                  </div>
+                ),
+              )}
             </div>
           ) : (
-            <div className="space-y-2">
-              {bubbles.map((b, i) => (
-                <BubbleCard
-                  key={i}
-                  bubble={b}
-                  /* Stagger delivery so the cards arrive sequentially —
-                   * the Messenger / WhatsApp feel. ~120 ms per bubble is
-                   * fast enough to not feel artificial but slow enough
-                   * to read as separate messages, not a single block. */
-                  delayMs={i * 120}
-                  /* Pinch the top-left corner only on the first bubble so
-                   * the stack reads as one conversational turn from
-                   * MedOS, not five independent messages. */
-                  firstOfTurn={i === 0}
-                />
-              ))}
+            // One user message → one unified card. We deliberately stopped
+            // splitting AI replies into welcome / answer / questions /
+            // signup chunks — that pattern read as fragmented chatbot
+            // output and made the product feel non-enterprise. The model
+            // is now instructed to produce ONE coherent reply per turn;
+            // this branch renders it as a single visual card.
+            <div className="rounded-2xl rounded-tl-sm border border-line/60 bg-surface-1 shadow-soft px-4 py-3.5 text-[15px] leading-relaxed text-ink-base">
+              <MarkdownContent content={cleanedContent} />
             </div>
           )}
           <div className="mt-1 text-[11px] text-ink-subtle">
@@ -148,55 +140,6 @@ export function MessageBubble({ message, showSourceChip }: MessageBubbleProps) {
   );
 }
 
-/**
- * A single sub-bubble inside an AI message turn. Visual treatment is
- * type-aware so urgent guidance stands out and the soft signup prompt
- * recedes — the rest stay neutral.
- */
-function BubbleCard({
-  bubble,
-  delayMs,
-  firstOfTurn,
-}: {
-  bubble: Bubble;
-  delayMs: number;
-  firstOfTurn: boolean;
-}) {
-  const base =
-    "shadow-soft px-4 py-3 text-[15px] leading-relaxed animate-fade-up";
-  const corner = firstOfTurn ? "rounded-2xl rounded-tl-sm" : "rounded-2xl";
-  let tone = "border border-line/60 bg-surface-1 text-ink-base";
-  let icon: React.ReactNode = null;
-  if (bubble.type === "urgent") {
-    tone =
-      "border border-danger-500/40 bg-danger-500/5 text-ink-base";
-    icon = (
-      <AlertTriangle
-        size={14}
-        className="text-danger-500 flex-shrink-0 mt-0.5"
-      />
-    );
-  } else if (bubble.type === "signup") {
-    tone =
-      "border border-brand-500/30 bg-brand-500/5 text-ink-muted text-[13px]";
-    icon = (
-      <UserPlus size={13} className="text-brand-500 flex-shrink-0 mt-0.5" />
-    );
-  }
-  return (
-    <div
-      className={`${corner} ${tone} ${base}`}
-      style={{ animationDelay: `${delayMs}ms`, animationFillMode: "both" }}
-    >
-      <div className="flex items-start gap-2">
-        {icon}
-        <div className="flex-1 min-w-0">
-          <MarkdownContent content={bubble.text} />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /**
  * MarkdownContent — lightweight markdown renderer for medical AI output.

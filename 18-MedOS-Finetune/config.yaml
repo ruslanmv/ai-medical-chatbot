@@ -1,0 +1,92 @@
+# DeepSeek-MedOS-v4 fine-tuning config.
+#
+# Used by finetuning/train.py. All hyperparameters live here so the
+# script stays declarative — a clinician or ops engineer can tune
+# without reading Python.
+
+model:
+  # Base model. The R1-Distill-Llama-8B is the cost-effective default;
+  # swap to the 14B or 32B distill for stronger performance, or to the
+  # full DeepSeek v4 base once Unsloth supports it (no other changes
+  # required — `train.py` reads this name only).
+  name: "unsloth/DeepSeek-R1-Distill-Llama-8B"
+  # Max context — DeepSeek distills support 32k+, but our SFT examples
+  # are ≤6k chars. 4096 is the sweet spot for memory.
+  max_seq_length: 4096
+  # 4-bit quantization for QLoRA. Cuts VRAM ~4x.
+  load_in_4bit: true
+  dtype: null   # auto: bf16 on A100/H100, fp16 elsewhere
+
+lora:
+  # Standard LoRA setup that works well across the DeepSeek family.
+  # Rank 16 / alpha 32 is the Unsloth default and produces ~30 MB
+  # adapter files — small enough to ship.
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.0       # 0 for QLoRA per the QLoRA paper
+  bias: "none"
+  use_gradient_checkpointing: "unsloth"   # Unsloth's optimized checkpointing
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+
+training:
+  output_dir: "finetuning/adapters/deepseek-medos-v4"
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4   # effective batch = 16
+  learning_rate: 0.0002
+  lr_scheduler_type: "cosine"
+  warmup_ratio: 0.03
+  optim: "adamw_8bit"
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  seed: 42
+  logging_steps: 10
+  save_steps: 100
+  eval_steps: 50
+  save_total_limit: 3
+  bf16: true
+  fp16: false
+  report_to: "tensorboard"
+
+dataset:
+  # Path to the ChatML dataset produced by `make dataset`. The augmentation
+  # pipeline in finetuning/augmentation/ extends this with patient /
+  # locale / refusal variants.
+  train_path: "dataset/generated/stage3-sft.jsonl"
+  validation_path: "dataset/generated/stage3-sft.jsonl"
+  # When > 0, use this many examples from train_path as a held-out
+  # validation split. 0 means use validation_path verbatim.
+  validation_split: 16
+  # If true, train.py runs the augmentation pipeline before training.
+  # When false, expects pre-augmented data at train_path.
+  auto_augment: true
+
+# Post-training export targets.
+export:
+  merged_fp16: true        # full FP16 model in finetuning/adapters/.../merged-fp16
+  gguf_q4_k_m: true        # quantized GGUF for llama.cpp / Ollama
+  push_to_hub: false       # set to "yourname/deepseek-medos-v4" to upload
+  hub_token_env: "HF_TOKEN"
+
+# Custom eval callback — runs the MedOS card-format compliance scorer
+# every `training.eval_steps` so we can see if the model is actually
+# learning the cards, not just minimizing loss.
+custom_eval:
+  enabled: true
+  # Held-out prompts the callback scores at each eval. These bypass
+  # the dataset and use the canonical benchmark questions so we get
+  # the SAME numbers the production benchmark will produce.
+  probe_prompts:
+    - { user: "hello", expect_card_kind: "greeting" }
+    - { user: "I have back pain", expect_card_kind: "safety_check" }
+    - { user: "Can you analyze my back pain deeply?", expect_card_kind: "profile_gate" }
+    - { user: "I have chest pain and trouble breathing", expect_card_kind: "emergency", country: "US" }
+    - { user: "I have chest pain and trouble breathing", expect_card_kind: "emergency", country: "IT" }
+    - { user: "Can I take ibuprofen?", expect_card_kind: "profile_gate" }

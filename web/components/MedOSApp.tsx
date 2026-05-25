@@ -453,6 +453,49 @@ function MedOSAppInner() {
             voiceEnabled={settings.voiceEnabled}
             readAloud={settings.readAloud}
             onNavigateEmergency={() => setActiveNav("emergency")}
+            /* Card action dispatcher. Card buttons emit a `value` token
+             * which we map to either a navigation event or a synthetic
+             * user message that becomes the next turn. Synthesizing a
+             * message keeps the conversation history honest: a reviewer
+             * can see exactly what choice the user made. */
+            onCardAction={(action) => {
+              const v = action.value;
+              if (v === "open_ehr_wizard") {
+                setActiveNav("ehr-wizard");
+              } else if (v === "open_login") {
+                setActiveNav("login");
+              } else if (
+                v === "open_emergency" ||
+                v === "intent:emergency" ||
+                v === "intent:nearby_emergency"
+              ) {
+                setActiveNav("emergency");
+              } else if (v === "continue_general") {
+                handleSendMessage(
+                  "Please continue with general guidance.",
+                );
+              } else if (v.startsWith("intent:")) {
+                // Greeting-card quick actions → seed the next turn with
+                // the chosen category as free text so the intent
+                // classifier routes correctly.
+                const map: Record<string, string> = {
+                  "intent:check_symptoms": "I'd like to check some symptoms.",
+                  "intent:medication": "I have a medication question.",
+                  "intent:test_result": "I'd like help understanding a test result.",
+                  "intent:nearby_care": "Find nearby care.",
+                };
+                handleSendMessage(map[v] || action.label);
+              } else if (v.startsWith("rf:") || v.startsWith("selected:") || v.startsWith("slider:")) {
+                // Structured chip / slider selections — send the label
+                // as a clean user message. Server-side flow state
+                // tracking ships in Batch 2.
+                handleSendMessage(action.label);
+              } else {
+                // Unknown action — degrade gracefully by sending the
+                // label so the LLM at least sees the user's choice.
+                handleSendMessage(action.label);
+              }
+            }}
             profileWelcome={showProfileWelcome}
             onDismissProfileWelcome={() => setShowProfileWelcome(false)}
             ehrProfile={health.ehrProfile}
