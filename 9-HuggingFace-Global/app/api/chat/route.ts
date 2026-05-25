@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { chatWithFallback, AllProvidersUnavailableError, type ChatMessage } from '@/lib/providers';
 import { getEmergencyInfo } from '@/lib/safety/emergency-numbers';
 import { preCheck, postCheck } from '@/lib/safety/safety-engine';
-import { snapshotFlags } from '@/lib/feature-flags';
+import { snapshotFlags, emergencyCardEnabled } from '@/lib/feature-flags';
 import { classifyIntent, priorUserTurns } from '@/lib/medical-flow/intent';
 import {
   buildGreetingCard,
@@ -256,7 +256,17 @@ export async function POST(request: NextRequest) {
     // Prepare summary) the user can tap right now, while the LLM
     // turn that follows adds contextual reasoning. Cards are never
     // gated by login or profile.
-    if (isEmergency) {
+    // Emergency-card emission is gated behind MEDOS_EMERGENCY_CARD_ENABLED
+    // (default OFF). When off, the dedicated `[card:emergency]` UI is
+    // suppressed and the chat falls through to the existing
+    // emergency-banner-prepend path (banner text is still injected
+    // into the LLM response, the safety floor is preserved). User
+    // feedback was that the red emergency card felt overaggressive
+    // for the chest-pain / stroke / FAST triggers; routing those
+    // through the structured safety_check → intake → urgent guidance
+    // flow gives clearer next steps without the alarming UI.
+    // Operators who explicitly want the card UI flip the flag on.
+    if (isEmergency && emergencyCardEnabled()) {
       const emergencyCard = buildEmergencyCard({
         reason:
           emergencyRuleFires.length > 0

@@ -13,23 +13,60 @@ export interface TriageResult {
 
 interface EmergencyPattern {
   keywords: string[];
+  /** Optional second-keyword requirement. When set, ALL keywords from
+   *  `keywords` AND at least one from `co_requires` must appear in
+   *  the message before the pattern fires. Used to prevent bare
+   *  "chest pain" / "back pain" / "headache" from auto-triggering R5
+   *  emergency without ACS / SAH / stroke red flags also being present.
+   *  The symptom flow handles the bare-mention case via the
+   *  safety_check card — the user picks red flags from a checklist
+   *  rather than the AI assuming the worst on a one-word complaint. */
+  co_requires?: string[];
   category: string;
   guidance: string;
   severity: 'critical' | 'urgent';
 }
 
 const EMERGENCY_PATTERNS: EmergencyPattern[] = [
+  // EXPLICIT cardiac-emergency CLAIMS — these are unambiguous: a user
+  // who types "heart attack" or "infarto" is asserting the diagnosis,
+  // not exploring a symptom. Fire R5 immediately on these alone.
   {
     keywords: [
-      'chest pain', 'dolor de pecho', 'douleur poitrine', 'brustschmerzen',
-      'dolore al petto', 'dor no peito', 'боль в груди', 'ألم في الصدر',
-      'nyeri dada', 'maumivu ya kifua', 'sakit dada', 'ngực đau',
       'heart attack', 'ataque al corazón', 'infarto', 'herzinfarkt',
-      '心脏病', '胸痛', '心臓発作', '가슴 통증', '심장마비',
+      '心脏病', '心臓発作', '심장마비', 'attacco cardiaco', 'crise cardiaque',
     ],
     category: 'cardiovascular',
     guidance:
       'This could be a heart attack. Call emergency services IMMEDIATELY. While waiting: sit upright, stay calm, loosen tight clothing. Chew aspirin if available and not allergic.',
+    severity: 'critical',
+  },
+  // CHEST PAIN WITH RED FLAGS — must combine "chest pain" / equivalents
+  // with at least one ACS warning sign (radiation, sweating, dyspnea,
+  // arm/jaw involvement, collapse). Bare "chest pain" alone routes to
+  // the symptom flow's safety_check checklist instead of R5.
+  {
+    keywords: [
+      'chest pain', 'chest pressure', 'crushing chest', 'tight chest',
+      'pressure in my chest', 'dolor de pecho', 'douleur poitrine',
+      'brustschmerzen', 'dolore al petto', 'dor no peito',
+      'боль в груди', 'ألم في الصدر', 'nyeri dada', 'maumivu ya kifua',
+      'sakit dada', 'ngực đau', '胸痛', '가슴 통증',
+    ],
+    co_requires: [
+      'radiating', 'radiates', 'left arm', 'right arm', 'jaw', 'neck',
+      'sweating', 'cold sweat', 'shortness of breath', 'short of breath',
+      'trouble breathing', "can't breathe", 'cant breathe',
+      'fainting', 'passed out', 'collapse', 'crushing', 'pressure',
+      'tightness', 'nausea and chest', 'vomiting and chest',
+      // Spanish / Italian / German equivalents
+      'irradi', 'brazo izquierdo', 'mandíbula', 'sudoración',
+      'braccio sinistro', 'mascella', 'sudore', 'sudorazione',
+      'linker arm', 'kiefer', 'schwitzen', 'atemnot',
+    ],
+    category: 'cardiovascular',
+    guidance:
+      'Chest pain with these warning signs needs emergency assessment. Call emergency services IMMEDIATELY. While waiting: sit upright, stay calm, loosen tight clothing. Chew aspirin if available and not allergic.',
     severity: 'critical',
   },
   {
@@ -210,16 +247,27 @@ export function triageMessage(message: string): TriageResult {
   const messageLower = message.toLowerCase();
 
   for (const pattern of EMERGENCY_PATTERNS) {
-    for (const keyword of pattern.keywords) {
-      if (messageLower.includes(keyword.toLowerCase())) {
-        return {
-          isEmergency: true,
-          category: pattern.category,
-          guidance: pattern.guidance,
-          severity: pattern.severity,
-        };
-      }
+    const primaryHit = pattern.keywords.some((k) =>
+      messageLower.includes(k.toLowerCase()),
+    );
+    if (!primaryHit) continue;
+    // When co_requires is set, demand a second qualifier in the same
+    // message before firing R5. This keeps bare "chest pain" / "back
+    // pain" / "headache" out of the emergency template — they route
+    // through the symptom flow's safety_check instead, where the user
+    // picks red flags from a structured checklist.
+    if (pattern.co_requires && pattern.co_requires.length > 0) {
+      const coHit = pattern.co_requires.some((k) =>
+        messageLower.includes(k.toLowerCase()),
+      );
+      if (!coHit) continue;
     }
+    return {
+      isEmergency: true,
+      category: pattern.category,
+      guidance: pattern.guidance,
+      severity: pattern.severity,
+    };
   }
 
   return {

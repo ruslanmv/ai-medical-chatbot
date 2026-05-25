@@ -318,13 +318,92 @@ export const MENTAL_HEALTH: SymptomFlow = {
   ],
 };
 
+// ─────────────────────────────────────────────────────────────────────
+// Chest pain — investigative, NOT auto-emergency
+// ─────────────────────────────────────────────────────────────────────
+// Bare "chest pain" used to fire the safety/triage R5 emergency
+// template immediately, which the user (rightly) called out as
+// over-aggressive. The triage rule now requires a co-occurring ACS
+// qualifier (radiating, jaw, sweating, dyspnea…). When the user only
+// says "I have chest pain", the route falls through to this flow
+// instead — a structured safety_check that ASKS about red flags
+// rather than assuming the worst.
+//
+// On any positive red-flag answer the flow's `on_positive: 'emergency'`
+// emits the guidance card with care_level=emergency. Bare "None of
+// these" routes to intake (location → duration → severity) and the
+// usual care-level classification.
+
+const CHEST_PAIN_RED_FLAGS: Action[] = [
+  { label: 'Pain radiating to arm, jaw, or neck', value: 'rf:chest:radiating', style: 'danger' },
+  { label: 'Shortness of breath or trouble breathing', value: 'rf:chest:dyspnea', style: 'danger' },
+  { label: 'Sweating, nausea, or vomiting', value: 'rf:chest:autonomic', style: 'danger' },
+  { label: 'Fainting or near-fainting', value: 'rf:chest:syncope', style: 'danger' },
+  { label: 'Crushing or pressure-like pain', value: 'rf:chest:crushing', style: 'danger' },
+  { label: 'Pain started during exertion and persists', value: 'rf:chest:exertional', style: 'danger' },
+  { label: 'History of heart disease or recent surgery', value: 'rf:chest:cv_history', style: 'danger' },
+  { label: 'None of these', value: 'rf:none', style: 'primary' },
+  { label: 'Not sure', value: 'rf:unsure' },
+];
+
+const CHEST_PAIN_LOCATION: Action[] = [
+  { label: 'Center / behind sternum', value: 'selected:loc:central' },
+  { label: 'Left side', value: 'selected:loc:left' },
+  { label: 'Right side', value: 'selected:loc:right' },
+  { label: 'Across the chest', value: 'selected:loc:diffuse' },
+  { label: 'Worse with breathing', value: 'selected:loc:pleuritic' },
+  { label: 'Worse with movement / position', value: 'selected:loc:musculoskeletal' },
+];
+
+export const CHEST_PAIN: SymptomFlow = {
+  id: 'chest-pain',
+  // Match isolated "chest pain" / "chest pressure" mentions. The R5
+  // triage rule (now ACS-qualified) still catches the explicit-claim
+  // pattern before this flow ever sees the message, so we only get
+  // bare-mention chest pain here.
+  trigger:
+    /\b(chest\s+(pain|ache|discomfort|pressure|tightness|hurts?)|(pain|ache|hurts?|tightness|pressure|discomfort)\s+(?:in\s+)?(?:my\s+|the\s+)?chest)\b/i,
+  safety: {
+    kind: 'safety_check',
+    title: 'Chest pain',
+    question:
+      "Chest pain can come from many things. First, let's check for warning signs that need urgent care.",
+    options: CHEST_PAIN_RED_FLAGS,
+    on_positive: 'emergency',
+  },
+  intake_steps: [
+    {
+      title: 'Where is the pain?',
+      question: 'Where exactly do you feel it?',
+      input_type: 'chips',
+      options: CHEST_PAIN_LOCATION,
+    },
+    {
+      title: 'How long?',
+      question: 'How long has it been happening?',
+      input_type: 'chips',
+      options: DURATION_OPTIONS,
+    },
+    {
+      title: 'How severe?',
+      question: 'On a scale from 0 to 10, how severe is it?',
+      input_type: 'slider',
+      slider: SEVERITY_SLIDER,
+    },
+  ],
+};
+
 export const ALL_FLOWS: SymptomFlow[] = [
   // Order matters: more specific patterns first so they win against
   // broader ones. STROKE before HEADACHE because "sudden severe
   // headache" appears in both. INFANT_FEVER before MENTAL_HEALTH so
-  // "baby" + "fever" doesn't get hijacked.
+  // "baby" + "fever" doesn't get hijacked. CHEST_PAIN sits with the
+  // other safety-critical flows — the triage R5 rule (with ACS
+  // qualifier) handles confirmed cardiac emergencies; this flow
+  // handles the bare-mention investigative case.
   STROKE,
   INFANT_FEVER,
+  CHEST_PAIN,
   MENTAL_HEALTH,
   BACK_PAIN,
   HEADACHE,

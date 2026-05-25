@@ -69,24 +69,75 @@ const includesAny = (haystack: string, needles: string[]) =>
   needles.some((n) => haystack.includes(n));
 
 // ───── Cardiovascular ────────────────────────────────────────────────────
+//
+// IMPORTANT — bare "chest pain" is intentionally NOT in this rule any
+// more. The user feedback was clear: an unqualified single complaint
+// like "I have chest pain" should NOT trigger the R5 emergency template
+// immediately. The AI should investigate first. The CHEST_PAIN flow in
+// lib/medical-flow/symptoms.ts handles bare mentions via a structured
+// safety_check checklist; if the patient picks any genuine red flag
+// from the checklist, the flow emits the emergency guidance card on
+// the NEXT turn. That keeps the safety floor strict for confirmed ACS
+// presentations without crying wolf on the bare two-word complaint.
+//
+// What stays as a hard R5 here:
+//   - Explicit emergency CLAIMS (the patient is asserting the
+//     diagnosis, not exploring a symptom): "heart attack", "MI",
+//     "I'm having a heart attack".
+//   - Multi-term ACS combinations that arrive in a single message
+//     (chest pain + radiating, chest pain + jaw, chest pain + sweating,
+//     crushing chest, pressure in chest + dyspnea, …).
 
-const CHEST_PAIN_TERMS = [
-  'chest pain', 'crushing chest', 'tight chest', 'pressure in my chest',
-  'pressure in chest', 'chest pressure', 'chest squeezing',
-  'left arm pain', 'pain in my left arm', 'jaw pain shortness',
-  'heart attack', 'mi symptoms',
+// Explicit-claim phrases — fire R5 immediately.
+const EXPLICIT_CARDIO_CLAIMS = [
+  'heart attack',
+  'mi symptoms',
+  "i'm having a heart attack",
+  'cardiac arrest',
+];
+
+// ACS qualifier set. To fire R5 on chest symptoms, the message MUST
+// contain BOTH a chest term AND at least one qualifier from this list.
+const CHEST_SYMPTOM_TERMS = [
+  'chest pain',
+  'chest pressure',
+  'crushing chest',
+  'tight chest',
+  'pressure in my chest',
+  'pressure in chest',
+  'chest squeezing',
+  'chest tightness',
+];
+const ACS_QUALIFIERS = [
+  'radiating', 'radiates', 'radiate',
+  'left arm', 'right arm', 'down my arm',
+  'jaw', 'neck',
+  'sweating', 'cold sweat',
+  'shortness of breath', 'short of breath',
+  "can't breathe", 'cant breathe', 'trouble breathing', 'difficulty breathing',
+  'fainting', 'passed out', 'syncope', 'collapse',
+  'crushing', 'squeezing',
+  'nausea and chest', 'vomiting and chest',
 ];
 
 const CARDIO_RULE: RedFlagRule = {
   id: 'RF-CARDIO-01',
   category: 'cardiovascular_emergency',
   riskClass: 'R5',
-  reason: 'Cardiovascular emergency keywords detected.',
+  reason: 'Confirmed cardiac emergency presentation (explicit claim OR chest symptom + ACS qualifier).',
   guidance:
     'This may be a heart attack. Call your local emergency number immediately. ' +
     'While waiting: sit upright, stay calm, loosen tight clothing. ' +
     'Chew aspirin only if you are not allergic and a clinician has previously advised it.',
-  match: (text) => includesAny(lc(text), CHEST_PAIN_TERMS),
+  match: (text) => {
+    const t = lc(text);
+    // Path A: explicit claim — fires alone.
+    if (includesAny(t, EXPLICIT_CARDIO_CLAIMS)) return true;
+    // Path B: chest symptom + ACS qualifier must BOTH be present.
+    const hasChestSymptom = includesAny(t, CHEST_SYMPTOM_TERMS);
+    if (!hasChestSymptom) return false;
+    return includesAny(t, ACS_QUALIFIERS);
+  },
 };
 
 // ───── Stroke ────────────────────────────────────────────────────────────

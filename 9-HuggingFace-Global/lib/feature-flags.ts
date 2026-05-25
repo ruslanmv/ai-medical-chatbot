@@ -48,6 +48,34 @@ export const offlineLiteEnabled = (): boolean =>
   truthy(process.env.MEDOS_OFFLINE_LITE_ENABLED);
 
 /**
+ * Emergency card emission.
+ *
+ * When OFF (the default), the chat route does NOT emit the dedicated
+ * `[card:emergency]` UI card, and the symptom-flow state machine
+ * downgrades any safety-check red-flag match from care_level `emergency`
+ * to `urgent` on the guidance card.
+ *
+ * The DETERMINISTIC SAFETY FLOOR is preserved either way:
+ *   - preCheck() still runs and still classifies risk (R0–R5)
+ *   - For R5 (explicit claims like "I am having a heart attack"), the
+ *     emergency banner text is still prepended to the LLM response
+ *   - The local emergency number still appears in `seek_care_if`
+ *     sections of guidance cards
+ *
+ * What changes when OFF: users with bare chest-pain / stroke-FAST
+ * / similar inputs are not greeted with the alarming red emergency
+ * card. They get the structured safety_check → intake → urgent
+ * guidance flow instead, which still tells them what to do, just
+ * less dramatically.
+ *
+ * Re-enable by setting MEDOS_EMERGENCY_CARD_ENABLED=true on the
+ * environment for the deployment that needs it (e.g. an internal
+ * clinician-supervised pilot where the alarm UI is welcome).
+ */
+export const emergencyCardEnabled = (): boolean =>
+  truthy(process.env.MEDOS_EMERGENCY_CARD_ENABLED);
+
+/**
  * Snapshot every flag's current value. Convenience for the /api/health
  * endpoint and for logging at process startup.
  */
@@ -55,5 +83,6 @@ export function snapshotFlags(): Record<string, boolean> {
   return {
     MEDOS_PER_USER_OLLABRIDGE: perUserOllaBridgeEnabled(),
     MEDOS_OFFLINE_LITE_ENABLED: offlineLiteEnabled(),
+    MEDOS_EMERGENCY_CARD_ENABLED: emergencyCardEnabled(),
   };
 }
