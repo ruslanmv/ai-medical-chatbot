@@ -239,8 +239,48 @@ export function useChat() {
 
         clearTimeout(timeout);
 
+        // Surface server-supplied correlation IDs so a console error can
+        // be matched against Vercel function logs / OllaBridge logs.
+        const requestId =
+          response.headers.get("x-vercel-id") ||
+          response.headers.get("x-request-id") ||
+          null;
+
         if (!response.ok) {
-          throw new Error(`Request failed: ${response.statusText}`);
+          // Read the error envelope the orchestrator returns so the
+          // console points straight at the failure (e.g. the structured
+          // `{ error, code, upstreamStatus }` from /api/chat). Falls back
+          // to the raw text if the body isn't JSON.
+          let errorBody: any = null;
+          let errorText = "";
+          try {
+            errorText = await response.text();
+            try {
+              errorBody = JSON.parse(errorText);
+            } catch {
+              errorBody = null;
+            }
+          } catch {
+            // ignore — best-effort diagnostics
+          }
+          if (typeof console !== "undefined") {
+            console.group(`[Chat] /api/chat ${response.status} ${response.statusText}`);
+            console.error("requestId:", requestId);
+            console.error("code:", errorBody?.code ?? "(none)");
+            console.error("error:", errorBody?.error ?? errorText.slice(0, 300));
+            if (errorBody?.upstreamStatus !== undefined) {
+              console.error("upstreamStatus:", errorBody.upstreamStatus);
+            }
+            console.groupEnd();
+          }
+          const friendly =
+            errorBody?.code === "ollabridge_not_configured"
+              ? "The medical AI gateway isn't configured on the server yet. Try again in a moment."
+              : errorBody?.code === "ollabridge_timeout"
+                ? "The medical AI took too long to respond. Please try again."
+                : errorBody?.error ||
+                  `Request failed: ${response.statusText} (${response.status})`;
+          throw new Error(friendly);
         }
 
         if (!response.body) {
@@ -255,6 +295,31 @@ export function useChat() {
         let firstByteAt: number | null = null;
         const requestStartedAt = Date.now();
 
+        // Stream-level diagnostics. Populated as frames arrive so we can
+        // emit a structured report if the stream closes with zero
+        // content (the most common silent-failure mode — OllaBridge stubs,
+        // alias drift, empty deltas).
+        let framesSeen = 0;
+        let framesParsed = 0;
+        let framesSkipped = 0;
+        let bytesReceived = 0;
+        let sawDone = false;
+        let upstreamProvider: string | null = null;
+        let upstreamModel: string | null = null;
+        const earlyFrameSamples: string[] = [];
+        const skippedFrameSamples: string[] = [];
+
+        // Capture the raw HEAD of the response (first ~1500 bytes) so
+        // when zero SSE frames arrive — the common "server returned 200
+        // with HTML/JSON instead of SSE" mode — we can show the user
+        // exactly what came back instead of saying "(none)".
+        const RAW_HEAD_MAX = 1500;
+        let rawHead = "";
+        // Also surface the response transport metadata. Content-Type
+        // alone usually tells SSE / JSON / HTML apart at a glance.
+        const responseContentType = response.headers.get("content-type") || "";
+        const responseContentLength = response.headers.get("content-length") || "";
+
         // The assistant bubble is created LAZILY — only after the first real
         // token arrives. While the stream is still flowing nothing is shown
         // but the typing indicator (handled by the caller via isTyping). This
@@ -267,7 +332,12 @@ export function useChat() {
 
           // SSE frames can be split across chunks — buffer until we see a
           // double-newline separator before parsing.
-          buffer += decoder.decode(value, { stream: true });
+          const chunk = decoder.decode(value, { stream: true });
+          bytesReceived += chunk.length;
+          if (rawHead.length < RAW_HEAD_MAX) {
+            rawHead = (rawHead + chunk).slice(0, RAW_HEAD_MAX);
+          }
+          buffer += chunk;
           const frames = buffer.split("\n\n");
           buffer = frames.pop() || "";
 
@@ -276,11 +346,25 @@ export function useChat() {
               if (!line.startsWith("data: ")) continue;
               const data = line.slice(6).trim();
               if (!data) continue;
-              if (data === "[DONE]") break;
+              framesSeen += 1;
+              if (earlyFrameSamples.length < 3) {
+                earlyFrameSamples.push(data.slice(0, 200));
+              }
+              if (data === "[DONE]") {
+                sawDone = true;
+                break;
+              }
 
               try {
                 const parsed = JSON.parse(data);
+                framesParsed += 1;
                 if (parsed.error) throw new Error(parsed.error);
+                if (parsed?.provider && !upstreamProvider) {
+                  upstreamProvider = parsed.provider;
+                }
+                if (parsed?.model && !upstreamModel) {
+                  upstreamModel = parsed.model;
+                }
 
                 // Backend providers emit the OpenAI-compatible shape:
                 //   { choices: [{ delta: { content: "..." } }], provider, model }
@@ -298,7 +382,8 @@ export function useChat() {
                       console.info(
                         `[Chat] First token received in ${firstByteAt - requestStartedAt}ms` +
                           (parsed?.provider ? ` via ${parsed.provider}` : "") +
-                          (parsed?.model ? ` (${parsed.model})` : ""),
+                          (parsed?.model ? ` (${parsed.model})` : "") +
+                          (requestId ? ` [req ${requestId}]` : ""),
                       );
                     }
                   }
@@ -327,8 +412,12 @@ export function useChat() {
                   });
                 }
               } catch (parseErr) {
-                // Malformed frame — log once at info level so dev console
-                // can trace SSE issues without spamming for keep-alives.
+                framesSkipped += 1;
+                if (skippedFrameSamples.length < 3) {
+                  skippedFrameSamples.push(data.slice(0, 200));
+                }
+                // Malformed frame — log once at debug so dev console can
+                // trace SSE issues without spamming for keep-alives.
                 if (typeof console !== "undefined") {
                   console.debug("[Chat] Skipped SSE frame:", data.slice(0, 120));
                 }
@@ -337,12 +426,115 @@ export function useChat() {
           }
         }
 
-        // If the stream closed with zero content, surface it as an error
-        // so the user isn't left staring at an empty bubble.
+        // If the stream closed with zero content, dump everything we know
+        // so the next config drift is debuggable from one console group.
         if (!aiContent) {
-          throw new Error(
-            "The AI returned an empty response. Check Admin → LLM for provider health.",
-          );
+          // Try to parse the raw head as JSON. When the orchestrator (or
+          // its upstream) returns a non-streaming response — the most
+          // common silent-failure mode is OllaBridge's stub responder,
+          // which sends a single JSON blob with empty content — this
+          // gives us the real error/model/finish_reason without needing
+          // server logs.
+          let rawAsJson: any = null;
+          if (rawHead.trim().startsWith("{")) {
+            try {
+              rawAsJson = JSON.parse(rawHead.trim());
+            } catch {
+              // not parseable; rawHead snapshot below still helps
+            }
+          }
+          // Pull common error fields from whatever shape the body
+          // happens to be, so the surface message can be specific.
+          const upstreamErrorMessage =
+            rawAsJson?.error?.message ??
+            (typeof rawAsJson?.error === "string" ? rawAsJson.error : null) ??
+            rawAsJson?.message ??
+            null;
+          const upstreamFinishReason =
+            rawAsJson?.choices?.[0]?.finish_reason ?? null;
+          const upstreamMessageContent =
+            rawAsJson?.choices?.[0]?.message?.content ?? null;
+          const upstreamModelFromJson = rawAsJson?.model ?? null;
+
+          if (typeof console !== "undefined") {
+            const elapsed = Date.now() - requestStartedAt;
+            console.group(
+              `[Chat] Empty-response diagnostics (${elapsed}ms, ${bytesReceived}B)`,
+            );
+            console.error("requestId:", requestId);
+            console.error("content-type:", responseContentType || "(none)");
+            if (responseContentLength) {
+              console.error("content-length:", responseContentLength);
+            }
+            console.error("bytesReceived:", bytesReceived);
+            console.error("framesSeen:", framesSeen);
+            console.error("framesParsed:", framesParsed);
+            console.error("framesSkipped:", framesSkipped);
+            console.error("sawDone:", sawDone);
+            console.error(
+              "upstreamProvider:",
+              upstreamProvider ?? "(none)",
+            );
+            console.error(
+              "upstreamModel:",
+              upstreamModel ?? upstreamModelFromJson ?? "(none)",
+            );
+            if (rawAsJson) {
+              // The single most useful field when OllaBridge stubs out.
+              console.error("upstream JSON (parsed):", rawAsJson);
+              if (upstreamFinishReason !== null) {
+                console.error("finish_reason:", upstreamFinishReason);
+              }
+              if (upstreamMessageContent !== null) {
+                console.error(
+                  "message.content length:",
+                  String(upstreamMessageContent).length,
+                );
+              }
+              if (upstreamErrorMessage) {
+                console.error("upstream error:", upstreamErrorMessage);
+              }
+            } else if (rawHead.length > 0) {
+              console.error(
+                "rawHead (first 1500B):",
+                rawHead.slice(0, RAW_HEAD_MAX),
+              );
+            }
+            if (earlyFrameSamples.length > 0) {
+              console.error("first SSE frames:", earlyFrameSamples);
+            }
+            if (skippedFrameSamples.length > 0) {
+              console.error(
+                "skipped SSE frames:",
+                skippedFrameSamples,
+              );
+            }
+            console.error(
+              "hint:",
+              framesSeen === 0 && /text\/html/i.test(responseContentType)
+                ? "Server returned HTML — most likely an upstream 404 page (OllaBridge URL missing /v1, or the deploy didn't include /api/chat)."
+                : framesSeen === 0 &&
+                    /application\/json/i.test(responseContentType) &&
+                    upstreamMessageContent === ""
+                  ? `OllaBridge returned a non-streaming JSON with empty content (model='${upstreamModelFromJson ?? "?"}'). This is the stub responder — remove OLLABRIDGE_MODEL on Vercel so OllaBridge auto-routes, or set it to 'free-best'.`
+                  : framesSeen === 0 && upstreamErrorMessage
+                    ? `Upstream returned an error envelope: ${upstreamErrorMessage}`
+                    : framesSeen === 0
+                      ? "Server returned 200 with no SSE frames. Check Vercel function logs and OllaBridge upstream."
+                      : framesParsed > 0 && upstreamModel
+                        ? `Upstream produced frames but no content tokens — model '${upstreamModel}' may be a stub. Try removing OLLABRIDGE_MODEL on Vercel to let OllaBridge route.`
+                        : "Frames arrived but none parsed — check SSE format.",
+            );
+            console.groupEnd();
+          }
+          // Tailor the user-facing message when we have enough signal.
+          const surface =
+            upstreamMessageContent === "" && upstreamFinishReason === "stop"
+              ? "The medical AI gateway returned an empty reply (stub model). The admin can fix this by removing OLLABRIDGE_MODEL or setting it to 'free-best'."
+              : upstreamErrorMessage
+                ? `The medical AI gateway returned an error: ${upstreamErrorMessage}`
+                : "The AI returned an empty response. Check Admin → LLM for provider health.";
+          throw new Error(surface);
         }
       } catch (err: any) {
         const errorMessage =
@@ -351,7 +543,24 @@ export function useChat() {
             : err?.message || "I'm having trouble reaching the medical AI right now.";
         setError(errorMessage);
         if (typeof console !== "undefined") {
-          console.error("[Chat] Stream failed:", errorMessage, err);
+          console.group("[Chat] Stream failed");
+          console.error("message:", errorMessage);
+          console.error("error.name:", err?.name ?? "(unknown)");
+          console.error("error.message:", err?.message ?? "(none)");
+          if (err?.cause) console.error("error.cause:", err.cause);
+          if (err?.stack) console.error("error.stack:", err.stack);
+          if (err?.name === "AbortError") {
+            console.error(
+              "hint:",
+              "Client-side 58s abort fired. Upstream took too long — check the Vercel function log for an OllaBridge timeout.",
+            );
+          } else if (err?.name === "TypeError" && /fetch|network/i.test(err?.message || "")) {
+            console.error(
+              "hint:",
+              "fetch() rejected before a response — likely DNS, TLS, CORS, or the route didn't deploy. Confirm /api/chat exists on this build.",
+            );
+          }
+          console.groupEnd();
         }
 
         // Render a gentle, professional message — no "⚠️ Error:" prefix

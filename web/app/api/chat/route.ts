@@ -1,211 +1,188 @@
 /**
- * /api/chat — MedOS orchestrator entry point.
+ * /api/chat — thin streaming proxy to the HF Space backend.
  *
- * Replaces the previous `/api/proxy/chat` straight-passthrough to the
- * HF Space. This route owns the AI-first product logic that the proxy
- * can't:
+ * Vercel hosts the UI and CDN; the HuggingFace Space at
+ * `huggingface.co/spaces/ruslanmv/MediBot` (URL: `ruslanmv-medibot.hf.space`)
+ * owns the entire chat pipeline — RAG, intent classification, safety
+ * pre/post checks, the provider fallback chain (Groq → OllaBridge →
+ * HF Inference), the admin SQLite store, and the card-emitting system
+ * prompt. We forward the request body verbatim and stream the SSE
+ * response back, so the browser sees exactly what HF emits.
  *
- *   1. Reads the typed `action` event from the request body.
- *   2. Derives conversation state from the message history.
- *   3. Runs the action router — actions like `doctor_summary` are
- *      handled deterministically here (built from derived state) and
- *      never reach the LLM.
- *   4. For everything else, stamps an AI-first system prompt + flow
- *      hint and forwards to OllaBridge Cloud's OpenAI-compatible
- *      `/v1/chat/completions` endpoint, streaming the result through.
+ * Why a proxy instead of running the chat on Vercel:
+ *   - HF is the source of truth for backend behaviour (per the latest
+ *     architecture decision).
+ *   - Vercel's serverless functions can't share the Space's persistent
+ *     SQLite admin store, so admin config changes wouldn't take effect.
+ *   - One pipeline, one set of logs, one place to fix bugs.
  *
- * What stays out of this file:
- *   - Medical copy (lives in the model + the system prompt).
- *   - Schema validation of emitted cards (the client-side safety
- *     validator handles it before render).
- *   - UI concerns.
- *
- * What deliberately stays in:
- *   - Action routing — the only place we can guarantee a click never
- *     loops back into the wrong intake.
- *   - Doctor-summary generation — built from real conversation slots
- *     so the output isn't a memorized template.
- *   - System-prompt construction — the contract between the orchestrator
- *     and any LLM is centralised here, regardless of which OllaBridge
- *     model alias is configured.
+ * Configuration:
+ *   HF_BACKEND_URL          server-only override. Defaults to
+ *                           `NEXT_PUBLIC_BACKEND_URL` (which is shared
+ *                           with the legacy /api/proxy/[...path] route)
+ *                           and finally to the public shared instance.
+ *   HF_BACKEND_TIMEOUT_MS   optional connect timeout (default 50000).
+ *                           The function itself has a 60s Vercel cap.
  */
 
-import { NextRequest, NextResponse } from "next/server";
-
-import {
-  deriveConversationState,
-  type WireMessage,
-} from "@/lib/medos-orchestrator/conversation-state";
-import { route, type ActionEvent } from "@/lib/medos-orchestrator/action-router";
-import { buildSystemMessage } from "@/lib/medos-orchestrator/prompt-builder";
-import { classifyContextSwitch } from "@/lib/medos-orchestrator/context-switch-classifier";
-import {
-  OllaBridgeNotConfigured,
-  streamChatCompletion,
-} from "@/lib/medos-orchestrator/ollabridge-client";
+import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface ChatRequestBody {
-  messages: WireMessage[];
-  action?: ActionEvent;
-  flow?: { active_topic?: string | null };
-  context?: {
-    country?: string;
-    language?: string;
-    emergencyNumber?: string;
-  };
-  model?: string;
+const DEFAULT_BACKEND = "https://ruslanmv-medibot.hf.space";
+const DEFAULT_TIMEOUT_MS = 50_000;
+
+function resolveBackendURL(): string {
+  const raw =
+    process.env.HF_BACKEND_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    DEFAULT_BACKEND;
+  return raw.replace(/\/+$/, "");
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
-  let body: ChatRequestBody;
-  try {
-    body = (await req.json()) as ChatRequestBody;
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 },
-    );
-  }
+  const backend = resolveBackendURL();
+  const upstream = `${backend}/api/chat`;
 
-  if (!Array.isArray(body.messages) || body.messages.length === 0) {
-    return NextResponse.json(
-      { error: "`messages` is required and must be non-empty" },
-      { status: 400 },
-    );
-  }
+  // Read the body once as text so we can both forward it and log
+  // its size without consuming the stream twice.
+  const bodyText = await req.text();
 
-  // ── 1. Derive state from the conversation we received. ──────────────
-  const state = deriveConversationState(body.messages);
-
-  // ── 2. Run the action router. Deterministic outcomes (doctor_summary,
-  //       pure-nav rejects) get streamed back from here without touching
-  //       the LLM. ────────────────────────────────────────────────────
-  const decision = route(body.action, state);
-  if (decision.kind === "handled" || decision.kind === "reject") {
-    return sseFromString(decision.sse || endOfStream());
-  }
-
-  // ── 3. Build the system prompt (AI-first contract + flow hint) and
-  //       prepend it. Drop any pre-existing system messages — this route
-  //       is the single source of truth for the inference contract. ──
-  const country = body.context?.country;
-  const language = body.context?.language;
-  const switchHint = classifyContextSwitch(
-    body.messages[body.messages.length - 1]?.content ?? "",
-    state,
+  const startedAt = Date.now();
+  console.log(
+    `[Proxy] /api/chat → ${upstream} (${bodyText.length}B in)`,
   );
 
-  const system = buildSystemMessage({
-    country,
-    language,
-    active_topic: state.active_topic,
-    patient_subject: state.patient_subject,
-  });
+  const timeoutMs = Number(
+    process.env.HF_BACKEND_TIMEOUT_MS || DEFAULT_TIMEOUT_MS,
+  );
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  // Honor a client disconnect too.
+  if (req.signal) {
+    req.signal.addEventListener("abort", () => controller.abort(), {
+      once: true,
+    });
+  }
 
-  // Append the context-switch hint as a lightweight `<flow_hint>`
-  // continuation. The model is free to ignore it; the hint just makes
-  // the right answer cheaper to reach when the inference model isn't
-  // yet fine-tuned for the new SYSTEM_PROMPT.
-  const enrichedSystem: WireMessage = {
-    role: "system",
-    content:
-      system.content +
-      "\n\n<flow_hint>\n" +
-      `context_switch_likelihood=${switchHint.likelihood.toFixed(2)}\n` +
-      `context_switch_reason=${switchHint.reason}\n` +
-      (switchHint.new_patient_likely
-        ? "context_switch_new_patient=true\n"
-        : "") +
-      "</flow_hint>",
-  };
-
-  const forwardMessages: WireMessage[] = [
-    enrichedSystem,
-    ...body.messages.filter((m) => m.role !== "system"),
-  ];
-
-  // ── 4. Forward to OllaBridge and pipe the SSE stream through. ──────
+  let res: Response;
   try {
-    const upstream = await streamChatCompletion({
-      messages: forwardMessages,
-      model: body.model,
-      signal: req.signal,
+    res = await fetch(upstream, {
+      method: "POST",
+      headers: buildForwardHeaders(req),
+      body: bodyText,
+      signal: controller.signal,
     });
-
-    if (!upstream.ok || !upstream.body) {
-      const text = await upstream.text().catch(() => "");
-      console.error(
-        `[Orchestrator] OllaBridge ${upstream.status}: ${text.slice(0, 200)}`,
-      );
-      return NextResponse.json(
-        {
-          error:
-            "The LLM gateway returned an error. Try again in a moment.",
-          code: "ollabridge_upstream_error",
-          upstreamStatus: upstream.status,
-        },
-        { status: upstream.status >= 500 ? 502 : upstream.status },
-      );
-    }
-
-    // Pass-through streaming. The client already speaks the OpenAI
-    // SSE shape (`useChat.ts` parses `choices[0].delta.content`), so
-    // we don't have to transform.
-    return new Response(upstream.body, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-store",
-        Connection: "keep-alive",
-      },
-    });
-  } catch (err) {
-    if (err instanceof OllaBridgeNotConfigured) {
-      return NextResponse.json(
-        {
-          error:
-            "OllaBridge is not configured. Set OLLABRIDGE_BASE_URL and OLLABRIDGE_API_KEY on the server.",
-          code: "ollabridge_not_configured",
-        },
-        { status: 503 },
-      );
-    }
-    const aborted = (err as any)?.name === "AbortError";
-    console.error("[Orchestrator] upstream failed:", err);
-    return NextResponse.json(
-      {
-        error: aborted
-          ? "The LLM took too long to respond. Please try again."
-          : "Could not reach the LLM gateway. Please try again.",
-        code: aborted ? "ollabridge_timeout" : "ollabridge_unreachable",
-      },
-      { status: aborted ? 504 : 502 },
+  } catch (err: any) {
+    clearTimeout(timer);
+    const aborted = err?.name === "AbortError";
+    console.error(
+      `[Proxy] fetch to ${upstream} failed (${Date.now() - startedAt}ms):`,
+      err?.message || err,
+    );
+    return jsonError(
+      aborted
+        ? "The medical AI took too long to respond. Please try again."
+        : "Could not reach the medical AI backend. Please try again.",
+      aborted ? "backend_timeout" : "backend_unreachable",
+      aborted ? 504 : 502,
     );
   }
+  clearTimeout(timer);
+
+  const upstreamContentType = res.headers.get("content-type") || "";
+  console.log(
+    `[Proxy] ${upstream} → ${res.status} content-type=${upstreamContentType} (${Date.now() - startedAt}ms TTFB)`,
+  );
+
+  if (!res.ok) {
+    // Surface the upstream body so the browser-side empty-response
+    // diagnostic groups have the actual error to display.
+    const text = await res.text().catch(() => "");
+    console.error(
+      `[Proxy] upstream error ${res.status}: ${text.slice(0, 300)}`,
+    );
+    return jsonError(
+      `The medical AI backend returned an error (${res.status}). Please try again in a moment.`,
+      "backend_error",
+      res.status >= 500 ? 502 : res.status,
+      { upstreamStatus: res.status, upstreamBody: text.slice(0, 500) },
+    );
+  }
+
+  if (!res.body) {
+    // 200 with no body — treat as an empty stream so the client
+    // diagnostic logger has something parseable to report.
+    return new Response("data: [DONE]\n\n", {
+      status: 200,
+      headers: sseHeaders(),
+    });
+  }
+
+  // Stream the upstream body straight through. The HF Space already
+  // emits canonical OpenAI-compatible SSE frames (its provider chain
+  // re-encodes every upstream into the same shape), so the browser
+  // parser in web/lib/hooks/useChat.ts works unchanged.
+  return new Response(res.body, {
+    status: 200,
+    headers: {
+      ...sseHeaders(),
+      // Preserve the upstream content-type if it's something other
+      // than text/event-stream (defensive — should always be SSE).
+      "Content-Type": upstreamContentType || "text/event-stream",
+    },
+  });
+}
+
+// Bare GET is sometimes hit by health probes and link previewers.
+// Returning 405 is cleaner than letting Next.js render a 500 page.
+export async function GET(): Promise<Response> {
+  return new Response("Method Not Allowed — use POST", { status: 405 });
 }
 
 // ─────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────
 
-/** Wrap an already-formed SSE payload string in a streaming Response.
- *  Used for the action-router's deterministic outcomes (doctor_summary,
- *  rejects). */
-function sseFromString(sse: string): Response {
-  const body = sse.length > 0 ? sse : endOfStream();
-  return new Response(body, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-store",
-      Connection: "keep-alive",
-    },
-  });
+function buildForwardHeaders(req: NextRequest): HeadersInit {
+  const out: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "text/event-stream",
+  };
+  // Pass-through session cookies so HF can authenticate the user
+  // against its own session store.
+  const cookie = req.headers.get("cookie");
+  if (cookie) out.Cookie = cookie;
+  // Pass-through Accept-Language so the HF Space can localise its
+  // greeting card and safety copy.
+  const acceptLang = req.headers.get("accept-language");
+  if (acceptLang) out["Accept-Language"] = acceptLang;
+  // Forward the original client IP for HF-side rate limiting.
+  const realIp = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip");
+  if (realIp) out["X-Forwarded-For"] = realIp;
+  return out;
 }
 
-function endOfStream(): string {
-  return "data: [DONE]\n\n";
+function sseHeaders(): Record<string, string> {
+  return {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-store",
+    Connection: "keep-alive",
+  };
+}
+
+function jsonError(
+  message: string,
+  code: string,
+  status: number,
+  extra?: Record<string, unknown>,
+): Response {
+  return new Response(
+    JSON.stringify({ error: message, code, ...(extra ?? {}) }),
+    {
+      status,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 }

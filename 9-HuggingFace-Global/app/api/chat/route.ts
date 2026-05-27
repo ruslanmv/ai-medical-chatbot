@@ -386,9 +386,18 @@ export async function POST(request: NextRequest) {
           country: countryCode,
           language,
         });
-      } else if (intent === 'chitchat') {
-        // Pure greeting — short, clean, no source chip, no medical
-        // triage.
+      } else if (intent === 'chitchat' && priorUserTurns(messages) === 0) {
+        // First-turn onboarding only — the greeting card is the
+        // app's deliberate entry point with quick-action chips
+        // (Check symptoms / Medication / Test results / Find care /
+        // Emergency).
+        //
+        // On every subsequent turn, chitchat ("hello", "how are you",
+        // "thanks") falls through to the LLM dispatch below. The
+        // system prompt in medical-knowledge.ts:127-130 already
+        // teaches the model not to greet again — it sees the full
+        // history and responds naturally ("Hi — still asking about
+        // your ankle?"). No new regex, no second greeting card.
         const greeting = buildGreetingCard({});
         earlyCards.push(streamCardChunk(greeting));
         recordCardEmission({
