@@ -32,6 +32,7 @@ import {
   ChevronDown,
   MoreHorizontal,
   Smartphone,
+  Plus,
 } from "lucide-react";
 import { NavItem } from "./NavItem";
 import { AboutModal } from "../ui/AboutModal";
@@ -68,6 +69,10 @@ interface SidebarProps {
   isAdmin?: boolean;
   username?: string;
   onLogout?: () => void;
+  /** Clears the current chat thread and returns to home. Same wiring as
+   *  the mobile drawer's "+ New Chat" button — keeps the sidebar in
+   *  parity with the ChatGPT/Claude pattern. */
+  onNewChat?: () => void;
 }
 
 const COLLAPSED_KEY = "medos_sidebar_collapsed";
@@ -80,6 +85,7 @@ export function Sidebar({
   isAdmin = false,
   username,
   onLogout,
+  onNewChat,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [bottomMenuOpen, setBottomMenuOpen] = useState(false);
@@ -157,6 +163,41 @@ export function Sidebar({
             </div>
           )}
         </div>
+
+        {/* New-chat row — sits at the top of the nav stack and uses the
+         * exact same row style as the NavItems below (Home / Ask / …).
+         * Calm and consistent: it's an action row, not a marketing CTA.
+         * The brand gradient stays reserved for true primary moments
+         * (Send / Sign up / Emergency call). */}
+        {onNewChat && !collapsed && (
+          <button
+            onClick={onNewChat}
+            className="group mb-2 w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-ink-muted hover:bg-surface-2 hover:text-ink-base transition-all duration-200"
+          >
+            <Plus
+              size={18}
+              strokeWidth={1.75}
+              className="flex-shrink-0 text-ink-subtle group-hover:text-ink-base"
+            />
+            <span className="text-sm tracking-tight truncate">
+              {t("drawer_new_chat", language)}
+            </span>
+          </button>
+        )}
+        {onNewChat && collapsed && (
+          <button
+            onClick={onNewChat}
+            title={t("drawer_new_chat", language)}
+            aria-label={t("drawer_new_chat", language)}
+            className="group mb-2 w-full flex justify-center items-center rounded-xl px-2 py-2.5 text-ink-muted hover:bg-surface-2 hover:text-ink-base transition-all duration-200"
+          >
+            <Plus
+              size={20}
+              strokeWidth={1.75}
+              className="text-ink-subtle group-hover:text-ink-base"
+            />
+          </button>
+        )}
 
         {/* Main nav.
          *

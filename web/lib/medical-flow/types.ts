@@ -157,6 +157,31 @@ export interface DoctorSummaryCard {
   generated_at: string;
 }
 
+/**
+ * Emitted by the model when it detects that the user's new turn has
+ * switched topic or patient mid-flow (e.g. they were triaging adult
+ * chest pain and now ask about a child's fever). The card acknowledges
+ * the switch, asks the first question of the new flow, and offers a
+ * "Stay on previous topic" escape hatch so an accidental keyword
+ * collision doesn't derail the original conversation. Detection is
+ * the model's job — the SYSTEM_PROMPT forbids keyword rules.
+ */
+export interface ContextSwitchCard {
+  kind: 'context_switch';
+  /** Short label of the topic we were on (e.g. "chest pain"). */
+  previous_topic: string;
+  /** Short label of the topic the new user turn introduces. */
+  new_topic: string;
+  /** True if the new topic is about a different patient (e.g. parent
+   *  was triaging themselves, now asking about their child). */
+  new_patient?: boolean;
+  /** One-sentence acknowledgement — shown as the card body. */
+  response: string;
+  /** The first question of the new flow, OR the action chip the user
+   *  should click to confirm the switch. */
+  suggested_action: Action;
+}
+
 export type Card =
   | GreetingCard
   | SafetyCheckCard
@@ -166,7 +191,8 @@ export type Card =
   | LimitedGuidanceCard
   | EmergencyCard
   | NextStepsCard
-  | DoctorSummaryCard;
+  | DoctorSummaryCard
+  | ContextSwitchCard;
 
 // ─────────────────────────────────────────────────────────────────────
 // Wire format helpers

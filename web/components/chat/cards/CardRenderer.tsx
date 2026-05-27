@@ -11,6 +11,7 @@
  */
 
 import type { Card, Action } from "@/lib/medical-flow/types";
+import { validateOrDrop, type ValidatorContext } from "@/lib/medical-flow/validator";
 import { GreetingCard } from "./GreetingCard";
 import { ProfileGateCard } from "./ProfileGateCard";
 import { SafetyCheckCard } from "./SafetyCheckCard";
@@ -20,6 +21,7 @@ import { NextStepsCard } from "./NextStepsCard";
 import { DoctorSummaryCard } from "./DoctorSummaryCard";
 import { LimitedGuidanceCard } from "./LimitedGuidanceCard";
 import { EmergencyCard } from "./EmergencyCard";
+import { ContextSwitchCard } from "./ContextSwitchCard";
 
 export interface CardActionHandler {
   /** Fired when the user clicks any chip / button inside a card. The
@@ -68,6 +70,8 @@ export function CardRenderer({
       // Doctor summary handles copy/share/print internally; no parent
       // callback needed.
       return <DoctorSummaryCard card={card} />;
+    case "context_switch":
+      return <ContextSwitchCard card={card} onAction={(a) => onAction(a, card)} />;
     // Other kinds ship in subsequent batches. Until then they degrade
     // gracefully to a neutral fallback so a forward-rolling server
     // never breaks the client.
@@ -103,7 +107,10 @@ const CARD_RE = /\[card:([a-z_]+)\]\s*([\s\S]*?)\s*\[\/card\]/gi;
  *    - unknown future kinds: returned as cards with their raw kind,
  *      the dispatcher renders a graceful fallback
  */
-export function parseCardSegments(content: string): ContentSegment[] {
+export function parseCardSegments(
+  content: string,
+  ctx: ValidatorContext = {},
+): ContentSegment[] {
   if (!content) return [];
   const out: ContentSegment[] = [];
   let lastIndex = 0;
@@ -115,9 +122,15 @@ export function parseCardSegments(content: string): ContentSegment[] {
       if (text) out.push({ type: "text", text });
     }
     try {
-      const card = JSON.parse(m[2]) as Card;
-      if (!card.kind) (card as Card).kind = m[1] as Card["kind"];
-      out.push({ type: "card", card });
+      const raw = JSON.parse(m[2]) as Card;
+      if (!raw.kind) (raw as Card).kind = m[1] as Card["kind"];
+      // Run the AI-emitted card through the safety validator before
+      // letting it reach the renderer. Repairs (missing rf:none /
+      // rf:unsure, wrong-locale emergency_number, cross-reacting drug
+      // names in guidance) happen in-place; fatally-invalid cards are
+      // dropped so the chat keeps flowing without a broken-card stub.
+      const safe = validateOrDrop(raw, ctx);
+      if (safe) out.push({ type: "card", card: safe });
     } catch {
       // Malformed JSON inside the marker — keep the raw block as text
       // so the failure is visible, not silently dropped.

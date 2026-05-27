@@ -1,10 +1,12 @@
 "use client";
 
+import { useMemo } from "react";
 import { HeroInput } from "../chat/HeroInput";
 import {
   t,
   type SupportedLanguage,
 } from "@/lib/i18n";
+import { getExampleQuestions, pickRandom } from "@/lib/example-questions";
 
 interface HomeViewProps {
   language: SupportedLanguage;
@@ -33,6 +35,16 @@ export function HomeView({
   onSendMessage,
   onStartVoice,
 }: HomeViewProps) {
+  // Pick three suggestions at random from the localized bank. Memoized
+  // on `language` so the chips stay stable while the user is on the
+  // home view; switching language (or remounting after "New chat")
+  // reshuffles them. This is what makes the home feel alive instead
+  // of the same three example chips on every visit.
+  const suggestions = useMemo(
+    () => pickRandom(getExampleQuestions(language), 3),
+    [language],
+  );
+
   return (
     <div className="flex-1 overflow-y-auto scroll-touch flex flex-col">
       <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full px-4 sm:px-6 py-8">
@@ -53,11 +65,7 @@ export function HomeView({
             onSend={onSendMessage}
             onStartVoice={onStartVoice}
             size="hero"
-            suggestions={[
-              t("ask_example_1", language),
-              t("ask_example_2", language),
-              t("ask_example_3", language),
-            ].filter(Boolean)}
+            suggestions={suggestions}
           />
         </div>
 

@@ -30,6 +30,11 @@ lib64/
 !9-HuggingFace-Global/lib/**
 !web/lib/
 !web/lib/**
+# Re-include test directories whose paths nest under `lib/` (e.g.
+# web/__tests__/lib/) — the broad `lib/` rule above would otherwise
+# silently drop new unit tests for the web app.
+!web/__tests__/lib/
+!web/__tests__/lib/**
 parts/
 sdist/
 var/
