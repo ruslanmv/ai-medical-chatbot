@@ -8,7 +8,9 @@ import { TypingIndicator } from "../chat/TypingIndicator";
 import { TrustBar } from "../chat/TrustBar";
 import type { ChatMessage } from "@/lib/hooks/useChat";
 import type { EHRProfile } from "@/lib/health-store";
+import type { ValidatorContext } from "@/lib/medical-flow/validator";
 import { t, type SupportedLanguage } from "@/lib/i18n";
+import { getExampleQuestions, pickRandom } from "@/lib/example-questions";
 
 interface ChatViewProps {
   messages: ChatMessage[];
@@ -32,6 +34,10 @@ interface ChatViewProps {
   /** Used to summarise the saved profile in the welcome card. */
   ehrProfile?: EHRProfile;
   activeMedicationsCount?: number;
+  /** Session context fed to the medical-flow safety validator on every
+   *  rendered AI message — enforces locale-correct emergency_number
+   *  and patient-allergy scrubbing before the card hits the screen. */
+  validatorContext?: ValidatorContext;
 }
 
 export function ChatView({
@@ -48,6 +54,7 @@ export function ChatView({
   onDismissProfileWelcome,
   ehrProfile,
   activeMedicationsCount = 0,
+  validatorContext,
 }: ChatViewProps) {
   const [isListening, setIsListening] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -115,15 +122,14 @@ export function ChatView({
   // gate on >= 1 instead of > 1.
   const hasMessages = messages.length >= 1;
 
-  // Dynamic suggestions — contextual chips under the input.
+  // Dynamic suggestions — three chips picked at random from a curated
+  // localized bank of ~50 prompts. Re-memoizes on language change (so
+  // switching languages reshuffles in the new language), and re-rolls
+  // whenever the user lands on an empty chat — that's the "New chat"
+  // entry point. Hidden once the conversation starts.
   const suggestions = useMemo(() => {
     if (hasMessages) return [];
-    return [
-      t("ask_example_1", language),
-      t("ask_example_2", language),
-      t("ask_example_3", language),
-      t("ask_example_4", language),
-    ].filter(Boolean);
+    return pickRandom(getExampleQuestions(language), 3);
   }, [hasMessages, language]);
 
   return (
@@ -177,6 +183,7 @@ export function ChatView({
                 msg.content.length > 80
               }
               onCardAction={onCardAction}
+              validatorContext={validatorContext}
             />
           ))}
 

@@ -3,6 +3,7 @@
 import { Stethoscope, User2, ShieldCheck } from "lucide-react";
 import type { ChatMessage } from "@/lib/hooks/useChat";
 import type { Action, Card } from "@/lib/medical-flow/types";
+import type { ValidatorContext } from "@/lib/medical-flow/validator";
 import { CardRenderer, parseCardSegments } from "./cards/CardRenderer";
 
 interface MessageBubbleProps {
@@ -13,6 +14,11 @@ interface MessageBubbleProps {
    *  selections) or navigate (for `open_ehr_wizard` / `open_login` /
    *  `open_emergency`). When absent, action clicks are no-ops. */
   onCardAction?: (action: Action, card: Card) => void;
+  /** Session context used by the medical-flow safety validator. The
+   *  validator uses it to enforce a locale-correct emergency_number
+   *  and to scrub drug names that cross-react with declared allergies
+   *  out of any guidance card the model emits. */
+  validatorContext?: ValidatorContext;
 }
 
 /**
@@ -45,7 +51,12 @@ function stripBubbleMarkers(content: string): string {
  *
  * User bubbles keep the right-aligned chat style.
  */
-export function MessageBubble({ message, showSourceChip, onCardAction }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  showSourceChip,
+  onCardAction,
+  validatorContext,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   if (isUser) {
@@ -71,8 +82,11 @@ export function MessageBubble({ message, showSourceChip, onCardAction }: Message
   // First pass: lift any [card:KIND]…[/card] blocks out of the content.
   // Returns an ordered list of `text` and `card` segments. Card-only
   // messages skip the legacy bubble system entirely and render as a
-  // vertical stack of card components.
-  const segments = parseCardSegments(message.content);
+  // vertical stack of card components. The validator context is
+  // threaded in so each card is checked against the locale's
+  // emergency number and the patient's declared allergies before it
+  // reaches the renderer.
+  const segments = parseCardSegments(message.content, validatorContext);
   const hasCards = segments.some((s) => s.type === "card");
 
   // Strip any stray `[bubble:type]` markers from text content. Older

@@ -84,7 +84,13 @@ function MedOSAppInner() {
     onResult: onGeo,
   });
 
-  const handleSendMessage = (content: string) => {
+  const handleSendMessage = (
+    content: string,
+    extra?: {
+      displayContent?: string;
+      action?: import("@/lib/hooks/useChat").MedActionEvent;
+    },
+  ) => {
     sendMessage(content, {
       preset: settings.advancedMode ? undefined : settings.preset,
       provider: settings.advancedMode ? settings.provider : undefined,
@@ -97,11 +103,22 @@ function MedOSAppInner() {
         language: settings.language,
         emergencyNumber: settings.emergencyNumber,
       },
+      displayContent: extra?.displayContent,
+      action: extra?.action,
     });
     // Auto-navigate to chat when sending a message from home/topics
     if (activeNav !== "chat") {
       setActiveNav("chat");
     }
+  };
+
+  // Reset the conversation and return to home. Bound to the "+ New chat"
+  // button in the sidebar / drawer and the `continue_general` card action
+  // ("Ask another question") at the end of a symptom flow.
+  const handleNewChat = () => {
+    clearMessages();
+    setShowProfileWelcome(false);
+    setActiveNav("home");
   };
 
   const handleStartVoice = () => {
@@ -460,21 +477,56 @@ function MedOSAppInner() {
              * can see exactly what choice the user made. */
             onCardAction={(action) => {
               const v = action.value;
+              // Pure navigation — no LLM turn needed.
               if (v === "open_ehr_wizard") {
                 setActiveNav("ehr-wizard");
-              } else if (v === "open_login") {
+                return;
+              }
+              if (v === "open_login") {
                 setActiveNav("login");
-              } else if (
-                v === "open_emergency" ||
-                v === "intent:emergency" ||
-                v === "intent:nearby_emergency"
-              ) {
+                return;
+              }
+              if (v === "open_emergency" || v === "intent:emergency") {
                 setActiveNav("emergency");
-              } else if (v === "continue_general") {
+                return;
+              }
+              if (v === "intent:nearby_care" || v === "intent:nearby_emergency") {
+                // Both "Find nearby care" (next_steps) and "Find nearby
+                // emergency care" (emergency card) route to the Nearby
+                // view — that's where actual hospitals / clinics /
+                // pharmacies are listed. The Emergency view is a static
+                // safety screen, not a discovery surface.
+                setActiveNav("nearby");
+                return;
+              }
+              if (v === "continue_general") {
+                // "Ask another question" — start a fresh thread instead
+                // of continuing the previous symptom flow. Without this,
+                // the next message inherits the prior context and the
+                // LLM treats the new concern as a continuation of the
+                // previous chief complaint.
+                handleNewChat();
+                return;
+              }
+
+              // ── Typed action channel (AI-first protocol) ────────────
+              // For card buttons that need an LLM turn, send a typed
+              // <action/> event instead of a free-text user message.
+              // The AI-first SFT system prompt teaches the model to
+              // dispatch on the tag deterministically — no more chest-
+              // pain restart when the user clicks "Create doctor
+              // summary".
+              if (v === "action:doctor_summary") {
                 handleSendMessage(
-                  "Please continue with general guidance.",
+                  "Build the doctor summary from the information already collected.",
+                  {
+                    displayContent: action.label || "Create doctor summary",
+                    action: { type: "doctor_summary" },
+                  },
                 );
-              } else if (v.startsWith("intent:")) {
+                return;
+              }
+              if (v.startsWith("intent:")) {
                 // Greeting-card quick actions → seed the next turn with
                 // the chosen category as free text so the intent
                 // classifier routes correctly.
@@ -482,24 +534,42 @@ function MedOSAppInner() {
                   "intent:check_symptoms": "I'd like to check some symptoms.",
                   "intent:medication": "I have a medication question.",
                   "intent:test_result": "I'd like help understanding a test result.",
-                  "intent:nearby_care": "Find nearby care.",
                 };
                 handleSendMessage(map[v] || action.label);
-              } else if (v.startsWith("rf:") || v.startsWith("selected:") || v.startsWith("slider:")) {
-                // Structured chip / slider selections — send the label
-                // as a clean user message. Server-side flow state
-                // tracking ships in Batch 2.
-                handleSendMessage(action.label);
-              } else {
-                // Unknown action — degrade gracefully by sending the
-                // label so the LLM at least sees the user's choice.
-                handleSendMessage(action.label);
+                return;
               }
+              if (
+                v.startsWith("rf:") ||
+                v.startsWith("selected:") ||
+                v.startsWith("slider:")
+              ) {
+                // Structured selections — send as a typed `select`
+                // action so the model sees both the label (for natural-
+                // language continuity) and the structured value (for
+                // deterministic dispatch and the doctor-summary slot
+                // collection).
+                handleSendMessage(action.label, {
+                  action: { type: "select", value: v, label: action.label },
+                });
+                return;
+              }
+              // Unknown action — degrade gracefully by sending the
+              // label so the LLM at least sees the user's choice.
+              handleSendMessage(action.label);
             }}
             profileWelcome={showProfileWelcome}
             onDismissProfileWelcome={() => setShowProfileWelcome(false)}
             ehrProfile={health.ehrProfile}
             activeMedicationsCount={health.medications.filter((m) => m.active).length}
+            /* Context used by the medical-flow safety validator on
+             * every AI message rendered: country pins the local
+             * emergency number on emergency cards, allergies drive
+             * cross-reaction drug scrubbing on guidance cards.
+             * AI-first conversation, deterministic safety floor. */
+            validatorContext={{
+              country: settings.country,
+              allergies: health.ehrProfile?.allergies,
+            }}
           />
         );
     }
@@ -548,7 +618,7 @@ function MedOSAppInner() {
         onClose={() => setDrawerOpen(false)}
         activeKey={activeNav}
         onNavigate={(key) => setActiveNav(key as NavView)}
-        onNewChat={() => { clearMessages(); setActiveNav("home"); }}
+        onNewChat={handleNewChat}
         isAuthenticated={auth.isAuthenticated}
         isAdmin={auth.user?.isAdmin}
         username={auth.user?.displayName || auth.user?.email}
@@ -567,6 +637,7 @@ function MedOSAppInner() {
         isAdmin={auth.user?.isAdmin}
         username={auth.user?.displayName || auth.user?.email}
         onLogout={() => { auth.logout(); setActiveNav("home"); }}
+        onNewChat={handleNewChat}
       />
 
       {/* Main Content */}

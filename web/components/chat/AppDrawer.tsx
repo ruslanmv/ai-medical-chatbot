@@ -115,14 +115,22 @@ export function AppDrawer({
           </button>
         </div>
 
-        {/* New Chat button */}
-        <div className="px-4 pb-3">
+        {/* New Chat — same row style as the drawer items below (Ask,
+         * Records, …) so it reads as a navigation action, not a CTA.
+         * Sidebar.tsx uses the matching NavItem-style row. */}
+        <div className="px-3 pb-2">
           <button
             onClick={() => { onNewChat?.(); onClose(); }}
-            className="w-full py-2.5 bg-brand-gradient text-white rounded-xl font-bold text-sm shadow-glow hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="group w-full h-11 rounded-xl px-3 flex items-center gap-3 text-left text-ink-muted hover:bg-surface-2 hover:text-ink-base transition-all active:scale-[0.98]"
           >
-            <Plus size={16} />
-            {t("drawer_new_chat", language)}
+            <Plus
+              size={18}
+              strokeWidth={1.75}
+              className="flex-shrink-0 text-ink-subtle group-hover:text-ink-base"
+            />
+            <span className="text-sm truncate">
+              {t("drawer_new_chat", language)}
+            </span>
           </button>
         </div>
 

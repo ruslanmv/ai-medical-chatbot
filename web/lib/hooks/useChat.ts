@@ -11,6 +11,32 @@ export type ChatMessage = {
   timestamp: string;
 };
 
+/**
+ * Typed action event — the structured alternative to a free-text user
+ * message. Card buttons emit one of these instead of sending the label
+ * as raw text; the AI-first SFT prompt teaches the model to recognise
+ * `<action type="..."/>` blocks in the user turn and dispatch
+ * accordingly (e.g. doctor_summary → emit doctor_summary card from the
+ * prior structured turns, never restart the symptom flow).
+ *
+ * Wire shape — sent to /api/chat alongside `messages` as a top-level
+ * field so a forward-rolling backend can route on it directly:
+ *
+ *   { messages: [...], action: { type: "doctor_summary" } }
+ *
+ * For the current backend (which only knows about `messages`), the
+ * action is also serialised into the user turn as an `<action ... />`
+ * block so the LLM sees it inline. Once the HF Space wrapper adds an
+ * `action` handler, the duplicate serialisation can be removed.
+ */
+export type MedActionEvent =
+  | { type: "doctor_summary" }
+  | { type: "find_nearby_care" }
+  | { type: "add_health_profile" }
+  | { type: "ask_another_question" }
+  | { type: "select"; value: string; label: string }
+  | { type: "emergency" };
+
 export type SendOptions = {
   preset?: Preset;
   provider?: Provider;
@@ -23,6 +49,17 @@ export type SendOptions = {
     emergencyNumber: string;
     units?: "metric" | "imperial";
   };
+  /** When set, this is what the user sees in their bubble, while `content`
+   *  is what the backend LLM receives. Used for card-triggered actions
+   *  (e.g. "Create doctor summary" button → sends an explicit instruction
+   *  to the model but the chat still reads as the user's choice). */
+  displayContent?: string;
+  /** Typed action event for card-button clicks. When set, the request
+   *  carries an `action` field at the top level AND embeds an
+   *  `<action type="..."/>` block in the user-turn text so the model
+   *  routes deterministically instead of treating the click as a new
+   *  symptom mention. */
+  action?: MedActionEvent;
 };
 
 /**
@@ -30,6 +67,60 @@ export type SendOptions = {
  * Free presets route via the server's HF_TOKEN, so no key is needed.
  */
 const BYO_KEY_PROVIDERS: Provider[] = ["openai", "gemini", "claude"];
+
+/** Serialise a typed action event into the `<action type="..."/>` tag
+ *  the AI-first system prompt expects to see inside the user turn. The
+ *  tag is the in-band channel; the request body's top-level `action`
+ *  field is the out-of-band one. Either is enough — both makes the
+ *  rollout boundary trivial. */
+function serializeActionTag(a: MedActionEvent): string {
+  if (a.type === "select") {
+    // Escape minimally — values are constrained to identifiers like
+    // "rf:cardio:radiation", but defensively strip any quote chars.
+    const v = a.value.replace(/"/g, "");
+    const l = a.label.replace(/"/g, "");
+    return `<action type="select" value="${v}" label="${l}"/>`;
+  }
+  return `<action type="${a.type}"/>`;
+}
+
+/** Pull the current flow's topic out of the chat history by inspecting
+ *  the most recent assistant card with a `title` field (safety_check,
+ *  intake, guidance, next_steps). Returns null if the conversation is
+ *  cold or the assistant turn contained only a greeting / context
+ *  switch. The backend uses this hint to decide whether the new user
+ *  turn is a context switch — see the SYSTEM_PROMPT contract. */
+function extractActiveTopic(messages: ChatMessage[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== "ai") continue;
+    // Walk every `[card:KIND] {...} [/card]` in reverse so the most
+    // recent topic-bearing card wins.
+    const matches = Array.from(
+      m.content.matchAll(/\[card:([a-z_]+)\]\s*(\{[\s\S]*?\})\s*\[\/card\]/gi),
+    );
+    for (let k = matches.length - 1; k >= 0; k--) {
+      const kind = matches[k][1];
+      if (
+        kind !== "safety_check" &&
+        kind !== "intake" &&
+        kind !== "guidance" &&
+        kind !== "next_steps"
+      ) {
+        continue;
+      }
+      try {
+        const obj = JSON.parse(matches[k][2]);
+        if (obj && typeof obj.title === "string" && obj.title.trim()) {
+          return obj.title.trim();
+        }
+      } catch {
+        // ignore — malformed payload, keep searching
+      }
+    }
+  }
+  return null;
+}
 
 export function useChat() {
   // Start with NO canned greeting. The empty-state hero in ChatView
@@ -63,12 +154,33 @@ export function useChat() {
         minute: "2-digit",
       });
 
+      const trimmed = content.trim();
+      const display = (options.displayContent ?? content).trim();
+
+      // Serialise the typed action (if any) into an `<action/>` block
+      // prepended to the user-turn text. The new AI-first SFT system
+      // prompt teaches the model to dispatch on this tag deterministically
+      // (e.g. <action type="doctor_summary"/> → emit doctor_summary card,
+      // NEVER restart the symptom flow). It's belt-and-braces with the
+      // top-level `action` field below so the channel works on both the
+      // current backend and a future backend that consumes the structured
+      // event directly.
+      const actionTag = options.action
+        ? serializeActionTag(options.action) + "\n"
+        : "";
+      const wireText = actionTag + trimmed;
+
+      // What we show in the chat thread (user-facing bubble).
       const userMessage: ChatMessage = {
         id: Date.now(),
         role: "user",
-        content: content.trim(),
+        content: display,
         timestamp,
       };
+      // What we send to the LLM. Equal to `userMessage` unless an action
+      // was attached or `displayContent` was overridden.
+      const wireMessage: ChatMessage =
+        wireText === display ? userMessage : { ...userMessage, content: wireText };
 
       setMessages((prev) => [...prev, userMessage]);
       setIsTyping(true);
@@ -85,7 +197,7 @@ export function useChat() {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 58000);
 
-        const response = await fetch("/api/proxy/chat", {
+        const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
@@ -96,7 +208,23 @@ export function useChat() {
             apiKey: options.apiKey,
             userHfToken: options.userHfToken,
             context: options.context,
-            messages: [...messages, userMessage].map((m, i) => ({
+            // Top-level typed action — the AI-first protocol surface.
+            // A forward-rolling backend can route on this directly
+            // without parsing the embedded <action/> tag. Today's
+            // backend ignores unknown fields, so the tag still does
+            // the work via the SFT-trained dispatch contract.
+            action: options.action,
+            // Flow-state hints. Sent so a forward-rolling backend can
+            // detect context switches deterministically (combined with
+            // the model's own classification) instead of re-scanning
+            // the entire history each turn. `active_topic` is the last
+            // assistant-card title; the model is taught (via the new
+            // SYSTEM_PROMPT) to emit a context_switch card when the
+            // new user turn diverges from it.
+            flow: {
+              active_topic: extractActiveTopic(messages),
+            },
+            messages: [...messages, wireMessage].map((m, i) => ({
               role: m.role === "ai" ? "assistant" : "user",
               // Inject patient context only on the FIRST user message of
               // the conversation — keeps it concise and avoids bloating
