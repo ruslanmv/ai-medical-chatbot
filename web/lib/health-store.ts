@@ -106,12 +106,24 @@ export interface HealthRecord {
   tags?: string[];
 }
 
+export interface ConversationMessage {
+  id: number;
+  role: 'user' | 'ai';
+  content: string;
+  timestamp: string;
+}
+
 export interface ConversationSummary {
   id: string;
   date: string;
   preview: string; // first ~120 chars of first user message
   messageCount: number;
   topic?: string;
+  /** Editable display title (defaults to the first user message). */
+  title?: string;
+  /** Full thread, persisted so the sidebar list can RESUME the conversation
+   *  in place (ChatGPT / Claude style), not just re-seed its first message. */
+  messages?: ConversationMessage[];
 }
 
 // ============================================================
@@ -227,9 +239,10 @@ export const ALLERGY_COMMON = [
 const EHR_KEY = 'medos_ehr_profile';
 
 export function loadEHRProfile(): EHRProfile {
-  if (typeof localStorage === 'undefined') return {};
+  const store = medium();
+  if (!store) return {};
   try {
-    const raw = localStorage.getItem(EHR_KEY);
+    const raw = store.getItem(scopedKey(EHR_KEY));
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -237,9 +250,10 @@ export function loadEHRProfile(): EHRProfile {
 }
 
 export function saveEHRProfile(profile: EHRProfile): void {
-  if (typeof localStorage === 'undefined') return;
+  const store = medium();
+  if (!store) return;
   try {
-    localStorage.setItem(EHR_KEY, JSON.stringify(profile));
+    store.setItem(scopedKey(EHR_KEY), JSON.stringify(profile));
   } catch {}
 }
 
@@ -376,13 +390,53 @@ const KEYS = {
 } as const;
 
 // ============================================================
+// Storage scope — account isolation + guest ephemerality
+// ============================================================
+//
+// The scope decides WHERE (and under what key) health data lives:
+//   - user  -> window.localStorage, key namespaced by id ("…__<uid>"),
+//              a durable cache of the account's server data, isolated so
+//              two accounts on one browser can never read each other.
+//   - guest -> window.sessionStorage, bare key. sessionStorage auto-clears
+//              when the tab/window closes, so an anonymous session on a
+//              shared device leaves nothing behind for the next person
+//              (OWASP: keep transient sensitive data out of localStorage).
+//
+// The app sets the active scope from the auth state via setStorageScope().
+
+type StorageScope = { kind: 'guest' } | { kind: 'user'; id: string };
+
+let activeScope: StorageScope = { kind: 'guest' };
+
+export function setStorageScope(scope: StorageScope): void {
+  activeScope = scope;
+}
+
+/** Storage medium for the active scope. */
+function medium(): Storage | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return activeScope.kind === 'user' ? window.localStorage : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** Namespaced key: `<base>__<uid>` for a user, bare `<base>` for a guest
+ *  (guest data already lives in its own sessionStorage silo). */
+function scopedKey(base: string): string {
+  return activeScope.kind === 'user' ? `${base}__${activeScope.id}` : base;
+}
+
+// ============================================================
 // Generic CRUD helpers
 // ============================================================
 
 function load<T>(key: string): T[] {
-  if (typeof localStorage === 'undefined') return [];
+  const store = medium();
+  if (!store) return [];
   try {
-    const raw = localStorage.getItem(key);
+    const raw = store.getItem(scopedKey(key));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -390,9 +444,10 @@ function load<T>(key: string): T[] {
 }
 
 function save<T>(key: string, data: T[]): void {
-  if (typeof localStorage === 'undefined') return;
+  const store = medium();
+  if (!store) return;
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    store.setItem(scopedKey(key), JSON.stringify(data));
   } catch {
     // Storage full or unavailable — silently fail.
   }
@@ -636,6 +691,36 @@ export function saveConversation(
   return item;
 }
 
+/**
+ * Upsert a full conversation thread by id — updates in place and moves it to
+ * the top if it already exists, otherwise prepends it. The chat auto-save
+ * uses this so each conversation is ONE growing entry the sidebar list can
+ * resume, rather than a fresh summary per turn.
+ */
+export function upsertConversation(conv: ConversationSummary): void {
+  const all = loadHistory();
+  const idx = all.findIndex((c) => c.id === conv.id);
+  if (idx >= 0) all.splice(idx, 1);
+  all.unshift(conv); // newest first
+  if (all.length > 100) all.length = 100;
+  save(KEYS.history, all);
+}
+
+/** Fetch a single conversation (with its full thread) by id. */
+export function getConversation(id: string): ConversationSummary | null {
+  return loadHistory().find((c) => c.id === id) || null;
+}
+
+/** Rename a conversation's display title. */
+export function renameConversation(id: string, title: string): void {
+  const all = loadHistory();
+  const c = all.find((x) => x.id === id);
+  if (c) {
+    c.title = title;
+    save(KEYS.history, all);
+  }
+}
+
 export function removeConversation(id: string): void {
   save(
     KEYS.history,
@@ -645,6 +730,108 @@ export function removeConversation(id: string): void {
 
 export function clearHistory(): void {
   save(KEYS.history, []);
+}
+
+/**
+ * Wipe ALL personal health data from this browser's localStorage:
+ * medications, logs, appointments, vitals, records, chat history,
+ * medicine inventory, contacts, and the EHR profile.
+ *
+ * Called on sign-out / account deletion so a shared device never leaks one
+ * person's medical data (or chat history) to the next user, and a later
+ * login can't absorb a previous user's residue into the wrong account.
+ * Non-PII keys (settings, theme, auth token) are intentionally untouched.
+ */
+export function clearAllHealthData(): void {
+  const store = medium();
+  if (!store) return;
+  for (const key of Object.values(KEYS)) {
+    try { store.removeItem(scopedKey(key)); } catch { /* storage unavailable */ }
+  }
+  try { store.removeItem(scopedKey(EHR_KEY)); } catch { /* storage unavailable */ }
+}
+
+/**
+ * Clear the guest (sessionStorage) silo regardless of the active scope —
+ * used after a guest's data has been migrated into their new account on
+ * sign-in, so nothing lingers in the anonymous silo.
+ */
+export function clearGuestData(): void {
+  if (typeof window === 'undefined') return;
+  let ss: Storage;
+  try { ss = window.sessionStorage; } catch { return; }
+  for (const key of Object.values(KEYS)) {
+    try { ss.removeItem(key); } catch { /* ignore */ }
+  }
+  try { ss.removeItem(EHR_KEY); } catch { /* ignore */ }
+}
+
+/**
+ * One-time migration of pre-namespacing data. Older builds stored every
+ * user's data under bare localStorage keys (medos_medications, …). When a
+ * user scope is first activated, copy any such legacy data into that
+ * user's namespace (only if the namespace is still empty) and drop the bare
+ * keys, so existing single-account installs keep their data after the
+ * namespacing change. Cross-account residue on a shared device is bounded
+ * by the sign-out wipe + the authoritative pull-on-login from the server.
+ */
+export function migrateLegacyToUser(userId: string): void {
+  if (typeof window === 'undefined') return;
+  let ls: Storage;
+  try { ls = window.localStorage; } catch { return; }
+  for (const base of [...Object.values(KEYS), EHR_KEY]) {
+    try {
+      const legacy = ls.getItem(base);
+      if (legacy != null && ls.getItem(`${base}__${userId}`) == null) {
+        ls.setItem(`${base}__${userId}`, legacy);
+      }
+      ls.removeItem(base);
+    } catch { /* ignore */ }
+  }
+}
+
+/**
+ * Merge two id-keyed collections, with `incoming` (server) winning on
+ * conflicts. Lets hydrateFromServer add server rows without dropping
+ * local items that haven't been pushed yet.
+ */
+function mergeById<T extends { id: string }>(local: T[], incoming: T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const x of local) byId.set(x.id, x);
+  for (const x of incoming) byId.set(x.id, x);
+  return Array.from(byId.values());
+}
+
+/**
+ * Hydrate local stores from the authoritative server dataset pulled on
+ * login (rows of { id, type, data } from GET /api/health-data). Each
+ * collection is merged (server wins) so a user's data reappears after a
+ * logout -> login and data from other devices shows up — without dropping
+ * anything entered locally as a guest before signing in.
+ */
+export function hydrateFromServer(
+  items: Array<{ id: string; type: string; data: any }>,
+): void {
+  if (typeof window === 'undefined' || !Array.isArray(items)) return;
+  const bucket: Record<string, Array<{ id: string }>> = {};
+  let ehr: EHRProfile | null = null;
+  for (const it of items) {
+    if (!it || !it.data) continue;
+    if (it.type === 'ehr_profile') { ehr = it.data as EHRProfile; continue; }
+    (bucket[it.type] ||= []).push(it.data);
+  }
+  const apply = (key: string, type: string) => {
+    if (bucket[type]) save(key, mergeById(load<{ id: string }>(key), bucket[type]));
+  };
+  apply(KEYS.medications, 'medication');
+  apply(KEYS.medicationLogs, 'medication_log');
+  apply(KEYS.appointments, 'appointment');
+  apply(KEYS.vitals, 'vital');
+  apply(KEYS.records, 'record');
+  apply(KEYS.medicines, 'medicine');
+  apply(KEYS.contacts, 'contact');
+  apply(KEYS.history, 'conversation');
+  if (ehr) saveEHRProfile(ehr);
 }
 
 // --- Contacts (address book) ---

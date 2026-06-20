@@ -36,7 +36,7 @@ function buildSyncPayload(): Array<{ id: string; type: string; data: any }> {
  * All writes are localStorage-first (offline-capable), with async
  * server sync as a best-effort background operation.
  */
-export function useHealthStore(authToken?: string | null) {
+export function useHealthStore(authToken?: string | null, userId?: string | null) {
   const [medications, setMedications] = useState<hs.Medication[]>([]);
   const [medicationLogs, setMedicationLogs] = useState<hs.MedicationLog[]>([]);
   const [appointments, setAppointments] = useState<hs.Appointment[]>([]);
@@ -65,24 +65,78 @@ export function useHealthStore(authToken?: string | null) {
     setLoaded(true);
   }, [refresh]);
 
-  // --- Server sync (when authenticated) ---
-  const synced = useRef(false);
-
-  // On first login, bulk-sync all localStorage to server.
+  // --- Storage-scope lifecycle (account isolation + guest ephemerality) ---
+  //
+  // The scope decides WHERE health data lives:
+  //   guest -> sessionStorage (ephemeral, per-tab; nothing left for the
+  //            next person on a shared device)
+  //   user  -> localStorage namespaced by id (durable cache, isolated from
+  //            other accounts)
+  // On sign-in we migrate the guest session + any legacy data up to the
+  // account and pull the account's full dataset down; on sign-out we wipe
+  // the account's local cache and drop back to a fresh guest scope. The
+  // server is the source of truth for signed-in users.
+  const prevUserId = useRef<string | null>(null);
   useEffect(() => {
-    if (!authToken || synced.current) return;
-    synced.current = true;
-    const items = buildSyncPayload();
-    if (items.length === 0) return;
-    fetch("/api/proxy/health-data/sync", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authToken}`,
-      },
-      body: JSON.stringify({ items }),
-    }).catch(() => {});
-  }, [authToken]);
+    const uid = userId || null;
+    if (uid === prevUserId.current) return;
+    const wasUser = !!prevUserId.current;
+    prevUserId.current = uid;
+
+    if (uid) {
+      // ---- guest -> user (sign in / sign up) ----
+      let cancelled = false;
+      (async () => {
+        const guestItems = buildSyncPayload(); // from the guest sessionStorage silo
+        hs.setStorageScope({ kind: "user", id: uid });
+        hs.migrateLegacyToUser(uid); // pre-namespacing bare keys -> this user
+        const localItems = buildSyncPayload(); // from the user namespace
+        const seen = new Set<string>();
+        const items = [...guestItems, ...localItems].filter((it) => {
+          const k = `${it.type}:${it.id}`;
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+        // 1. Migrate everything up to the account (best-effort).
+        if (authToken && items.length > 0) {
+          await fetch("/api/proxy/health-data/sync", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({ items }),
+          }).catch(() => {});
+        }
+        // 2. Pull the authoritative server dataset and hydrate the user
+        //    namespace (merge, server wins). Stays local if offline.
+        if (authToken) {
+          try {
+            const res = await fetch("/api/proxy/health-data", {
+              headers: { Authorization: `Bearer ${authToken}` },
+            });
+            if (res.ok && !cancelled) {
+              const data = await res.json();
+              if (Array.isArray(data?.items)) hs.hydrateFromServer(data.items);
+            }
+          } catch {
+            /* offline — keep the migrated local cache */
+          }
+        }
+        hs.clearGuestData(); // the guest silo has been migrated up
+        if (!cancelled) refresh();
+      })();
+      return () => {
+        cancelled = true;
+      };
+    } else {
+      // ---- user -> guest (sign out / account deletion) ----
+      if (wasUser) hs.clearAllHealthData(); // wipe the account's local cache (safe; it's on the server)
+      hs.setStorageScope({ kind: "guest" });
+      refresh(); // load the fresh (empty) guest scope
+    }
+  }, [userId, authToken, refresh]);
 
   /** Best-effort server upsert — fire and forget. */
   const syncItem = useCallback(
@@ -288,20 +342,37 @@ export function useHealthStore(authToken?: string | null) {
     [syncItem],
   );
 
-  // --- History ---
-  const saveSession = useCallback(
-    (summary: Omit<hs.ConversationSummary, "id">) => {
-      hs.saveConversation(summary);
+  // --- Conversations (full-thread history, resumable from the sidebar) ---
+  /** Upsert the active thread as ONE growing conversation (stable id across
+   *  turns) + best-effort sync so it resumes on the user's other devices. */
+  const upsertConversation = useCallback(
+    (conv: hs.ConversationSummary) => {
+      hs.upsertConversation(conv);
       refresh();
+      syncItem(conv.id, "conversation", conv);
     },
-    [refresh],
+    [refresh, syncItem],
+  );
+  const getConversation = useCallback(
+    (id: string) => hs.getConversation(id),
+    [],
+  );
+  const renameConversation = useCallback(
+    (id: string, title: string) => {
+      hs.renameConversation(id, title);
+      refresh();
+      const c = hs.getConversation(id);
+      if (c) syncItem(id, "conversation", c);
+    },
+    [refresh, syncItem],
   );
   const deleteSession = useCallback(
     (id: string) => {
       hs.removeConversation(id);
       refresh();
+      syncDelete(id);
     },
-    [refresh],
+    [refresh, syncDelete],
   );
   const clearAllHistory = useCallback(() => {
     hs.clearHistory();
@@ -348,8 +419,10 @@ export function useHealthStore(authToken?: string | null) {
     deleteContact,
     // EHR profile
     saveEHR,
-    // History actions
-    saveSession,
+    // Conversation actions
+    upsertConversation,
+    getConversation,
+    renameConversation,
     deleteSession,
     clearAllHistory,
     // Export

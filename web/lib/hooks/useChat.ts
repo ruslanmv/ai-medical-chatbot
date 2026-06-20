@@ -595,11 +595,19 @@ export function useChat() {
     setError(null);
   }, []);
 
+  /** Restore a full thread — used to RESUME a past conversation from the
+   *  sidebar's recent-conversations list (ChatGPT / Claude style). */
+  const loadMessages = useCallback((msgs: ChatMessage[]) => {
+    setMessages(msgs);
+    setError(null);
+  }, []);
+
   return {
     messages,
     isTyping,
     error,
     sendMessage,
     clearMessages,
+    loadMessages,
   };
 }

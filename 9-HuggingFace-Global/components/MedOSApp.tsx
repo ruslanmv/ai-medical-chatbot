@@ -9,7 +9,6 @@ import { Sidebar, NavView } from "./chat/Sidebar";
 import { RightPanel } from "./chat/RightPanel";
 import { NotificationBell } from "./chat/NotificationCenter";
 import { ChatView } from "./views/ChatView";
-import { HomeView } from "./views/HomeView";
 import { EmergencyView } from "./views/EmergencyView";
 import { TopicsView } from "./views/TopicsView";
 import { SettingsView } from "./views/SettingsView";
@@ -33,12 +32,60 @@ import { ProfileView } from "./views/ProfileView";
 import { EHRWizard } from "./views/EHRWizard";
 import { MyMedicinesView } from "./views/MyMedicinesView";
 import { ShareView } from "./views/ShareView";
+import { NearbyView } from "./views/NearbyView";
 import { FamilyHealthView } from "./views/FamilyHealthView";
 import { DisclaimerBanner } from "./ui/DisclaimerBanner";
 import { OfflineBanner } from "./ui/OfflineBanner";
 import { InstallPrompt } from "./ui/InstallPrompt";
 import { buildPatientContext, todayISO } from "@/lib/health-store";
 import { t, type SupportedLanguage } from "@/lib/i18n";
+
+/** Human, translated title for the top header. Without this, any NavView
+ *  not explicitly handled (login, register, history, records, nearby, …)
+ *  leaked its raw key straight into the header — e.g. literally "register".
+ *  Auth views use one neutral, stable label so the header never contradicts
+ *  the form's own title (which toggles Log in / Create account internally). */
+function viewTitle(nav: NavView, language: SupportedLanguage): string {
+  switch (nav) {
+    case "emergency":
+      return t("nav_emergency", language);
+    case "topics":
+      return t("nav_topics", language);
+    case "settings":
+      return t("nav_settings", language);
+    case "history":
+      return t("nav_history", language);
+    case "records":
+      return t("nav_records", language);
+    case "medications":
+      return t("nav_medications", language);
+    case "appointments":
+      return t("nav_appointments", language);
+    case "vitals":
+      return t("nav_vitals", language);
+    case "health-dashboard":
+      return t("nav_dashboard", language);
+    case "schedule":
+      return t("nav_schedule", language);
+    case "nearby":
+      return "Nearby";
+    case "my-medicines":
+      return "My Medicines";
+    case "family-health":
+      return "MedOS Family";
+    case "share":
+      return "Share";
+    case "login":
+    case "register":
+    case "profile":
+    case "ehr-wizard":
+      return t("nav_profile", language);
+    case "home":
+    case "chat":
+    default:
+      return t("nav_ask", language);
+  }
+}
 
 export default function MedOSApp() {
   return (
@@ -49,7 +96,10 @@ export default function MedOSApp() {
 }
 
 function MedOSAppInner() {
-  const [activeNav, setActiveNav] = useState<NavView>("home");
+  // The app opens directly on the chat surface. There is no separate
+  // "Home" composer screen anymore — the chat's empty state IS the
+  // landing (one chat product, like ChatGPT / Claude / Gemini).
+  const [activeNav, setActiveNav] = useState<NavView>("chat");
   const settings = useSettings();
   const auth = useAuth();
   const resetLink = usePasswordResetLink();
@@ -79,6 +129,13 @@ function MedOSAppInner() {
   });
 
   const handleSendMessage = (content: string) => {
+    // A message initiated from any non-chat surface (the Home landing
+    // input, a Topics card, the welcome screen, ...) starts a BRAND-NEW
+    // conversation instead of being appended to the previous thread.
+    // Inside the chat view, turns append as usual. We read activeNav
+    // BEFORE the auto-navigation below so the very first Home message of
+    // a new topic resets the session.
+    const freshSession = activeNav !== "chat";
     sendMessage(content, {
       preset: settings.advancedMode ? undefined : settings.preset,
       provider: settings.advancedMode ? settings.provider : undefined,
@@ -91,6 +148,7 @@ function MedOSAppInner() {
         language: settings.language,
         emergencyNumber: settings.emergencyNumber,
       },
+      freshSession,
     });
     // Auto-navigate to chat when sending a message from home/topics
     if (activeNav !== "chat") {
@@ -98,9 +156,13 @@ function MedOSAppInner() {
     }
   };
 
-  const handleStartVoice = () => {
+  const handleNewChat = () => {
+    // The single "start fresh" action. Drops the active thread from both
+    // the UI and the in-memory state, then shows the empty chat composer.
+    // Past conversations are re-opened from History — New Chat never
+    // reuses an old conversation.
+    clearMessages();
     setActiveNav("chat");
-    // Voice will auto-start via the ChatView component
   };
 
   const handleWelcomeComplete = (lang: SupportedLanguage, country: string) => {
@@ -147,17 +209,10 @@ function MedOSAppInner() {
 
   const renderContent = () => {
     switch (activeNav) {
-      case "home":
-        return (
-          <HomeView
-            language={settings.language}
-            country={settings.country}
-            emergencyNumber={settings.emergencyNumber}
-            onNavigate={handleNavigate}
-            onSendMessage={handleSendMessage}
-            onStartVoice={handleStartVoice}
-          />
-        );
+      // "home" is kept as a NavView value for backward compatibility with
+      // flows that still navigate there (post-login, welcome, wizard
+      // cancel). It now resolves to the unified chat surface via the
+      // `default` branch below — there is no separate Home composer.
       case "emergency":
         return (
           <EmergencyView
@@ -319,6 +374,8 @@ function MedOSAppInner() {
         );
       case "share":
         return <ShareView language={settings.language} />;
+      case "nearby":
+        return <NearbyView language={settings.language} />;
       case "history":
         return (
           <HistoryView
@@ -430,6 +487,53 @@ function MedOSAppInner() {
             voiceEnabled={settings.voiceEnabled}
             readAloud={settings.readAloud}
             onNavigateEmergency={() => setActiveNav("emergency")}
+            /* Card buttons emit an action `value`. We map it to either a
+             * navigation event or a synthetic follow-up user message that
+             * becomes the next turn — keeping the conversation history
+             * honest about which choice the user made. */
+            onCardAction={(action) => {
+              const v = action.value;
+              // Pure navigation — no LLM turn needed.
+              if (
+                v === "open_emergency" ||
+                v === "intent:emergency" ||
+                v === "intent:nearby_emergency"
+              ) {
+                setActiveNav("emergency");
+                return;
+              }
+              if (v === "open_login") {
+                setActiveNav("login");
+                return;
+              }
+              if (v === "open_ehr_wizard") {
+                setActiveNav("ehr-wizard");
+                return;
+              }
+              // Greeting quick-action chips → seed the next turn with the
+              // chosen category as natural language so the server-side
+              // intent classifier routes it correctly.
+              if (v.startsWith("intent:")) {
+                const seed: Record<string, string> = {
+                  "intent:check_symptoms": "I'd like to check some symptoms.",
+                  "intent:medication": "I have a medication question.",
+                  "intent:test_result":
+                    "I'd like help understanding a test result.",
+                };
+                handleSendMessage(seed[v] || action.label);
+                return;
+              }
+              // Red-flag checklist picks, sliders, and everything else:
+              // synthesize a follow-up message from the human-readable
+              // label. The label carries the natural-language wording the
+              // server's red-flag detector and symptom-flow state machine
+              // key on (e.g. "I have thoughts of self-harm").
+              handleSendMessage(action.label);
+            }}
+            /* Pins the locale-correct emergency number on emergency
+             * cards before they reach the renderer (validator is a no-op
+             * for the other card kinds). */
+            validatorContext={{ country: settings.country }}
           />
         );
     }
@@ -473,10 +577,16 @@ function MedOSAppInner() {
       <Sidebar
         activeNav={activeNav}
         setActiveNav={setActiveNav}
+        onNewChat={handleNewChat}
         language={settings.language}
         advancedMode={settings.advancedMode}
         isAuthenticated={auth.isAuthenticated}
         username={auth.user?.displayName || auth.user?.email}
+        email={auth.user?.email}
+        onLogout={() => {
+          auth.logout();
+          setActiveNav("home");
+        }}
       />
 
       {/* Main Content */}
@@ -492,19 +602,7 @@ function MedOSAppInner() {
           </div>
 
           <h2 className="hidden md:block font-bold text-lg text-ink-base tracking-tight">
-            {activeNav === "home"
-              ? t("nav_home", settings.language)
-              : activeNav === "chat"
-              ? t("nav_ask", settings.language)
-              : activeNav === "emergency"
-              ? t("nav_emergency", settings.language)
-              : activeNav === "topics"
-              ? t("nav_topics", settings.language)
-              : activeNav === "settings"
-              ? t("nav_settings", settings.language)
-              : activeNav === "family-health"
-              ? "MedOS Family"
-              : activeNav}
+            {viewTitle(activeNav, settings.language)}
           </h2>
 
           <div className="flex items-center gap-2 sm:gap-3">
