@@ -3,7 +3,13 @@ import { z } from 'zod';
 import { chatWithFallback, AllProvidersUnavailableError, type ChatMessage } from '@/lib/providers';
 import { getEmergencyInfo } from '@/lib/safety/emergency-numbers';
 import { preCheck, postCheck } from '@/lib/safety/safety-engine';
-import { snapshotFlags, emergencyCardEnabled } from '@/lib/feature-flags';
+import {
+  snapshotFlags,
+  emergencyCardEnabled,
+  symptomCardsEnabled,
+  ragHybridEnabled,
+  ragRequireEvidence,
+} from '@/lib/feature-flags';
 import { classifyIntent, priorUserTurns } from '@/lib/medical-flow/intent';
 import {
   buildGreetingCard,
@@ -25,6 +31,10 @@ import {
 // configured behavior visible. Values are server-side only and PHI-free.
 console.log(`[Chat] route.flags ${JSON.stringify(snapshotFlags())}`);
 import { buildRAGContext } from '@/lib/rag/medical-kb';
+import { retrieveAndGround } from '@/lib/rag';
+import { GROUNDED_INSTRUCTION, insufficientEvidenceReply } from '@/lib/rag/context';
+import { checkFaithfulness, shouldCheckFaithfulness } from '@/lib/rag/faithfulness';
+import type { EvidenceSource, RetrievedChunk } from '@/lib/rag/types';
 import { buildMedicalSystemPrompt } from '@/lib/medical-knowledge';
 import { authenticateRequest } from '@/lib/auth-middleware';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -154,13 +164,49 @@ export async function POST(request: NextRequest) {
       safetyDecision?.kind === 'emergency_template' ? safetyDecision.audit.ruleFires : [];
     const isEmergency = !!emergencyBanner;
 
-    // Step 2: Build RAG context from the medical knowledge base.
+    // Step 2: Retrieve grounding context.
+    //
+    // With RAG_HYBRID on we retrieve from the versioned, source-attributed
+    // corpus (FTS5 + vector, RRF-fused). The in-memory keyword KB remains
+    // the automatic fallback whenever the corpus is not ingested or
+    // retrieval is unavailable, so the pipeline is never empty. When real
+    // evidence is found we switch the model into grounded-only mode; when
+    // the corpus returns nothing relevant we may defer (Step 5.7).
     const ragStart = Date.now();
-    const ragContext = lastUserMessage ? buildRAGContext(cleanUserContent) : '';
+    let ragContext = '';
+    let ragMode = 'kb';
+    let ragSources: EvidenceSource[] = [];
+    let ragChunks: RetrievedChunk[] = [];
+    let ragCorpusVersion: string | null = null;
+    let groundedActive = false;
+    let insufficientEvidence = false;
+    if (lastUserMessage) {
+      if (ragHybridEnabled()) {
+        const grounded = await retrieveAndGround(cleanUserContent);
+        ragMode = grounded.mode;
+        ragCorpusVersion = grounded.corpusVersion;
+        if (grounded.mode === 'grounded') {
+          ragContext = grounded.contextText;
+          ragSources = grounded.sources;
+          ragChunks = grounded.chunks;
+          groundedActive = true;
+        } else if (grounded.mode === 'insufficient') {
+          insufficientEvidence = true; // may defer below
+        } else {
+          // disabled / kb-fallback → keyword KB keeps the pipeline non-empty
+          ragContext = buildRAGContext(cleanUserContent);
+        }
+      } else {
+        ragContext = buildRAGContext(cleanUserContent);
+      }
+    }
     console.log(
       `[Chat] route.rag ${JSON.stringify({
         userId: user?.id || null,
+        mode: ragMode,
         chars: ragContext.length,
+        sources: ragSources.length,
+        corpusVersion: ragCorpusVersion,
         latencyMs: Date.now() - ragStart,
       })}`,
     );
@@ -212,6 +258,12 @@ export async function POST(request: NextRequest) {
         `  • keep it under 6 sentences\n`;
     }
 
+    if (groundedActive) {
+      // Retrieved evidence is present → pin the model to it for clinical
+      // claims (overrides the KB's softer "use general training too" hint).
+      systemPrompt += `\n\n${GROUNDED_INSTRUCTION}`;
+    }
+
     // Step 5: Assemble the final message list. Prior turns are passed through
     // verbatim except for the LAST user turn, which is rebuilt with:
     //    sanitised user prose + server-built [Patient: ...] + retrieved RAG
@@ -227,7 +279,9 @@ export async function POST(request: NextRequest) {
       cleanUserContent,
       patientContext, // already starts with '\n[Patient: ...]' or ''
       ragContext
-        ? `\n\n[Reference material retrieved from the medical knowledge base — use if relevant]\n${ragContext}`
+        ? groundedActive
+          ? ragContext // already a labelled "# SOURCES" block (cite as [S1]…)
+          : `\n\n[Reference material retrieved from the medical knowledge base — use if relevant]\n${ragContext}`
         : '',
     ].join('');
 
@@ -386,26 +440,32 @@ export async function POST(request: NextRequest) {
           country: countryCode,
           language,
         });
-      } else if (intent === 'chitchat' && priorUserTurns(messages) === 0) {
-        // First-turn onboarding only — the greeting card is the
-        // app's deliberate entry point with quick-action chips
-        // (Check symptoms / Medication / Test results / Find care /
-        // Emergency).
+      } else if (intent === 'chitchat') {
+        // Greetings / smalltalk ("hello", "how are you", "thanks") are
+        // never a symptom turn, so they must NOT fall through to the
+        // symptom-flow state machine below. Otherwise a greeting sent
+        // after an earlier symptom mention gets hijacked: the machine
+        // re-matches the old complaint from history and wrongly advances
+        // the triage (the "Hello" → "Where is the pain?" bug).
         //
-        // On every subsequent turn, chitchat ("hello", "how are you",
-        // "thanks") falls through to the LLM dispatch below. The
-        // system prompt in medical-knowledge.ts:127-130 already
-        // teaches the model not to greet again — it sees the full
-        // history and responds naturally ("Hi — still asking about
-        // your ankle?"). No new regex, no second greeting card.
-        const greeting = buildGreetingCard({});
-        earlyCards.push(streamCardChunk(greeting));
-        recordCardEmission({
-          user_id: user?.id || null,
-          card: greeting,
-          country: countryCode,
-          language,
-        });
+        // Turn 1: emit the greeting card — the app's deliberate entry
+        // point with quick-action chips (Check symptoms / Medication /
+        // Test results / Find care / Emergency).
+        //
+        // Turn 2+: emit no card and fall through to the LLM dispatch
+        // below. The system prompt already teaches the model not to greet
+        // twice, so it replies naturally ("Hi — still asking about your
+        // ankle?") without a second greeting card or a symptom card.
+        if (priorUserTurns(messages) === 0) {
+          const greeting = buildGreetingCard({});
+          earlyCards.push(streamCardChunk(greeting));
+          recordCardEmission({
+            user_id: user?.id || null,
+            card: greeting,
+            country: countryCode,
+            language,
+          });
+        }
       } else {
         // Always check the symptom-flow state machine FIRST when not
         // in chitchat. Mid-flow turns (the user just answered a
@@ -413,7 +473,15 @@ export async function POST(request: NextRequest) {
         // any intent-based gate can fire — otherwise a 3-turn intake
         // would get hijacked by the deep_analysis profile_gate after
         // turn 3 thanks to the soft-promotion rule in classifyIntent.
-        const symptomResult = nextSymptomCard(messages.slice(0, -1), cleanUserContent);
+        // Structured symptom-flow cards are gated OFF by default — the rigid
+        // safety_check / intake checklists read as robotic. When disabled,
+        // non-emergency symptom turns fall through to the LLM for a natural,
+        // professional, in-context reply. The deterministic emergency floor
+        // (preCheck) already ran on the raw input above, so true red-flags
+        // still escalate regardless of this flag.
+        const symptomResult = symptomCardsEnabled()
+          ? nextSymptomCard(messages.slice(0, -1), cleanUserContent)
+          : null;
         if (symptomResult) {
           earlyCards.push(streamCardChunk(symptomResult.card));
           recordCardEmission({
@@ -478,6 +546,43 @@ export async function POST(request: NextRequest) {
           },
         );
       }
+    }
+
+    // Step 5.7: Insufficient-evidence deferral (Phase 2).
+    //
+    // When RAG_REQUIRE_EVIDENCE is on and the corpus returned nothing
+    // relevant for a substantive, non-emergency turn, answer honestly
+    // instead of letting the model fill the gap from unguarded general
+    // knowledge. Emergencies never reach here (the deterministic safety
+    // floor and its banner take precedence above).
+    if (insufficientEvidence && ragRequireEvidence() && !isEmergency) {
+      const deferral = insufficientEvidenceReply(emergencyInfo.emergency);
+      const deferRisk =
+        safetyDecision?.kind === 'allow_llm' ? safetyDecision.riskClass : 'R0';
+      const data = JSON.stringify({
+        choices: [{ delta: { content: deferral } }],
+        provider: 'rag-guard',
+        model: 'insufficient-evidence',
+        riskClass: deferRisk,
+        ragMode,
+        groundedness: null,
+        corpusVersion: ragCorpusVersion,
+        sources: [],
+      });
+      console.log(
+        `[Chat] route.rag.defer ${JSON.stringify({
+          userId: user?.id || null,
+          corpusVersion: ragCorpusVersion,
+        })}`,
+      );
+      return new Response(`data: ${data}\n\ndata: [DONE]\n\n`, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+        },
+      });
     }
 
     // Step 6: Stream response via the provider fallback chain.
@@ -651,6 +756,26 @@ export async function POST(request: NextRequest) {
       })}`,
     );
 
+    // Step 7.6: Faithfulness check (Phase 2) — grounded turns only, risk-
+    // gated. Low groundedness appends a transparency caveat; it never
+    // silently drops the answer (hard refusals remain the safety floor's job).
+    let groundedness: number | null = null;
+    if (groundedActive && finalContent && shouldCheckFaithfulness(riskClass)) {
+      const fc = await checkFaithfulness(finalContent, ragChunks);
+      groundedness = fc.groundedness;
+      if (groundedness !== null && groundedness < 0.5) {
+        finalContent +=
+          `\n\n_Note: I could not fully verify every detail above against my ` +
+          `cited sources — please confirm with a licensed clinician._`;
+        console.warn(
+          `[Chat] route.rag.lowGroundedness ${JSON.stringify({
+            userId: user?.id || null,
+            groundedness,
+          })}`,
+        );
+      }
+    }
+
     const encoder = new TextEncoder();
     const safeStream = new ReadableStream({
       start(controller) {
@@ -662,6 +787,10 @@ export async function POST(request: NextRequest) {
           filtered: post.audit.modified,
           isEmergency,
           ruleFires: emergencyRuleFires,
+          ragMode,
+          groundedness,
+          corpusVersion: ragCorpusVersion,
+          sources: ragSources,
         });
         controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));

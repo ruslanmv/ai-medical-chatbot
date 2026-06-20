@@ -302,7 +302,7 @@ export const MENTAL_HEALTH: SymptomFlow = {
     /\b(anxious|anxiety|panic\s+attack|depress(ed|ion)|suicidal|self.?harm|hopeless|overwhelmed)\b/i,
   safety: {
     kind: 'safety_check',
-    title: 'How you are feeling',
+    title: 'How are you feeling?',
     question:
       "I'm sorry you're feeling this way. First — are you safe right now?",
     options: MH_CRISIS_OPTIONS,

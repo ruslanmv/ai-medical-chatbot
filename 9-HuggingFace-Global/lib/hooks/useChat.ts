@@ -4,11 +4,26 @@ import { useState, useCallback } from "react";
 import type { Provider, Preset } from "../types";
 import { buildPatientContext, buildMedicineInventoryContext } from "../health-store";
 
+/** A retrieved source surfaced as an evidence chip on an AI answer.
+ *  Mirrors the `sources` array the chat route emits in its SSE metadata
+ *  (lib/rag/types.ts → EvidenceSource), trimmed to what the UI renders. */
+export interface ChatSource {
+  ref?: string;
+  title: string;
+  organization: string;
+  url: string;
+  version_date?: string;
+}
+
 export type ChatMessage = {
   id: number;
   role: "user" | "ai";
   content: string;
   timestamp: string;
+  /** Evidence-receipt sources (grounded answers only). */
+  sources?: ChatSource[];
+  /** 0–1 faithfulness score when the check ran, else null/undefined. */
+  groundedness?: number | null;
 };
 
 export type SendOptions = {
@@ -23,6 +38,18 @@ export type SendOptions = {
     emergencyNumber: string;
     units?: "metric" | "imperial";
   };
+  /**
+   * Start a brand-new conversation for this turn: the prior in-memory
+   * thread is discarded from BOTH the rendered UI and the request
+   * payload, so the message becomes the first turn of a fresh session.
+   *
+   * Set when a message is initiated from a non-chat surface (the Home
+   * landing input, a Topics card, ...). Without it, returning to Home
+   * after a chat and typing a new prompt appended the new topic onto the
+   * previous thread — the server even received the stale history because
+   * the payload is built from the closure's `messages` (see below).
+   */
+  freshSession?: boolean;
 };
 
 /**
@@ -66,7 +93,18 @@ export function useChat() {
         timestamp,
       };
 
-      setMessages((prev) => [...prev, userMessage]);
+      // A fresh session discards the previous thread entirely; otherwise
+      // the new turn appends to the existing conversation. Capture the
+      // base history HERE rather than reading the closure's `messages`
+      // inside the request body, so the rendered messages and the payload
+      // sent to /api/chat stay in lock-step (this is the fix for "typing
+      // from Home appended to the old chat — and the server saw the stale
+      // history too").
+      const baseHistory = options.freshSession ? [] : messages;
+
+      setMessages(
+        options.freshSession ? [userMessage] : (prev) => [...prev, userMessage],
+      );
       setIsTyping(true);
       setError(null);
 
@@ -81,7 +119,7 @@ export function useChat() {
             apiKey: options.apiKey,
             userHfToken: options.userHfToken,
             context: options.context,
-            messages: [...messages, userMessage].map((m, i) => ({
+            messages: [...baseHistory, userMessage].map((m, i) => ({
               role: m.role === "ai" ? "assistant" : "user",
               // Inject patient context only on the FIRST user message of
               // the conversation — keeps it concise and avoids bloating
@@ -105,6 +143,10 @@ export function useChat() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let aiContent = "";
+        // Evidence-receipt metadata arrives on the same SSE frame as the
+        // (buffered) answer content for grounded turns.
+        let aiSources: ChatSource[] | undefined;
+        let aiGroundedness: number | null | undefined;
         const aiMessageId = Date.now() + 1;
 
         while (true) {
@@ -121,6 +163,13 @@ export function useChat() {
               try {
                 const parsed = JSON.parse(data);
                 if (parsed.error) throw new Error(parsed.error);
+                // Capture evidence-receipt metadata when present.
+                if (Array.isArray(parsed.sources)) {
+                  aiSources = parsed.sources as ChatSource[];
+                }
+                if (typeof parsed.groundedness === "number") {
+                  aiGroundedness = parsed.groundedness;
+                }
                 // Extract content from THREE possible chunk shapes (in
                 // priority order):
                 //   1. OpenAI-style stream:  { choices: [{ delta: { content }}]}
@@ -145,7 +194,14 @@ export function useChat() {
                     const existing = prev.find((m) => m.id === aiMessageId);
                     if (existing) {
                       return prev.map((m) =>
-                        m.id === aiMessageId ? { ...m, content: aiContent } : m,
+                        m.id === aiMessageId
+                          ? {
+                              ...m,
+                              content: aiContent,
+                              sources: aiSources ?? m.sources,
+                              groundedness: aiGroundedness ?? m.groundedness,
+                            }
+                          : m,
                       );
                     }
                     return [
@@ -158,6 +214,8 @@ export function useChat() {
                           hour: "2-digit",
                           minute: "2-digit",
                         }),
+                        sources: aiSources,
+                        groundedness: aiGroundedness,
                       },
                     ];
                   });

@@ -7,6 +7,8 @@ import { HeroInput } from "../chat/HeroInput";
 import { TypingIndicator } from "../chat/TypingIndicator";
 import { TrustBar } from "../chat/TrustBar";
 import type { ChatMessage } from "@/lib/hooks/useChat";
+import type { Action, Card } from "@/lib/medical-flow/types";
+import type { ValidatorContext } from "@/lib/medical-flow/validator";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface ChatViewProps {
@@ -18,6 +20,14 @@ interface ChatViewProps {
   voiceEnabled?: boolean;
   readAloud?: boolean;
   onNavigateEmergency?: () => void;
+  /** Fired when the user taps a button/chip inside a rendered card.
+   *  The parent maps `action.value` to either a navigation event or a
+   *  synthetic follow-up user message (see MedOSApp). */
+  onCardAction?: (action: Action, card: Card) => void;
+  /** Threaded into every AI message so the medical-flow validator can
+   *  pin the locale-correct emergency number and scrub allergy-crossing
+   *  drug names before a card reaches the renderer. */
+  validatorContext?: ValidatorContext;
 }
 
 export function ChatView({
@@ -29,6 +39,8 @@ export function ChatView({
   voiceEnabled = true,
   readAloud = false,
   onNavigateEmergency,
+  onCardAction,
+  validatorContext,
 }: ChatViewProps) {
   const [isListening, setIsListening] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -115,10 +127,10 @@ export function ChatView({
                 <Stethoscope size={24} className="text-white" />
               </div>
               <h2 className="text-2xl font-bold text-ink-base tracking-tight mb-2">
-                {t("ask_hero_title", language)}
+                {t("home_hero_title", language)}
               </h2>
               <p className="text-ink-muted leading-relaxed max-w-md mx-auto">
-                {t("ask_hero_subtitle", language)}
+                {t("home_hero_subtitle", language)}
               </p>
               <div className="mt-5">
                 <TrustBar language={language} />
@@ -131,6 +143,8 @@ export function ChatView({
               key={msg.id}
               message={msg}
               showSourceChip={msg.role === "ai" && i <= 1}
+              onCardAction={onCardAction}
+              validatorContext={validatorContext}
             />
           ))}
 

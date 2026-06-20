@@ -120,15 +120,24 @@ export function nextSymptomCard(
   | null {
   // Walk-back: find the most recent in-flow assistant card, if any.
   const lastCard = lastAssistantCardKind(history);
-  const flow = findSymptomFlow(currentUserText) || findSymptomFlow(
-    // If the current turn is a token like "selected:loc:lower", the
-    // user's free-text from earlier in the conversation determines
-    // which flow we're in. Fall back to scanning earlier user turns.
-    history
-      .filter((m) => m.role === 'user')
-      .map((m) => m.content)
-      .join(' '),
-  );
+  // Resolve which symptom flow we're in. Prefer the current message, but
+  // only fall back to scanning earlier free-text when we're ACTIVELY
+  // mid-flow (the last assistant card was a safety_check / intake and the
+  // current turn is a button token like "selected:loc:lower" that needs
+  // the original complaint to resolve). Without this guard, any later
+  // off-topic message re-matches the old complaint from history and the
+  // machine wrongly reopens a triage the user has moved on from.
+  const midFlow =
+    !!lastCard && (lastCard.kind === 'safety_check' || lastCard.kind === 'intake');
+  let flow = findSymptomFlow(currentUserText);
+  if (!flow && midFlow) {
+    flow = findSymptomFlow(
+      history
+        .filter((m) => m.role === 'user')
+        .map((m) => m.content)
+        .join(' '),
+    );
+  }
   if (!flow) return null;
 
   const answers = collectAnswers([...history, { role: 'user', content: currentUserText }]);

@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  Home,
   MessageCircle,
+  Plus,
   AlertTriangle,
   BookOpen,
   Settings,
@@ -17,6 +17,7 @@ import {
   Clock,
   User2,
   LogIn,
+  LogOut,
   UserPlus,
   PanelLeftClose,
   PanelLeftOpen,
@@ -24,10 +25,10 @@ import {
   HelpCircle,
   Share2,
   Info,
+  MapPin,
   ExternalLink,
   ChevronUp,
   ChevronDown,
-  Smartphone,
   UsersRound,
 } from "lucide-react";
 import { NavItem } from "./NavItem";
@@ -52,15 +53,24 @@ export type NavView =
   | "ehr-wizard"
   | "my-medicines"
   | "family-health"
-  | "share";
+  | "share"
+  | "nearby";
 
 interface SidebarProps {
   activeNav: NavView;
   setActiveNav: (nav: NavView) => void;
+  /** Start a brand-new conversation: clears the active thread and shows
+   *  the empty chat composer. The single "start a chat" entry point —
+   *  there is intentionally no separate Home composer. */
+  onNewChat?: () => void;
   language?: SupportedLanguage;
   advancedMode?: boolean;
   isAuthenticated?: boolean;
   username?: string;
+  email?: string;
+  /** Sign the user out. Wired from MedOSApp (clears the auth token and
+   *  returns to the chat surface). Surfaced in the account menu. */
+  onLogout?: () => void;
 }
 
 const COLLAPSED_KEY = "medos_sidebar_collapsed";
@@ -68,9 +78,12 @@ const COLLAPSED_KEY = "medos_sidebar_collapsed";
 export function Sidebar({
   activeNav,
   setActiveNav,
+  onNewChat,
   language = "en",
   isAuthenticated = false,
   username,
+  email,
+  onLogout,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [bottomMenuOpen, setBottomMenuOpen] = useState(false);
@@ -155,11 +168,28 @@ export function Sidebar({
          * Medications / Appointments / Vitals / Records / My Medicines /
          * MedOS Family) require saved personal data and would otherwise
          * surface empty or error states. The logged-out shell collapses
-         * to: Home, Ask, and the Tools group (Emergency, Topics, Share,
-         * History). Sign-in lives in the bottom auth card. */}
+         * to: New Chat, History, and the Tools group (Emergency, Nearby,
+         * Topics, Share). Sign-in lives in the bottom auth card. */}
         <nav className="flex-1 overflow-y-auto space-y-0.5">
-          <NavItem icon={Home} label={t("nav_home", language)} active={activeNav === "home"} onClick={() => setActiveNav("home")} collapsed={collapsed} />
-          <NavItem icon={MessageCircle} label={t("nav_ask", language)} active={activeNav === "chat"} onClick={() => setActiveNav("chat")} collapsed={collapsed} />
+          {/* New Chat — the single entry point for starting a conversation.
+              Follows the ChatGPT / Claude / Gemini pattern: one "new chat"
+              action, not a separate Home page with its own duplicate
+              composer. */}
+          <button
+            onClick={() => onNewChat?.()}
+            title="New Chat"
+            className={`w-full flex items-center rounded-xl border border-line/60 bg-surface-1 hover:bg-surface-2 hover:border-brand-500/40 transition-all font-semibold text-ink-base mb-1 ${
+              collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"
+            }`}
+          >
+            <Plus size={18} strokeWidth={2.5} className="flex-shrink-0 text-brand-500" />
+            {!collapsed && <span className="text-sm">New Chat</span>}
+          </button>
+
+          {/* History — the way back to a past or in-progress conversation,
+              ChatGPT-style: New Chat starts fresh, History reopens. Replaces
+              the old standalone "Ask" item, which only duplicated New Chat. */}
+          <NavItem icon={Clock} label={t("nav_history", language)} active={activeNav === "history"} onClick={() => setActiveNav("history")} collapsed={collapsed} />
 
           {isAuthenticated && (
             <>
@@ -181,54 +211,59 @@ export function Sidebar({
           {collapsed && <div className="my-2 border-t border-line/50" />}
 
           <NavItem icon={AlertTriangle} label={t("nav_emergency", language)} active={activeNav === "emergency"} onClick={() => setActiveNav("emergency")} urgent collapsed={collapsed} />
+          {/* Nearby — find pharmacies, doctors and hospitals near you. Lives in
+              Tools (outside the auth gate) so guests and signed-in users alike
+              can reach it; the feature needs only device location, no account. */}
+          <NavItem icon={MapPin} label="Nearby" active={activeNav === "nearby"} onClick={() => setActiveNav("nearby")} collapsed={collapsed} />
           <NavItem icon={BookOpen} label={t("nav_topics", language)} active={activeNav === "topics"} onClick={() => setActiveNav("topics")} collapsed={collapsed} />
           <NavItem icon={Share2} label="Share" active={activeNav === "share"} onClick={() => setActiveNav("share")} collapsed={collapsed} />
-          <NavItem icon={Clock} label={t("nav_history", language)} active={activeNav === "history"} onClick={() => setActiveNav("history")} collapsed={collapsed} />
         </nav>
 
         {/* ============================================================
          * Bottom section.
          *
          * Two very different layouts:
-         *   - GUEST:  No hidden menus. Explicit Account + Preferences
-         *             groups with a single primary "Create free account"
-         *             CTA. Follows the pattern used by Notion / Slack /
-         *             MyFitnessPal on their signed-out shell.
-         *   - AUTH'd: Classic avatar button that pops an upward settings
-         *             drawer — same affordance users already know from
-         *             ChatGPT / Claude.
+         *   - GUEST:  No hidden menus. A visible Preferences group plus a
+         *             single primary "Sign up free" CTA, with Log in as a
+         *             secondary link beneath it.
+         *   - AUTH'd: Avatar button that pops an upward account menu —
+         *             identity, Profile, Settings, Language, Help & support,
+         *             and Sign out. Same affordance as ChatGPT / Claude.
          * ============================================================ */}
         <div className="mt-auto pt-3 border-t border-line/50 relative" ref={menuRef}>
           {isAuthenticated ? (
             <>
-              {/* Pop-up menu (opens upward) — authenticated only. */}
+              {/* Account menu (opens upward) — authenticated only. Focused on
+                  the user: identity, account, language, help, sign out. Product,
+                  marketing and developer links intentionally live elsewhere
+                  (Share in the sidebar Tools; About / Source / Space in
+                  Settings) so this stays a clean account menu. */}
               {bottomMenuOpen && !collapsed && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 bg-surface-1 border border-line/60 rounded-2xl shadow-card overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200 z-50">
-                  <div className="p-2 space-y-0.5">
-                    <MenuItem icon={Settings} label={t("nav_settings", language)} shortcut="Ctrl+," onClick={() => navTo("settings")} />
-                    <MenuItem icon={Globe} label={`${t("settings_language", language)}`} detail={language.toUpperCase()} onClick={() => navTo("settings")} />
-                    <MenuItem icon={HelpCircle} label="Get help" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot/issues", "_blank")} />
-
-                    <div className="my-1.5 border-t border-line/40" />
-
-                    <MenuItem icon={Smartphone} label="Install as App" onClick={() => {}} />
-                    <MenuItem icon={Share2} label="Share MedOS" onClick={() => { if (navigator.share) navigator.share({ title: "MedOS", url: window.location.origin }); }} />
-                    <MenuItem icon={Info} label="About MedOS" detail="v1.0" onClick={() => navTo("settings")} />
-
-                    <div className="my-1.5 border-t border-line/40" />
-
-                    <MenuItem icon={ExternalLink} label="Source Code" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot", "_blank")} external />
-                    <MenuItem icon={ExternalLink} label="HuggingFace Space" onClick={() => window.open("https://huggingface.co/spaces/ruslanmv/MediBot", "_blank")} external />
-
-                    <div className="my-1.5 border-t border-line/40" />
-
-                    <div className="px-3 py-2">
-                      <p className="text-[10px] text-ink-subtle leading-snug">
-                        MedOS v1.0 · Free & Open Source
-                        <br />
-                        Zero data retention · {t("badge_private", language)}
-                      </p>
+                  {/* Identity header — who am I. */}
+                  <div className="flex items-center gap-3 px-3 py-3 border-b border-line/40">
+                    <div className="w-9 h-9 rounded-full bg-brand-gradient flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                      {(username || "U")[0].toUpperCase()}
                     </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-ink-base truncate">
+                        {username || t("nav_profile", language)}
+                      </p>
+                      {email && email !== username && (
+                        <p className="text-[11px] text-ink-subtle truncate">{email}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-2 space-y-0.5">
+                    <MenuItem icon={User2} label={t("nav_profile", language)} onClick={() => navTo("profile")} />
+                    <MenuItem icon={Settings} label={t("nav_settings", language)} onClick={() => navTo("settings")} />
+                    <MenuItem icon={Globe} label={t("settings_language", language)} detail={language.toUpperCase()} onClick={() => navTo("settings")} />
+                    <MenuItem icon={HelpCircle} label="Help & support" onClick={() => window.open("https://github.com/ruslanmv/ai-medical-chatbot/issues", "_blank")} />
+
+                    <div className="my-1.5 border-t border-line/40" />
+
+                    <MenuItem icon={LogOut} label="Sign out" danger onClick={() => { setBottomMenuOpen(false); onLogout?.(); }} />
                   </div>
                 </div>
               )}
@@ -293,15 +328,6 @@ export function Sidebar({
                 </button>
               ) : (
                 <>
-                  {/* Account group — Log in + Create account. */}
-                  <div>
-                    <SectionLabel>Account</SectionLabel>
-                    <div className="space-y-0.5">
-                      <MenuItem icon={LogIn} label="Log in" onClick={() => navTo("login")} />
-                      <MenuItem icon={UserPlus} label="Create account" onClick={() => navTo("register")} />
-                    </div>
-                  </div>
-
                   {/* Preferences — visible, not hidden behind an ellipsis. */}
                   <div>
                     <SectionLabel>Preferences</SectionLabel>
@@ -336,19 +362,28 @@ export function Sidebar({
                     </div>
                   </div>
 
-                  {/* Primary CTA — single strongest action on the page. */}
-                  <button
-                    onClick={() => navTo("register")}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-brand-gradient text-white text-sm font-semibold shadow-glow hover:opacity-95 active:scale-[0.99] transition-all"
-                  >
-                    <UserPlus size={16} strokeWidth={2.5} />
-                    Sign up free
-                  </button>
-                  <p className="text-center text-[10px] text-ink-subtle leading-snug px-2">
-                    Sync your health data across devices.
-                    <br />
-                    You’re browsing as a guest.
-                  </p>
+                  {/* Single account CTA. The old "Account" group (Log in +
+                      Create account) duplicated this button, so it was removed:
+                      "Sign up free" is the one primary action, and Log in drops
+                      to a secondary text link beneath it. */}
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => navTo("register")}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-brand-gradient text-white text-sm font-semibold shadow-glow hover:opacity-95 active:scale-[0.99] transition-all"
+                    >
+                      <UserPlus size={16} strokeWidth={2.5} />
+                      Sign up free
+                    </button>
+                    <p className="text-center text-[11px] text-ink-subtle">
+                      Already have an account?{" "}
+                      <button
+                        onClick={() => navTo("login")}
+                        className="font-semibold text-brand-600 hover:underline"
+                      >
+                        Log in
+                      </button>
+                    </p>
+                  </div>
                 </>
               )}
             </div>
@@ -358,8 +393,8 @@ export function Sidebar({
 
       {/* Mobile bottom navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-1/95 backdrop-blur-xl border-t border-line/60 flex items-center justify-around px-1 z-50 safe-area-bottom">
-        <MobileNavButton icon={Home} label={t("nav_home", language)} active={activeNav === "home"} onClick={() => setActiveNav("home")} />
-        <MobileNavButton icon={MessageCircle} label={t("nav_ask", language)} active={activeNav === "chat"} onClick={() => setActiveNav("chat")} />
+        <MobileNavButton icon={Plus} label="New Chat" active={false} onClick={() => onNewChat?.()} />
+        <MobileNavButton icon={MessageCircle} label={t("nav_ask", language)} active={activeNav === "chat" || activeNav === "home"} onClick={() => setActiveNav("chat")} />
         <MobileNavButton
           icon={Heart}
           label={t("nav_health", language)}
@@ -393,6 +428,7 @@ function MenuItem({
   detail,
   shortcut,
   external,
+  danger,
   onClick,
 }: {
   icon: any;
@@ -400,14 +436,22 @@ function MenuItem({
   detail?: string;
   shortcut?: string;
   external?: boolean;
+  danger?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-ink-base hover:bg-surface-2 transition-colors"
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+        danger
+          ? "text-danger-500 hover:bg-danger-500/10"
+          : "text-ink-base hover:bg-surface-2"
+      }`}
     >
-      <Icon size={16} className="text-ink-subtle flex-shrink-0" />
+      <Icon
+        size={16}
+        className={`flex-shrink-0 ${danger ? "text-danger-500" : "text-ink-subtle"}`}
+      />
       <span className="flex-1 text-left">{label}</span>
       {detail && (
         <span className="text-xs text-ink-subtle">{detail}</span>

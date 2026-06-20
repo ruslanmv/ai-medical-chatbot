@@ -42,6 +42,60 @@ import { InstallPrompt } from "./ui/InstallPrompt";
 import { buildPatientContext, buildContactsContext, todayISO } from "@/lib/health-store";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
+/** Human, translated title for the top header — kept in sync with the HF
+ *  build. Without it, any NavView not explicitly handled (history, nearby,
+ *  records, contacts, admin, …) leaked its raw key into the header. Auth
+ *  views use one neutral label so the header never contradicts the form. */
+function viewTitle(nav: NavView, language: SupportedLanguage): string {
+  switch (nav) {
+    case "home":
+      return t("nav_home", language);
+    case "chat":
+      return t("nav_ask", language);
+    case "emergency":
+      return t("nav_emergency", language);
+    case "topics":
+      return t("nav_topics", language);
+    case "settings":
+      return t("nav_settings", language);
+    case "history":
+      return t("nav_history", language);
+    case "records":
+      return t("nav_records", language);
+    case "medications":
+      return t("nav_medications", language);
+    case "appointments":
+      return t("nav_appointments", language);
+    case "vitals":
+      return t("nav_vitals", language);
+    case "health-dashboard":
+      return t("nav_dashboard", language);
+    case "schedule":
+      return t("nav_schedule", language);
+    case "nearby":
+      return t("nearby_title", language);
+    case "my-medicines":
+      return t("medicines_title", language);
+    case "contacts":
+      return "Contacts";
+    case "share":
+      return "Share";
+    case "admin":
+      return "Admin";
+    case "login":
+    case "profile":
+    case "ehr-wizard":
+      return t("nav_profile", language);
+    default:
+      return t("nav_home", language);
+  }
+}
+
+/** Stable id for a chat thread — used to upsert the growing conversation. */
+function newConversationId(): string {
+  return `c_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export default function MedOSApp() {
   return (
     <ThemeProvider>
@@ -67,9 +121,19 @@ function MedOSAppInner() {
   useEffect(() => {
     if (resetLink) setActiveNav("login");
   }, [resetLink]);
-  const { messages, isTyping, error, sendMessage, clearMessages } = useChat();
-  const health = useHealthStore(auth.token);
+  const { messages, isTyping, error, sendMessage, clearMessages, loadMessages } = useChat();
+  const health = useHealthStore(auth.token, auth.user?.id);
   const notif = useNotifications();
+
+  // Active conversation id — the thread the auto-save upserts into and the
+  // sidebar list highlights. A ref drives the save logic (no stale closure);
+  // the state mirror keeps the highlight reactive.
+  const conversationId = useRef<string | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const beginConversation = useCallback((id: string | null) => {
+    conversationId.current = id;
+    setActiveConversationId(id);
+  }, []);
 
   // IP-based auto-detection. Only applies if the user hasn't manually
   // chosen a language yet; the manual override in Settings wins forever.
@@ -117,8 +181,22 @@ function MedOSAppInner() {
   // ("Ask another question") at the end of a symptom flow.
   const handleNewChat = () => {
     clearMessages();
+    beginConversation(null); // the next message starts a fresh thread
     setShowProfileWelcome(false);
     setActiveNav("home");
+  };
+
+  // Resume a past conversation from the sidebar list — restore its full
+  // thread and reopen it in the chat view (ChatGPT / Claude style).
+  const handleOpenConversation = (id: string) => {
+    const conv = health.getConversation(id);
+    if (conv?.messages && conv.messages.length > 0) {
+      loadMessages(conv.messages);
+      beginConversation(id);
+      lastSavedCount.current = conv.messages.length;
+      setShowProfileWelcome(false);
+      setActiveNav("chat");
+    }
   };
 
   const handleStartVoice = () => {
@@ -142,17 +220,22 @@ function MedOSAppInner() {
     const userMsgs = messages.filter((m) => m.role === "user");
     if (
       userMsgs.length > 0 &&
-      messages.length >= 3 &&
+      messages.length >= 2 &&
       messages.length !== lastSavedCount.current &&
       !isTyping
     ) {
       lastSavedCount.current = messages.length;
-      health.saveSession({
+      if (!conversationId.current) conversationId.current = newConversationId();
+      const existing = health.getConversation(conversationId.current);
+      health.upsertConversation({
+        id: conversationId.current,
         date: new Date().toISOString(),
         preview: userMsgs[0].content.slice(0, 120),
+        title: existing?.title || userMsgs[0].content.slice(0, 60),
         messageCount: messages.length,
-        topic: undefined,
+        messages,
       });
+      setActiveConversationId(conversationId.current);
     }
   }, [messages.length, isTyping]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -619,6 +702,10 @@ function MedOSAppInner() {
         activeKey={activeNav}
         onNavigate={(key) => setActiveNav(key as NavView)}
         onNewChat={handleNewChat}
+        conversations={health.history}
+        activeConversationId={activeConversationId}
+        onOpenConversation={handleOpenConversation}
+        onDeleteConversation={health.deleteSession}
         isAuthenticated={auth.isAuthenticated}
         isAdmin={auth.user?.isAdmin}
         username={auth.user?.displayName || auth.user?.email}
@@ -636,8 +723,13 @@ function MedOSAppInner() {
         isAuthenticated={auth.isAuthenticated}
         isAdmin={auth.user?.isAdmin}
         username={auth.user?.displayName || auth.user?.email}
+        email={auth.user?.email}
         onLogout={() => { auth.logout(); setActiveNav("home"); }}
         onNewChat={handleNewChat}
+        conversations={health.history}
+        activeConversationId={activeConversationId}
+        onOpenConversation={handleOpenConversation}
+        onDeleteConversation={health.deleteSession}
       />
 
       {/* Main Content */}
@@ -662,17 +754,7 @@ function MedOSAppInner() {
           </div>
 
           <h2 className="hidden md:block font-bold text-lg text-ink-base tracking-tight">
-            {activeNav === "home"
-              ? t("nav_home", settings.language)
-              : activeNav === "chat"
-              ? t("nav_ask", settings.language)
-              : activeNav === "emergency"
-              ? t("nav_emergency", settings.language)
-              : activeNav === "topics"
-              ? t("nav_topics", settings.language)
-              : activeNav === "settings"
-              ? t("nav_settings", settings.language)
-              : activeNav}
+            {viewTitle(activeNav, settings.language)}
           </h2>
 
           <div className="flex items-center gap-2 sm:gap-3">

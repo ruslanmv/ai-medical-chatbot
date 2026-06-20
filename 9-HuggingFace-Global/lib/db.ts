@@ -175,6 +175,68 @@ function runMigrations(db: Database.Database): void {
       PRAGMA user_version = 3;
     `);
   }
+
+  if (version < 4) {
+    // v4 — grounded RAG corpus (Phase 1).
+    //
+    // rag_chunks          one retrieval unit per row: the passage text, a
+    //                     stored float32 embedding (BLOB), and full source
+    //                     provenance (org, url, version_date). Tagged with
+    //                     corpus_version so an answer can be replayed
+    //                     against a known snapshot.
+    // rag_chunks_fts      FTS5 keyword index over the passage text. Created
+    //                     best-effort: if this SQLite build lacks FTS5 the
+    //                     retriever degrades to vector-only, so a missing
+    //                     module must NOT abort DB init.
+    // rag_embed_cache     query-embedding cache (qhash -> vector) to avoid
+    //                     re-embedding repeated questions.
+    // rag_corpus_manifest one row per ingested corpus version (embed model,
+    //                     source list, chunk count) — provenance for the
+    //                     evidence receipt.
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS rag_chunks (
+        chunk_id        TEXT PRIMARY KEY,
+        doc_title       TEXT NOT NULL,
+        organization    TEXT NOT NULL,
+        url             TEXT,
+        version_date    TEXT,
+        lang            TEXT NOT NULL DEFAULT 'en',
+        topic           TEXT,
+        text            TEXT NOT NULL,
+        embedding       BLOB,
+        corpus_version  TEXT NOT NULL,
+        created_at      TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_rag_chunks_corpus ON rag_chunks(corpus_version);
+
+      CREATE TABLE IF NOT EXISTS rag_embed_cache (
+        qhash       TEXT PRIMARY KEY,
+        embedding   BLOB NOT NULL,
+        model       TEXT NOT NULL,
+        created_at  TEXT DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS rag_corpus_manifest (
+        corpus_version  TEXT PRIMARY KEY,
+        embed_model     TEXT,
+        sources_json    TEXT NOT NULL DEFAULT '[]',
+        chunk_count     INTEGER NOT NULL DEFAULT 0,
+        is_active       INTEGER NOT NULL DEFAULT 0,
+        built_at        TEXT DEFAULT (datetime('now'))
+      );
+    `);
+    // FTS5 is best-effort — vector retrieval still works without it.
+    try {
+      db.exec(
+        `CREATE VIRTUAL TABLE IF NOT EXISTS rag_chunks_fts USING fts5(chunk_id UNINDEXED, text);`,
+      );
+    } catch (e) {
+      console.warn(
+        `[db] FTS5 unavailable; RAG will use vector-only retrieval: ${(e as Error).message}`,
+      );
+    }
+    db.exec(`PRAGMA user_version = 4;`);
+  }
 }
 
 // ============================================================

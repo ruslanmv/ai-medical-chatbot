@@ -1,25 +1,62 @@
 "use client";
 
-import { Stethoscope, User2, ShieldCheck } from "lucide-react";
+import { Stethoscope, User2, ShieldCheck, ExternalLink } from "lucide-react";
 import type { ChatMessage } from "@/lib/hooks/useChat";
+import type { Action, Card } from "@/lib/medical-flow/types";
+import type { ValidatorContext } from "@/lib/medical-flow/validator";
+import { CardRenderer, parseCardSegments } from "./cards/CardRenderer";
 
 interface MessageBubbleProps {
   message: ChatMessage;
   showSourceChip?: boolean;
+  /** Fired when the user taps an action chip/button inside a card.
+   *  Parents typically synthesize a follow-up user message (for chip
+   *  selections) or navigate (for `open_ehr_wizard` / `open_login` /
+   *  `open_emergency`). When absent, action clicks are no-ops. */
+  onCardAction?: (action: Action, card: Card) => void;
+  /** Session context used by the medical-flow safety validator. The
+   *  validator uses it to enforce a locale-correct emergency_number
+   *  and to scrub drug names that cross-react with declared allergies
+   *  out of any guidance card the model emits. */
+  validatorContext?: ValidatorContext;
 }
 
 /**
- * AI answers are rendered as cards with:
- *  - an avatar + "MedOS" header,
- *  - an optional source chip ("Reviewed with medical guidelines") on the
- *    first assistant reply,
- *  - inline parsing of the bold section headers emitted by the model
- *    ("**Summary**", "**What it could be**", ...) into structured blocks
- *    with a brand-colored left rail.
+ * The legacy [bubble:type] system was retired (Batch 7): every AI turn
+ * now produces ONE unified reply card, not multiple fragmented bubbles.
  *
- * User bubbles keep the classic right-aligned chat style.
+ * This helper strips any stray markers from content — older server
+ * deployments, model outputs that ignored the "no markers" rule, and
+ * cached older conversation history can still carry the tokens. We
+ * filter them on the way to the renderer so the user never sees raw
+ * `[bubble:answer]` text in the chat. Pure cosmetic safety net; new
+ * server emissions never produce markers in the first place.
  */
-export function MessageBubble({ message, showSourceChip }: MessageBubbleProps) {
+function stripBubbleMarkers(content: string): string {
+  if (!content) return "";
+  return content
+    .replace(/^\s*\[bubble:[a-z_]+\]\s*$/gim, "")
+    .replace(/\[bubble:[a-z_]+\]\s*/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/**
+ * MessageBubble — renders chat messages with markdown support.
+ *
+ * AI answers are rendered as structured cards with:
+ *  - Avatar + "MedOS" header + optional source chip
+ *  - Full markdown: bold, italic, lists, links, code, headers
+ *  - Section parsing for structured medical output
+ *
+ * User bubbles keep the right-aligned chat style.
+ */
+export function MessageBubble({
+  message,
+  showSourceChip,
+  onCardAction,
+  validatorContext,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   if (isUser) {
@@ -42,8 +79,23 @@ export function MessageBubble({ message, showSourceChip }: MessageBubbleProps) {
     );
   }
 
-  // AI message — parse section headings to structure the output.
-  const sections = parseSections(message.content);
+  // First pass: lift any [card:KIND]…[/card] blocks out of the content.
+  // Returns an ordered list of `text` and `card` segments. Card-only
+  // messages skip the legacy bubble system entirely and render as a
+  // vertical stack of card components. The validator context is
+  // threaded in so each card is checked against the locale's
+  // emergency number and the patient's declared allergies before it
+  // reaches the renderer.
+  const segments = parseCardSegments(message.content, validatorContext);
+  const hasCards = segments.some((s) => s.type === "card");
+
+  // Strip any stray `[bubble:type]` markers from text content. Older
+  // server deployments and any LLM that ignored the "no markers"
+  // instruction can leak these as visible text — render them as plain
+  // prose instead of letting the raw markers reach the user.
+  const cleanedContent = hasCards
+    ? message.content
+    : stripBubbleMarkers(message.content);
 
   return (
     <div className="flex justify-start mb-6 animate-fade-up">
@@ -63,31 +115,60 @@ export function MessageBubble({ message, showSourceChip }: MessageBubbleProps) {
               </span>
             )}
           </div>
-          <div className="rounded-2xl rounded-tl-sm border border-line/60 bg-surface-1 shadow-soft px-4 py-3.5 text-[15px] leading-relaxed text-ink-base">
-            {sections.length > 1 ? (
-              sections.map((s, i) =>
-                s.heading ? (
-                  <div key={i} className="answer-section">
-                    <h4 className="font-bold text-ink-base text-[13px] uppercase tracking-wider text-brand-600 dark:text-brand-400 mb-1">
-                      {s.heading}
-                    </h4>
-                    <p className="whitespace-pre-wrap text-ink-base/95">
-                      {s.body}
-                    </p>
-                  </div>
-                ) : (
-                  <p
+          {hasCards ? (
+            <div className="space-y-3">
+              {segments.map((seg, i) =>
+                seg.type === "card" ? (
+                  <CardRenderer
                     key={i}
-                    className="whitespace-pre-wrap text-ink-base/95 first:mt-0 mt-2"
+                    card={seg.card}
+                    onAction={(a, c) => onCardAction?.(a, c)}
+                  />
+                ) : (
+                  <div
+                    key={i}
+                    className="rounded-2xl rounded-tl-sm border border-line/60 bg-surface-1 shadow-soft px-4 py-3 text-[15px] leading-relaxed text-ink-base"
                   >
-                    {s.body}
-                  </p>
+                    <MarkdownContent content={stripBubbleMarkers(seg.text)} />
+                  </div>
                 ),
-              )
-            ) : (
-              <p className="whitespace-pre-wrap">{message.content}</p>
-            )}
-          </div>
+              )}
+            </div>
+          ) : (
+            // One user message → one unified card. We deliberately stopped
+            // splitting AI replies into welcome / answer / questions /
+            // signup chunks — that pattern read as fragmented chatbot
+            // output and made the product feel non-enterprise. The model
+            // is now instructed to produce ONE coherent reply per turn;
+            // this branch renders it as a single visual card.
+            <div className="rounded-2xl rounded-tl-sm border border-line/60 bg-surface-1 shadow-soft px-4 py-3.5 text-[15px] leading-relaxed text-ink-base">
+              <MarkdownContent content={cleanedContent} />
+            </div>
+          )}
+          {message.sources && message.sources.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-subtle">
+                Sources
+              </span>
+              {message.sources.map((s, i) =>
+                s.url ? (
+                  <a
+                    key={i}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`${s.organization} — ${s.title}${s.version_date ? ` (${s.version_date})` : ""}`}
+                    className="inline-flex items-center gap-1 max-w-[220px] rounded-full border border-line/60 bg-surface-2 px-2 py-0.5 text-[11px] text-ink-base hover:border-brand-500/40 hover:text-brand-600 transition-colors"
+                  >
+                    <ShieldCheck size={10} className="flex-shrink-0 text-accent-500" />
+                    <span className="font-semibold">{s.organization}</span>
+                    <span className="opacity-70 truncate">{s.title}</span>
+                    <ExternalLink size={9} className="flex-shrink-0 opacity-60" />
+                  </a>
+                ) : null,
+              )}
+            </div>
+          )}
           <div className="mt-1 text-[11px] text-ink-subtle">
             {message.timestamp}
           </div>
@@ -97,29 +178,233 @@ export function MessageBubble({ message, showSourceChip }: MessageBubbleProps) {
   );
 }
 
-type Section = { heading?: string; body: string };
 
 /**
- * Splits an AI answer on **Heading** markers so the UI can render each
- * section as a distinct block. Falls back to a single body when the
- * model didn't follow the structured output contract.
+ * MarkdownContent — lightweight markdown renderer for medical AI output.
+ *
+ * Supports: headers (#), bold (**), italic (*), bullet lists (- / *),
+ * numbered lists (1.), inline code (`), code blocks (```), links [text](url),
+ * and horizontal rules (---).
+ *
+ * No external dependencies — pure React + regex.
  */
-function parseSections(text: string): Section[] {
-  if (!text) return [{ body: "" }];
-  // Match lines that look like "**Summary**" or "**Self-care**".
-  const regex = /\*\*([^*\n]{2,60})\*\*\s*:?\s*/g;
-  const sections: Section[] = [];
-  let lastIndex = 0;
-  let currentHeading: string | undefined;
+function MarkdownContent({ content }: { content: string }) {
+  if (!content) return null;
 
-  let m: RegExpExecArray | null;
-  while ((m = regex.exec(text)) !== null) {
-    const body = text.slice(lastIndex, m.index).trim();
-    if (body) sections.push({ heading: currentHeading, body });
-    currentHeading = m[1].trim();
-    lastIndex = m.index + m[0].length;
+  const blocks = parseBlocks(content);
+
+  return (
+    <div className="space-y-2">
+      {blocks.map((block, i) => (
+        <BlockRenderer key={i} block={block} />
+      ))}
+    </div>
+  );
+}
+
+type Block =
+  | { type: "heading"; level: number; text: string }
+  | { type: "paragraph"; text: string }
+  | { type: "list"; ordered: boolean; items: string[] }
+  | { type: "code"; language: string; code: string }
+  | { type: "hr" };
+
+function parseBlocks(text: string): Block[] {
+  const lines = text.split("\n");
+  const blocks: Block[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Code block
+    if (line.trimStart().startsWith("```")) {
+      const lang = line.trimStart().slice(3).trim();
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      blocks.push({ type: "code", language: lang, code: codeLines.join("\n") });
+      i++;
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^(-{3,}|_{3,}|\*{3,})\s*$/.test(line.trim())) {
+      blocks.push({ type: "hr" });
+      i++;
+      continue;
+    }
+
+    // Heading
+    const headingMatch = line.match(/^(#{1,4})\s+(.+)$/);
+    if (headingMatch) {
+      blocks.push({ type: "heading", level: headingMatch[1].length, text: headingMatch[2] });
+      i++;
+      continue;
+    }
+
+    // Bold heading pattern: **Heading**
+    const boldHeadingMatch = line.match(/^\*\*([^*]+)\*\*\s*:?\s*$/);
+    if (boldHeadingMatch) {
+      blocks.push({ type: "heading", level: 3, text: boldHeadingMatch[1] });
+      i++;
+      continue;
+    }
+
+    // List (unordered: - or *, ordered: 1.)
+    if (/^\s*[-*]\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
+      const ordered = /^\s*\d+\./.test(line);
+      const items: string[] = [];
+      while (i < lines.length && (/^\s*[-*]\s+/.test(lines[i]) || /^\s*\d+\.\s+/.test(lines[i]))) {
+        items.push(lines[i].replace(/^\s*[-*]\s+/, "").replace(/^\s*\d+\.\s+/, ""));
+        i++;
+      }
+      blocks.push({ type: "list", ordered, items });
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === "") {
+      i++;
+      continue;
+    }
+
+    // Paragraph — collect consecutive non-empty lines
+    const paraLines: string[] = [];
+    while (i < lines.length && lines[i].trim() !== "" && !lines[i].trimStart().startsWith("```") && !lines[i].match(/^#{1,4}\s/) && !lines[i].match(/^\*\*[^*]+\*\*\s*:?\s*$/) && !/^\s*[-*]\s+/.test(lines[i]) && !/^\s*\d+\.\s+/.test(lines[i]) && !/^(-{3,}|_{3,}|\*{3,})\s*$/.test(lines[i].trim())) {
+      paraLines.push(lines[i]);
+      i++;
+    }
+    if (paraLines.length > 0) {
+      blocks.push({ type: "paragraph", text: paraLines.join("\n") });
+    }
   }
-  const tail = text.slice(lastIndex).trim();
-  if (tail) sections.push({ heading: currentHeading, body: tail });
-  return sections.length ? sections : [{ body: text }];
+
+  return blocks;
+}
+
+function BlockRenderer({ block }: { block: Block }) {
+  switch (block.type) {
+    case "heading":
+      return (
+        <div className="answer-section">
+          <h4 className={`font-bold text-brand-600 dark:text-brand-400 mb-1 ${
+            block.level <= 2 ? "text-[15px]" : "text-[13px] uppercase tracking-wider"
+          }`}>
+            {renderInline(block.text)}
+          </h4>
+        </div>
+      );
+
+    case "paragraph":
+      return (
+        <p className="whitespace-pre-wrap text-ink-base/95 leading-relaxed">
+          {renderInline(block.text)}
+        </p>
+      );
+
+    case "list":
+      const ListTag = block.ordered ? "ol" : "ul";
+      return (
+        <ListTag className={`space-y-1 pl-1 ${block.ordered ? "list-decimal list-inside" : ""}`}>
+          {block.items.map((item, i) => (
+            <li key={i} className="text-ink-base/95 leading-relaxed flex items-start gap-2">
+              {!block.ordered && <span className="text-brand-500 mt-1.5 text-xs flex-shrink-0">•</span>}
+              <span>{renderInline(item)}</span>
+            </li>
+          ))}
+        </ListTag>
+      );
+
+    case "code":
+      return (
+        <pre className="bg-surface-2 border border-line/40 rounded-xl p-3 overflow-x-auto text-[13px] font-mono text-ink-base/90 leading-relaxed">
+          <code>{block.code}</code>
+        </pre>
+      );
+
+    case "hr":
+      return <hr className="border-line/40 my-2" />;
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Render inline markdown: **bold**, *italic*, `code`, [link](url)
+ */
+function renderInline(text: string): React.ReactNode {
+  if (!text) return null;
+
+  // Split on inline patterns and render
+  const parts: React.ReactNode[] = [];
+  let remaining = text;
+  let key = 0;
+
+  while (remaining.length > 0) {
+    // Bold: **text**
+    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+    // Italic: *text* (but not **)
+    const italicMatch = remaining.match(/(?<!\*)\*([^*]+?)\*(?!\*)/);
+    // Inline code: `code`
+    const codeMatch = remaining.match(/`([^`]+?)`/);
+    // Link: [text](url)
+    const linkMatch = remaining.match(/\[([^\]]+?)\]\(([^)]+?)\)/);
+
+    // Find the earliest match
+    const matches = [
+      boldMatch ? { match: boldMatch, type: "bold" as const } : null,
+      italicMatch ? { match: italicMatch, type: "italic" as const } : null,
+      codeMatch ? { match: codeMatch, type: "code" as const } : null,
+      linkMatch ? { match: linkMatch, type: "link" as const } : null,
+    ].filter(Boolean).sort((a, b) => a!.match.index! - b!.match.index!);
+
+    if (matches.length === 0) {
+      parts.push(remaining);
+      break;
+    }
+
+    const first = matches[0]!;
+    const idx = first.match.index!;
+
+    // Text before match
+    if (idx > 0) {
+      parts.push(remaining.slice(0, idx));
+    }
+
+    // Render the matched element
+    switch (first.type) {
+      case "bold":
+        parts.push(<strong key={key++} className="font-bold">{first.match[1]}</strong>);
+        remaining = remaining.slice(idx + first.match[0].length);
+        break;
+      case "italic":
+        parts.push(<em key={key++} className="italic">{first.match[1]}</em>);
+        remaining = remaining.slice(idx + first.match[0].length);
+        break;
+      case "code":
+        parts.push(
+          <code key={key++} className="bg-surface-2 border border-line/40 rounded px-1.5 py-0.5 text-[13px] font-mono text-ink-base/90">
+            {first.match[1]}
+          </code>
+        );
+        remaining = remaining.slice(idx + first.match[0].length);
+        break;
+      case "link":
+        parts.push(
+          <a key={key++} href={first.match[2]} target="_blank" rel="noopener noreferrer"
+            className="text-brand-500 hover:text-brand-600 underline underline-offset-2">
+            {first.match[1]}
+          </a>
+        );
+        remaining = remaining.slice(idx + first.match[0].length);
+        break;
+    }
+  }
+
+  return <>{parts}</>;
 }

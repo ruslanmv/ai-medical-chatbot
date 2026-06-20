@@ -4,8 +4,6 @@ import { useEffect } from "react";
 import {
   X,
   Plus,
-  MessageCircle,
-  Clock,
   Pill,
   MapPin,
   Heart,
@@ -24,6 +22,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { t, type SupportedLanguage } from "@/lib/i18n";
+import { ConversationList } from "./ConversationList";
+import type { ConversationSummary } from "@/lib/health-store";
 
 interface AppDrawerProps {
   open: boolean;
@@ -35,6 +35,10 @@ interface AppDrawerProps {
   isAdmin?: boolean;
   username?: string;
   onLogout?: () => void;
+  conversations?: ConversationSummary[];
+  activeConversationId?: string | null;
+  onOpenConversation?: (id: string) => void;
+  onDeleteConversation?: (id: string) => void;
   language: SupportedLanguage;
 }
 
@@ -48,6 +52,10 @@ export function AppDrawer({
   isAdmin = false,
   username,
   onLogout,
+  conversations = [],
+  activeConversationId,
+  onOpenConversation,
+  onDeleteConversation,
   language,
 }: AppDrawerProps) {
   // Close on Escape
@@ -136,20 +144,33 @@ export function AppDrawer({
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 scroll-touch">
-          <DrawerSection title={t("drawer_section_main", language)}>
-            <DrawerItem icon={MessageCircle} label={t("nav_ask", language)} active={activeKey === "chat" || activeKey === "home"} onClick={() => nav("home")} />
-            <DrawerItem icon={Clock} label={t("nav_history", language)} active={activeKey === "history"} onClick={() => nav("history")} />
-          </DrawerSection>
+          {/* Inline recent conversations — replaces the separate History tab;
+              tap one to resume its full thread (ChatGPT / Claude). New Chat is
+              the button above; the old standalone "Ask" item was dropped. */}
+          {onOpenConversation && onDeleteConversation && (
+            <ConversationList
+              conversations={conversations}
+              activeId={activeConversationId}
+              onOpen={(id) => { onOpenConversation(id); onClose(); }}
+              onDelete={onDeleteConversation}
+              label={t("nav_history", language)}
+            />
+          )}
 
-          <DrawerSection title={t("nav_health_tracker", language)}>
-            <DrawerItem icon={Heart} label={t("nav_dashboard", language)} active={activeKey === "health-dashboard"} onClick={() => nav("health-dashboard")} />
-            <DrawerItem icon={Calendar} label={t("nav_schedule", language)} active={activeKey === "schedule"} onClick={() => nav("schedule")} />
-            <DrawerItem icon={Pill} label={t("nav_medications", language)} active={activeKey === "medications"} onClick={() => nav("medications")} />
-            <DrawerItem icon={Camera} label={t("medicines_title", language)} active={activeKey === "my-medicines"} onClick={() => nav("my-medicines")} />
-            <DrawerItem icon={Activity} label={t("nav_vitals", language)} active={activeKey === "vitals"} onClick={() => nav("vitals")} />
-            <DrawerItem icon={FileText} label={t("nav_records", language)} active={activeKey === "records"} onClick={() => nav("records")} />
-            <DrawerItem icon={Contact} label={t("contacts_title", language)} active={activeKey === "contacts"} onClick={() => nav("contacts")} />
-          </DrawerSection>
+          {/* Health Tracker — authenticated only. These tools store personal
+              medical data tied to the account, so guests never see them
+              (matches the desktop sidebar's gating). */}
+          {isAuthenticated && (
+            <DrawerSection title={t("nav_health_tracker", language)}>
+              <DrawerItem icon={Heart} label={t("nav_dashboard", language)} active={activeKey === "health-dashboard"} onClick={() => nav("health-dashboard")} />
+              <DrawerItem icon={Calendar} label={t("nav_schedule", language)} active={activeKey === "schedule"} onClick={() => nav("schedule")} />
+              <DrawerItem icon={Pill} label={t("nav_medications", language)} active={activeKey === "medications"} onClick={() => nav("medications")} />
+              <DrawerItem icon={Camera} label={t("medicines_title", language)} active={activeKey === "my-medicines"} onClick={() => nav("my-medicines")} />
+              <DrawerItem icon={Activity} label={t("nav_vitals", language)} active={activeKey === "vitals"} onClick={() => nav("vitals")} />
+              <DrawerItem icon={FileText} label={t("nav_records", language)} active={activeKey === "records"} onClick={() => nav("records")} />
+              <DrawerItem icon={Contact} label={t("contacts_title", language)} active={activeKey === "contacts"} onClick={() => nav("contacts")} />
+            </DrawerSection>
+          )}
 
           <DrawerSection title={t("drawer_section_tools", language)}>
             <DrawerItem icon={MapPin} label={t("drawer_nearby", language)} active={activeKey === "nearby"} onClick={() => nav("nearby")} />

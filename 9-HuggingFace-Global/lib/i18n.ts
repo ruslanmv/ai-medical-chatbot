@@ -524,6 +524,29 @@ export const translations: Record<string, Record<string, string>> = {
     nav_login: "Log in",
     nav_profile: "Profile",
 
+    // Nearby (Find pharmacies & doctors) — ported from the web app.
+    // Other languages fall back to English via t()'s en[] fallback.
+    nearby_title: "Nearby",
+    nearby_subtitle: "Find pharmacies and doctors near you",
+    nearby_search: "Search Nearby",
+    nearby_use_gps: "Use my location",
+    nearby_detecting: "Detecting...",
+    nearby_searching: "Searching nearby...",
+    nearby_waking: "Waking up service...",
+    nearby_places_found: "places found",
+    nearby_no_results: "No pharmacies or doctors found nearby. Try a larger area or different location.",
+    nearby_location_set: "Location set",
+    nearby_find: "Find",
+    nearby_find_healthcare: "Find healthcare nearby",
+    nearby_find_desc: "Type a city name, postal code, or share your GPS location to find pharmacies and doctors.",
+    nearby_directions: "Directions",
+    nearby_walk_min: "min walk",
+    nearby_type_all: "All",
+    nearby_type_pharmacy: "Pharmacy",
+    nearby_type_doctor: "Doctor",
+    nearby_placeholder: "City, address, or postal code...",
+    common_map: "Map",
+
     // Health Dashboard
     health_tracker: "Health Tracker",
     health_today_overview: "Today's overview",
