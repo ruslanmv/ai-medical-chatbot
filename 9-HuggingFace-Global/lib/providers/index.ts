@@ -50,13 +50,25 @@ function log(stage: string, details?: Record<string, unknown>) {
 
 /**
  * Stream chat completion with automatic fallback chain:
- *   1. Groq Cloud (llama-3.3-70b-versatile) — primary when GROQ_API_KEY is set.
- *      Sub-second first-token latency, generous free tier, follows the
- *      structured medical output contract reliably.
- *   2. OllaBridge-Cloud — only if admin has set OllaBridge URL. Acts as a
- *      warm secondary; covers Groq outages and rate-limit spikes.
- *   3. Direct HuggingFace Inference API — 9-model cascade. Kept for
+ *   1. OllaBridge-Cloud — PRIMARY. The gateway is the routing authority:
+ *      one admin defines the free provider fleet there (Groq, Gemini,
+ *      OpenRouter, HF, on-Space Ollama), orders it best-first, and every
+ *      consumer inherits that. MedOS asks for an alias and lets the
+ *      gateway pick the best live model, rather than second-guessing it.
+ *      Its chain ends at an always-on local rung, so it answers even when
+ *      every cloud tier is spent.
+ *   2. Groq direct — a BYPASS for when the gateway itself is unreachable
+ *      (redeploying, rate-limited, misconfigured). Off unless
+ *      GROQ_API_KEY is set here; a key on the gateway is the better place
+ *      for it, because every consumer benefits rather than just MedOS.
+ *   3. Direct HuggingFace Inference API — last resort. Kept for
  *      compatibility but most rungs currently return 402 on the free tier.
+ *
+ * Ordering note: Groq used to lead because it was the fastest single
+ * provider. That put MedOS's own opinion ahead of the fleet the admin
+ * curates, and meant a key had to be pasted into every consumer
+ * separately. The gateway now leads and the direct providers are the
+ * escape hatch.
  *
  * If every provider fails, throws AllProvidersUnavailableError. There is
  * intentionally NO "cached FAQ" fallback: a keyword dictionary speaking
@@ -81,32 +93,8 @@ export async function streamWithFallback(
 
   const failures: string[] = [];
 
-  // Step 1 — Groq (primary). Skipped silently when no key is set so
-  // self-hosters who only run OllaBridge are not penalised.
-  if (isGroqConfigured()) {
-    const tg = Date.now();
-    try {
-      const stream = await streamWithGroq(messages, model);
-      log('provider.groq.ok', {
-        requestId,
-        latencyMs: Date.now() - tg,
-        totalMs: Date.now() - startedAt,
-      });
-      return stream;
-    } catch (error: any) {
-      const msg = String(error?.message || error).slice(0, 200);
-      log('provider.groq.fail', {
-        requestId,
-        latencyMs: Date.now() - tg,
-        error: msg,
-      });
-      failures.push(`groq: ${msg}`);
-    }
-  } else {
-    log('provider.groq.skipped', { requestId, reason: 'not configured' });
-  }
-
-  // Step 2 — OllaBridge (only when the admin has set OLLABRIDGE_URL).
+  // Step 1 — OllaBridge (primary, the admin's curated fleet). Skipped
+  // only when no OLLABRIDGE_URL is configured at all.
   if (isOllaBridgeConfigured()) {
     const t0 = Date.now();
     try {
@@ -128,6 +116,34 @@ export async function streamWithFallback(
     }
   } else {
     log('provider.ollabridge.skipped', { requestId, reason: 'not configured' });
+  }
+
+  // Step 2 — Groq direct, a bypass for when the gateway is unreachable.
+  if (isGroqConfigured()) {
+    const tg = Date.now();
+    try {
+      const stream = await streamWithGroq(messages, model);
+      log('provider.groq.ok', {
+        requestId,
+        latencyMs: Date.now() - tg,
+        totalMs: Date.now() - startedAt,
+      });
+      return stream;
+    } catch (error: any) {
+      const msg = String(error?.message || error).slice(0, 200);
+      log('provider.groq.fail', {
+        requestId,
+        latencyMs: Date.now() - tg,
+        error: msg,
+      });
+      failures.push(`groq: ${msg}`);
+    }
+  } else {
+    log('provider.groq.skipped', {
+      requestId,
+      reason: 'not configured',
+      hint: 'optional bypass — OllaBridge is the primary route',
+    });
   }
 
   // Step 3 — HuggingFace Inference (cascades internally through 9 models).
@@ -175,7 +191,32 @@ export async function chatWithFallback(
 
   const failures: string[] = [];
 
-  // Step 1 — Groq (primary).
+  // Step 1 — OllaBridge (primary). See the ordering note on
+  // streamWithFallback: the gateway is the routing authority.
+  if (isOllaBridgeConfigured()) {
+    const tb = Date.now();
+    try {
+      const resp = await chatWithOllaBridge(messages, model);
+      log('provider.ollabridge.ok.nonstream', {
+        requestId,
+        latencyMs: Date.now() - tb,
+        model: resp.model,
+      });
+      return resp;
+    } catch (error: any) {
+      const msg = String(error?.message || error).slice(0, 200);
+      log('provider.ollabridge.fail.nonstream', {
+        requestId,
+        latencyMs: Date.now() - tb,
+        error: msg,
+      });
+      failures.push(`ollabridge: ${msg}`);
+    }
+  } else {
+    log('provider.ollabridge.skipped.nonstream', { requestId });
+  }
+
+  // Step 2 — Groq direct, only as a bypass when the gateway is down.
   if (isGroqConfigured()) {
     const tg = Date.now();
     try {
@@ -196,21 +237,11 @@ export async function chatWithFallback(
       failures.push(`groq: ${msg}`);
     }
   } else {
-    log('provider.groq.skipped.nonstream', { requestId });
-  }
-
-  if (isOllaBridgeConfigured()) {
-    try {
-      const resp = await chatWithOllaBridge(messages, model);
-      log('provider.ollabridge.ok.nonstream', { requestId });
-      return resp;
-    } catch (error: any) {
-      const msg = String(error?.message || error).slice(0, 200);
-      log('provider.ollabridge.fail.nonstream', { requestId, error: msg });
-      failures.push(`ollabridge: ${msg}`);
-    }
-  } else {
-    log('provider.ollabridge.skipped.nonstream', { requestId });
+    log('provider.groq.skipped.nonstream', {
+      requestId,
+      reason: 'not configured',
+      hint: 'optional bypass — OllaBridge is the primary route',
+    });
   }
 
   try {

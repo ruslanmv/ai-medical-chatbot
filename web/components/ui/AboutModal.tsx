@@ -56,7 +56,7 @@ export function AboutModal({ onClose }: { onClose: () => void }) {
               Powered by
             </h3>
             <div className="space-y-1.5 text-sm text-ink-base">
-              <InfoRow label="AI Model" value="Llama 3.3 70B (via Groq)" />
+              <InfoRow label="AI Model" value="Best available free model (auto-routed)" />
               <InfoRow label="Knowledge" value="WHO · CDC · NHS · SIE · SID · ADA" />
               <InfoRow label="Framework" value="Next.js 14 · React 18" />
               <InfoRow label="Backend" value="HuggingFace Spaces · SQLite" />

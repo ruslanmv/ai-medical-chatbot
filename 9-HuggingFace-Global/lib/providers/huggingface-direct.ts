@@ -58,6 +58,52 @@ function getModelChain(): string[] {
   return [adminDefault, ...BASE_MODEL_CHAIN.filter((m) => m !== adminDefault)];
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// Free-credit breaker
+// ─────────────────────────────────────────────────────────────────────
+// HF Inference Providers bills a MONTHLY CREDIT POOL, not per model. So
+// `402 Payment Required` means "this account is out of credit until the
+// pool resets" — it is never specific to the model that returned it.
+// Walking the rest of the chain after the first 402 therefore cannot
+// succeed; production logs show all nine rungs answering 402 in the same
+// turn, ~700ms of pure latency on a route that has already burned Groq
+// and OllaBridge. Stop at the first 402, and remember it for a cooldown
+// so the following turns skip the chain outright.
+//
+// Tunable: HF_CREDIT_COOLDOWN_MS (default 10 minutes).
+const CREDIT_COOLDOWN_MS =
+  Number(process.env.HF_CREDIT_COOLDOWN_MS) || 600_000;
+let creditsExhaustedAt = 0;
+
+function creditsExhausted(): boolean {
+  if (!creditsExhaustedAt) return false;
+  if (Date.now() - creditsExhaustedAt > CREDIT_COOLDOWN_MS) {
+    creditsExhaustedAt = 0;
+    return false;
+  }
+  return true;
+}
+
+function noteCreditsExhausted(model: string): void {
+  if (!creditsExhaustedAt) {
+    console.warn(
+      `[Chat] provider.huggingface.credits.exhausted ${JSON.stringify({
+        model,
+        cooldownMs: CREDIT_COOLDOWN_MS,
+      })}`,
+    );
+  }
+  creditsExhaustedAt = Date.now();
+}
+
+/** Reset by a successful call — the pool has been topped up or reset. */
+function noteCreditsOk(): void {
+  if (creditsExhaustedAt) {
+    console.log('[Chat] provider.huggingface.credits.restored');
+    creditsExhaustedAt = 0;
+  }
+}
+
 async function callHF(
   messages: ChatMessage[],
   model: string,
@@ -98,6 +144,10 @@ export async function streamWithHuggingFace(
   // cascade from the HF Space run logs. The chain starts with the
   // admin-configured default model (if any), so UI changes take effect
   // without a redeploy.
+  if (creditsExhausted()) {
+    throw new Error('HF Inference free credits exhausted — skipping');
+  }
+
   const chain = getModelChain();
   let response: Response | null = null;
   let activeModel = chain[0];
@@ -114,18 +164,25 @@ export async function streamWithHuggingFace(
           result: 'ok',
         })}`,
       );
+      noteCreditsOk();
       response = res;
       activeModel = model;
       break;
     }
+    // 402 is account-wide: the remaining rungs will answer it too.
+    const outOfCredit = res.status === 402;
     console.warn(
       `[Chat] provider.huggingface.attempt ${JSON.stringify({
         model,
         status: res.status,
         latencyMs,
-        result: 'fallback',
+        result: outOfCredit ? 'abort' : 'fallback',
       })}`,
     );
+    if (outOfCredit) {
+      noteCreditsExhausted(model);
+      throw new Error('HF Inference free credits exhausted (402)');
+    }
   }
   if (!response || !response.ok) {
     throw new Error('All HF Inference models unavailable');
@@ -180,6 +237,10 @@ export async function chatWithHuggingFace(
     console.error('[Chat] provider.huggingface.no-token.nonstream');
     throw new Error('HF token not configured');
   }
+  if (creditsExhausted()) {
+    throw new Error('HF Inference free credits exhausted — skipping');
+  }
+
   const chain = getModelChain();
   let response: Response | null = null;
   let activeModel = chain[0];
@@ -196,18 +257,24 @@ export async function chatWithHuggingFace(
           result: 'ok',
         })}`,
       );
+      noteCreditsOk();
       response = res;
       activeModel = model;
       break;
     }
+    const outOfCredit = res.status === 402;
     console.warn(
       `[Chat] provider.huggingface.attempt.nonstream ${JSON.stringify({
         model,
         status: res.status,
         latencyMs,
-        result: 'fallback',
+        result: outOfCredit ? 'abort' : 'fallback',
       })}`,
     );
+    if (outOfCredit) {
+      noteCreditsExhausted(model);
+      throw new Error('HF Inference free credits exhausted (402)');
+    }
   }
   if (!response || !response.ok) {
     throw new Error('All HF Inference models unavailable');

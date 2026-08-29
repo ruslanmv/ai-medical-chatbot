@@ -133,7 +133,12 @@ export function SettingsView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [{ role: "user", content: "Reply with exactly: OK" }],
-          model: "qwen2.5:1.5b",
+          // Send the selected preset, not a hardcoded model name. The
+          // probe used to pin `qwen2.5:1.5b` regardless of the picker,
+          // so "Test connection" reported on a route the user had not
+          // chosen — and reported success for a selection that might not
+          // route at all.
+          preset,
           language,
           countryCode: country,
           // Tag the request so the server skips audit / persistence
@@ -250,7 +255,8 @@ export function SettingsView({
               </span>
             </div>
             <p className="text-xs text-ink-muted mt-1.5">
-              Llama 3.3 70B with smart fallbacks — best quality, always available
+              Picks the best free model available right now, and steps down as
+              each one&rsquo;s free quota runs out — so you always get an answer
             </p>
           </button>
 
@@ -266,9 +272,17 @@ export function SettingsView({
           {showMoreModels && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
               <ModelOption
+                icon={Zap}
+                title="Fastest"
+                description="Prefers the quickest free model over the strongest"
+                badge="FREE"
+                active={preset === "free-fastest" && !showBYOKey}
+                onClick={() => { setPreset("free-fastest"); setShowBYOKey(false); setAdvancedMode(false); }}
+              />
+              <ModelOption
                 icon={Brain}
                 title="Deep Reasoning"
-                description="DeepSeek R1 — complex medical reasoning"
+                description="Routes to a reasoning model for complex questions"
                 badge="FREE"
                 active={preset === "deep-reasoning" && !showBYOKey}
                 onClick={() => { setPreset("deep-reasoning"); setShowBYOKey(false); setAdvancedMode(false); }}
@@ -276,7 +290,7 @@ export function SettingsView({
               <ModelOption
                 icon={Server}
                 title="Local (Ollama)"
-                description="Runs on server — works offline, always available"
+                description="Small model on our own server — slower, but never rate-limited"
                 badge="LOCAL"
                 active={preset === "local" && !showBYOKey}
                 onClick={() => { setPreset("local"); setShowBYOKey(false); setAdvancedMode(false); }}
@@ -359,34 +373,35 @@ export function SettingsView({
                     {t("settings_clear_key", language)}
                   </button>
                 )}
+
+                      {/* Optional HF token — advanced, lives with the other keys */}
+                <details className="mt-2">
+                  <summary className="flex items-center gap-2 px-1 py-2 text-xs text-ink-muted hover:text-ink-base cursor-pointer transition-colors">
+                    <Key size={12} />
+                    <span>HuggingFace token (optional — for higher rate limits)</span>
+                  </summary>
+                  <div className="mt-2 p-3 bg-surface-0 border border-line/60 rounded-xl">
+                    <div className="relative">
+                      <input
+                        type="password"
+                        value={hfToken}
+                        onChange={(e) => setHfToken(e.target.value)}
+                        placeholder="hf_..."
+                        className="w-full bg-surface-1 border border-line/60 text-ink-base rounded-xl px-3 py-2.5 pl-9 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono text-sm"
+                      />
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" size={14} />
+                    </div>
+                    {hfToken && (
+                      <button onClick={clearHfToken} className="text-xs text-danger-500 hover:underline mt-2">
+                        Clear token
+                      </button>
+                    )}
+                  </div>
+                </details>
               </div>
             </div>
           )}
 
-          {/* HF Token (collapsed by default) */}
-          <details className="mt-2">
-            <summary className="flex items-center gap-2 px-1 py-2 text-xs text-ink-muted hover:text-ink-base cursor-pointer transition-colors">
-              <Key size={12} />
-              <span>HuggingFace token (optional — for higher rate limits)</span>
-            </summary>
-            <div className="mt-2 p-3 bg-surface-0 border border-line/60 rounded-xl">
-              <div className="relative">
-                <input
-                  type="password"
-                  value={hfToken}
-                  onChange={(e) => setHfToken(e.target.value)}
-                  placeholder="hf_..."
-                  className="w-full bg-surface-1 border border-line/60 text-ink-base rounded-xl px-3 py-2.5 pl-9 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono text-sm"
-                />
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle" size={14} />
-              </div>
-              {hfToken && (
-                <button onClick={clearHfToken} className="text-xs text-danger-500 hover:underline mt-2">
-                  Clear token
-                </button>
-              )}
-            </div>
-          </details>
 
           {/* ─────────────────────────────────────────────── */}
           {/* TEST CONNECTION — works for every preset.       */}

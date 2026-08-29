@@ -33,7 +33,18 @@ rm -rf "$BUILD_DIR" && mkdir -p "$BUILD_DIR"
 # This brings Dockerfile, package.json, next.config.js, tsconfig,
 # all /app/api routes, /app/admin, /app/symptoms, /app/stats,
 # lib/db, lib/safety, lib/rag, lib/providers, data/, public/, etc.
-cp -r "$HF_DIR/"* "$BUILD_DIR/"
+# `node_modules/` and `.next/` are .gitignored, so they never reach the
+# Space either way — but a plain `cp -r` still copies ~600MB of them
+# whenever the deploy runs on a machine that has built or tested
+# locally. Exclude them here so the assembly stays fast and cannot fill
+# the disk on a constrained runner.
+tar -C "$HF_DIR" -cf - \
+  --exclude=node_modules \
+  --exclude=.next \
+  --exclude=out \
+  --exclude=.git \
+  --exclude='*.tsbuildinfo' \
+  . | tar -C "$BUILD_DIR" -xf -
 cp "$HF_DIR/.gitignore" "$BUILD_DIR/" 2>/dev/null || true
 cp "$HF_DIR/.env.example" "$BUILD_DIR/" 2>/dev/null || true
 rm -f "$BUILD_DIR/tsconfig.tsbuildinfo"
