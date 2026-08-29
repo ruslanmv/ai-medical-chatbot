@@ -163,7 +163,7 @@ docker-build: ## Build Docker image
 docker-run: ## Run Docker container locally
 	@echo "$(GREEN)Starting MedOS on http://localhost:7860...$(NC)"
 	cd $(APP_DIR) && docker run -p 7860:7860 \
-		-e OLLABRIDGE_URL=$${OLLABRIDGE_URL:-https://ruslanmv-ollabridge-cloud.hf.space} \
+		-e OLLABRIDGE_URL=$${OLLABRIDGE_URL:-https://ruslanmv-ollabridge.hf.space} \
 		-e HF_TOKEN=$${HF_TOKEN:-} \
 		medos-global
 

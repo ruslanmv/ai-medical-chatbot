@@ -52,9 +52,44 @@ const RequestSchema = z.object({
     })
   ),
   model: z.string().optional().default('qwen2.5:1.5b'),
+  // The Settings model picker sends this. It used to be accepted by the
+  // client, put on the wire, and then dropped on the floor here — the
+  // route only ever read `model`, so every choice in that picker did
+  // exactly the same thing. See PRESET_TO_ALIAS.
+  preset: z
+    .enum([
+      'free-best',
+      'free-fastest',
+      'free-flexible',
+      'deep-reasoning',
+      'local',
+      'ollabridge',
+    ])
+    .optional(),
   language: z.string().optional().default('en'),
   countryCode: z.string().optional().default('US'),
 });
+
+/**
+ * What each Settings preset asks OllaBridge for.
+ *
+ * The gateway owns routing: the admin curates the free provider fleet
+ * there and orders each alias, so a preset here names an *intent* and
+ * the gateway picks the best live model for it — descending to weaker
+ * rungs only as the good ones exhaust their free quota. MedOS never
+ * names a concrete model, which is why nothing here needs editing when
+ * a provider retires a SKU.
+ */
+const PRESET_TO_ALIAS: Record<string, string> = {
+  'free-best': 'free-best',
+  'free-fastest': 'free-fast',
+  'free-flexible': 'free-flex',
+  'deep-reasoning': 'cheap-reasoning',
+  // The gateway's own always-on CPU model — the one rung that has no
+  // quota to run out of.
+  local: 'qwen2.5:0.5b',
+  ollabridge: 'free-best',
+};
 
 export async function POST(request: NextRequest) {
   const routeStartedAt = Date.now();
@@ -86,7 +121,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { messages, model, language, countryCode } = RequestSchema.parse(body);
+    const {
+      messages,
+      model: requestedModel,
+      preset,
+      language,
+      countryCode,
+    } = RequestSchema.parse(body);
+
+    // A preset is a routing intent and outranks the raw model name: it is
+    // what the user actually chose in Settings, while `model` is the
+    // legacy default the client sends regardless.
+    const model = (preset && PRESET_TO_ALIAS[preset]) || requestedModel;
 
     // Single-line JSON payload so the HF Space logs API (SSE) can be grepped
     // with a simple prefix match. Every stage below tags itself `[Chat]`.
@@ -94,6 +140,7 @@ export async function POST(request: NextRequest) {
       `[Chat] route.enter ${JSON.stringify({
         userId: user?.id || null,
         turns: messages.length,
+        preset: preset || null,
         model,
         language,
         countryCode,
